@@ -37,8 +37,8 @@ import org.apache.http.ssl.TrustStrategy;
 import org.dbflute.optional.OptionalThing;
 import org.dbflute.remoteapi.converter.FlutyRequestConverter;
 import org.dbflute.remoteapi.converter.FlutyResponseConverter;
+import org.dbflute.remoteapi.rule.FlutyEmptyRemoteConversionRule;
 import org.dbflute.remoteapi.rule.FlutyRemoteConversionRule;
-import org.dbflute.remoteapi.rule.FlutyStandardRemoteConversionRule;
 import org.dbflute.util.DfCollectionUtil;
 
 /**
@@ -59,7 +59,7 @@ public class FlutyRemoteApiOption {
     protected Charset charset = StandardCharsets.UTF_8;
     protected FlutyRequestConverter requestConverter;
     protected FlutyResponseConverter responseConverter;
-    protected FlutyRemoteConversionRule remoteConversionRule = new FlutyStandardRemoteConversionRule();
+    protected FlutyRemoteConversionRule remoteConversionRule = new FlutyEmptyRemoteConversionRule();
     protected Map<String, String> headers;
     protected Type failureResponseType;
 
@@ -175,7 +175,7 @@ public class FlutyRemoteApiOption {
 
     public OptionalThing<Map<String, String>> getHeaders() {
         return OptionalThing.ofNullable(headers, () -> {
-            throw new IllegalStateException("Not found headers");
+            throw new IllegalStateException("Not found the headers.");
         });
     }
 
@@ -188,7 +188,7 @@ public class FlutyRemoteApiOption {
 
     public OptionalThing<Type> getFailureResponseType() {
         return OptionalThing.ofNullable(failureResponseType, () -> {
-            throw new IllegalStateException("Not found failureResponseType");
+            throw new IllegalStateException("Not found the failureResponseType.");
         });
     }
 

@@ -21,9 +21,8 @@ import java.time.format.DateTimeFormatter;
  * @author jflute
  * @author mito
  */
-public class FlutyStandardRemoteConversionRule implements FlutyRemoteConversionRule { // state-less
+public class FlutyEmptyRemoteConversionRule implements FlutyRemoteConversionRule { // state-less
 
-    // #unext_standard basically according to LastaFlute default
     // ===================================================================================
     //                                                                               Date
     //                                                                              ======
