@@ -46,7 +46,7 @@ import com.google.gson.annotations.SerializedName;
  * @author awaawa
  * @author inoue
  */
-public class LaRemoteApi extends FlutyRemoteApi {
+public class LastaRemoteApi extends FlutyRemoteApi {
 
     // ===================================================================================
     //                                                                           Attribute
@@ -56,7 +56,7 @@ public class LaRemoteApi extends FlutyRemoteApi {
     // ===================================================================================
     //                                                                         Constructor
     //                                                                         ===========
-    public LaRemoteApi(RequestManager requestManager, Consumer<FlutyRemoteApiOption> defaultOpLambda, Object callerExp) {
+    public LastaRemoteApi(RequestManager requestManager, Consumer<FlutyRemoteApiOption> defaultOpLambda, Object callerExp) {
         super(defaultOpLambda, callerExp);
         this.requestManager = requestManager;
     }

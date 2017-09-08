@@ -33,7 +33,7 @@ import org.lastaflute.web.servlet.request.RequestManager;
  * @author jflute
  * @author inoue
  */
-public abstract class LaRemoteBehavior extends FlutyRemoteBehavior {
+public abstract class LastaRemoteBehavior extends FlutyRemoteBehavior {
 
     // ===================================================================================
     //                                                                          Definition
@@ -59,13 +59,13 @@ public abstract class LaRemoteBehavior extends FlutyRemoteBehavior {
     // ===================================================================================
     //                                                                         Constructor
     //                                                                         ===========
-    public LaRemoteBehavior(RequestManager requestManager) {
+    public LastaRemoteBehavior(RequestManager requestManager) {
         this.requestManager = requestManager;
     }
 
     @Override
     protected FlutyRemoteApi createRemoteApi() {
-        return new LaRemoteApi(requestManager, op -> prepareDefaultRemoteApiOption(op), getClass());
+        return new LastaRemoteApi(requestManager, op -> prepareDefaultRemoteApiOption(op), getClass());
     }
 
     @Override
