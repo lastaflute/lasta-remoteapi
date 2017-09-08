@@ -51,14 +51,18 @@ public abstract class FlutyRemoteBehavior {
     }
 
     protected FlutyRemoteApi createRemoteApi() {
-        return new FlutyRemoteApi(op -> prepareDefaultRuledRemoteApiOption(op), getClass());
+        return new FlutyRemoteApi(op -> prepareDefaultRemoteApiOption(op), getClass());
     }
 
-    protected void prepareDefaultRuledRemoteApiOption(FlutyRemoteApiOption option) {
+    protected void prepareDefaultRemoteApiOption(FlutyRemoteApiOption option) {
+        reflectMockHttpClientIfNeeds(option);
+        option.setHeader("User-Agent", buildUserAgent());
+    }
+
+    protected void reflectMockHttpClientIfNeeds(FlutyRemoteApiOption option) {
         if (__xmockHttpClient != null) {
             option.xregisterMockHttpClient(__xmockHttpClient);
         }
-        option.setHeader("User-Agent", buildUserAgent());
     }
 
     protected String buildUserAgent() {

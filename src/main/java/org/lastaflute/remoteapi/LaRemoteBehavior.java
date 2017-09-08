@@ -65,7 +65,7 @@ public abstract class LaRemoteBehavior extends FlutyRemoteBehavior {
 
     @Override
     protected FlutyRemoteApi createRemoteApi() {
-        return new LaRemoteApi(requestManager, op -> prepareDefaultRuledRemoteApiOption(op), getClass());
+        return new LaRemoteApi(requestManager, op -> prepareDefaultRemoteApiOption(op), getClass());
     }
 
     @Override

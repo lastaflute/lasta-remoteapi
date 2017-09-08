@@ -91,10 +91,9 @@ public class FlutyRemoteApi {
         assertArgumentNotNull("actionPath", actionPath);
         assertArgumentNotNull("pathVariables", pathVariables);
         assertArgumentNotNull("queryForm", queryForm);
+        assertArgumentNotNull("opLambda", opLambda);
         queryForm.ifPresent(form -> validateForm(beanType, urlBase, actionPath, pathVariables, form));
-        FlutyRemoteApiOption option = new FlutyRemoteApiOption();
-        defaultOpLambda.accept(option);
-        opLambda.accept(option);
+        final FlutyRemoteApiOption option = createRemoteApiOption(opLambda);
         final String url = buildUrl(urlBase, actionPath, pathVariables, queryForm, option);
         logger.debug("#flow #remote ...Requesting as GET to Remote API:\n {}\n   => {}", url, beanType);
         return doRequestGet(beanType, url, option);
@@ -138,10 +137,9 @@ public class FlutyRemoteApi {
         assertArgumentNotNull("actionPath", actionPath);
         assertArgumentNotNull("pathVariables", pathVariables);
         assertArgumentNotNull("form", form);
+        assertArgumentNotNull("opLambda", opLambda);
         validateForm(beanType, urlBase, actionPath, pathVariables, form);
-        FlutyRemoteApiOption option = new FlutyRemoteApiOption();
-        defaultOpLambda.accept(option);
-        opLambda.accept(option);
+        FlutyRemoteApiOption option = createRemoteApiOption(opLambda);
         final String url = buildUrl(urlBase, actionPath, pathVariables, OptionalThing.empty(), option);
         logger.debug("#flow #remote ...Requesting as POST to Remote API:\n: {}\n with form: {}\n   => {}: ", url, form, beanType);
         return doRequestPost(beanType, url, form, option);
@@ -398,9 +396,20 @@ public class FlutyRemoteApi {
     // ===================================================================================
     //                                                                        Assist Logic
     //                                                                        ============
-    protected void setupHeader(final HttpMessage http, FlutyRemoteApiOption option) {
+    protected FlutyRemoteApiOption createRemoteApiOption(Consumer<FlutyRemoteApiOption> opLambda) {
+        final FlutyRemoteApiOption option = newFlutyRemoteApiOption();
+        defaultOpLambda.accept(option);
+        opLambda.accept(option);
+        return option;
+    }
+
+    protected FlutyRemoteApiOption newFlutyRemoteApiOption() {
+        return new FlutyRemoteApiOption();
+    }
+
+    protected void setupHeader(HttpMessage httpMessage, FlutyRemoteApiOption option) {
         option.getHeaders().ifPresent(map -> map.forEach((name, value) -> {
-            http.addHeader(name, value);
+            httpMessage.addHeader(name, value);
         }));
     }
 
