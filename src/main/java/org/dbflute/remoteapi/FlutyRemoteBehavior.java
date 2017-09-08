@@ -101,58 +101,62 @@ public abstract class FlutyRemoteBehavior {
     //                                                  GET
     //                                                 -----
     /**
-     * @param clazz The class of bean to convert, should have default constructor. (NotNull)
+     * @param <RESULT> The type of request result.
+     * @param beanType The class type of bean to convert, should have default constructor. (NotNull)
      * @param actionPath The path to action without URL parameter. e.g. /sea/land (NotNull)
      * @param pathVariables The array of URL path variables, e.g. ["hangar", 3]. (NotNull, EmptyAllowed)
      * @param queryForm The optional form of query (GET parameters). (NotNull, EmptyAllowed)
-     * @param header The optional map of HTTP header. (NotNull, EmptyAllowed)
+     * @param opLambda The callback for option of remote API. (NotNull)
      * @return The JSON result of response as result, returned from the request. (NotNull)
      */
-    protected <CONTENT extends Object> CONTENT doRequestGet(Class<? extends Object> clazz //
+    protected <RESULT extends Object> RESULT doRequestGet(Class<? extends Object> beanType //
             , String actionPath, Object[] pathVariables, OptionalThing<Object> queryForm, Consumer<FlutyRemoteApiOption> opLambda) {
-        return remoteApi.requestGet(clazz, getUrlBase(), actionPath, pathVariables, queryForm, opLambda);
+        return remoteApi.requestGet(beanType, getUrlBase(), actionPath, pathVariables, queryForm, opLambda);
     }
 
     /**
-     * @param pt The parameterized type of bean to convert, should have default constructor. (NotNull)
+     * @param <RESULT> The type of request result.
+     * @param beanType The parameterized type of bean to convert, should have default constructor. (NotNull)
      * @param actionPath The path to action without URL parameter. e.g. /sea/land (NotNull)
      * @param pathVariables The array of URL path variables, e.g. ["hangar", 3]. (NotNull, EmptyAllowed)
      * @param queryForm The optional form of query (GET parameters). (NotNull, EmptyAllowed)
-     * @param header The optional map of HTTP header. (NotNull, EmptyAllowed)
+     * @param opLambda The callback for option of remote API. (NotNull)
      * @return The JSON result of response as result, returned from the request. (NotNull)
      */
-    protected <CONTENT extends Object> CONTENT doRequestGet(ParameterizedType pt //
+    protected <RESULT extends Object> RESULT doRequestGet(ParameterizedType beanType //
             , String actionPath, Object[] pathVariables, OptionalThing<Object> queryForm, Consumer<FlutyRemoteApiOption> opLambda) {
-        return remoteApi.requestGet(pt, getUrlBase(), actionPath, pathVariables, queryForm, opLambda);
+        return remoteApi.requestGet(beanType, getUrlBase(), actionPath, pathVariables, queryForm, opLambda);
     }
 
     // -----------------------------------------------------
     //                                                 Post
     //                                                ------
     /**
-     * @param clazz The class of bean to convert, should have default constructor. (NotNull)
+     * @param <RESULT> The type of request result.
+     * @param beanType The class type of bean to convert, should have default constructor. (NotNull)
      * @param actionPath The path to action without URL parameter. e.g. /sea/land (NotNull)
      * @param pathVariables The array of URL path variables, e.g. ["hangar", 3]. (NotNull, EmptyAllowed)
      * @param form The form of POST parameters. (NotNull)
-     * @param header The optional map of HTTP header. (NotNull, EmptyAllowed)
+     * @param opLambda The callback for option of remote API. (NotNull)
      * @return The JSON result of response as result, returned from the request. (NotNull)
      */
-    protected <CONTENT extends Object> CONTENT doRequestPost(Class<? extends Object> clazz //
+    protected <RESULT extends Object> RESULT doRequestPost(Class<? extends Object> beanType //
             , String actionPath, Object[] pathVariables, Object form, Consumer<FlutyRemoteApiOption> opLambda) {
-        return remoteApi.requestPost(clazz, getUrlBase(), actionPath, pathVariables, form, opLambda);
+        return remoteApi.requestPost(beanType, getUrlBase(), actionPath, pathVariables, form, opLambda);
     }
 
     /**
-     * @param pt The parameterized type of bean to convert, should have default constructor. (NotNull)
+     * @param <RESULT> The type of request result.
+     * @param beanType The parameterized type of bean to convert, should have default constructor. (NotNull)
      * @param actionPath The path to action without URL parameter. e.g. /sea/land (NotNull)
      * @param pathVariables The array of URL path variables, e.g. ["hangar", 3]. (NotNull, EmptyAllowed)
      * @param form The form of POST parameters. (NotNull)
-     * @param header The optional map of HTTP header. (NotNull, EmptyAllowed)
+     * @param opLambda The callback for option of remote API. (NotNull)
      * @return The JSON result of response as result, returned from the request. (NotNull)
      */
-    protected <CONTENT extends Object> CONTENT doRequestPost(ParameterizedType pt //
+    protected <RESULT extends Object> RESULT doRequestPost(ParameterizedType beanType //
             , String actionPath, Object[] pathVariables, Object form, Consumer<FlutyRemoteApiOption> opLambda) {
-        return remoteApi.requestPost(pt, getUrlBase(), actionPath, pathVariables, form, opLambda);
+        return remoteApi.requestPost(beanType, getUrlBase(), actionPath, pathVariables, form, opLambda);
     }
 
     // ===================================================================================

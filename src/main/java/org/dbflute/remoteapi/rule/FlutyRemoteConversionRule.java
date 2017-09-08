@@ -46,7 +46,7 @@ public interface FlutyRemoteConversionRule {
     String serializeBoolean(Boolean boo);
 
     /**
-     * @param boo The expression converted to boolean. (NullAllowed: if null, returns null)
+     * @param exp The expression converted to boolean. (NullAllowed: if null, returns null)
      * @return The boolean for the expression. (NullAllowed: if argument is null)
      */
     Boolean deserializeBoolean(Object exp);
