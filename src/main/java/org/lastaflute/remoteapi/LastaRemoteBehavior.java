@@ -36,11 +36,6 @@ import org.lastaflute.web.servlet.request.RequestManager;
 public abstract class LastaRemoteBehavior extends FlutyRemoteBehavior {
 
     // ===================================================================================
-    //                                                                          Definition
-    //                                                                          ==========
-    protected static final Object[] EMPTY_PARAMS = new Object[] {};
-
-    // ===================================================================================
     //                                                                           Attribute
     //                                                                           =========
     // -----------------------------------------------------
@@ -54,29 +49,30 @@ public abstract class LastaRemoteBehavior extends FlutyRemoteBehavior {
     // -----------------------------------------------------
     //                                        Basic Resource
     //                                        --------------
-    protected final RequestManager requestManager; // injected via constructor
+    protected final RequestManager requestManager; // not null, injected via constructor of concrete class
 
     // ===================================================================================
     //                                                                         Constructor
     //                                                                         ===========
     public LastaRemoteBehavior(RequestManager requestManager) {
         this.requestManager = requestManager;
+        ((LastaRemoteApi) remoteApi).acceptRequestManager(requestManager); // for constructor headache
     }
 
     @Override
-    protected FlutyRemoteApi createRemoteApi() {
-        return new LastaRemoteApi(requestManager, op -> setupDefaultRemoteApiOption(op), getClass());
+    protected FlutyRemoteApi createRemoteApi() { // in constructor so you cannot use DI components
+        return new LastaRemoteApi(op -> setupDefaultRemoteApiOption(op), getClass());
     }
 
     @Override
-    protected String getUserAgentServiceName() {
+    protected String getUserAgentServiceName() { // in callback so you can use DI components
         return Arrays.stream(namingConvention.getRootPackageNames()).filter(name -> name.contains(".app")).map(name -> {
             return DfStringUtil.substringLastRear(DfStringUtil.substringFirstFront(name, ".app"), ".");
         }).findFirst().orElse(null);
     }
 
     @Override
-    protected String getUserAgentAppName() {
+    protected String getUserAgentAppName() { // in callback so you can use DI components
         return config.getOrDefault("domain.name", null);
     }
 }

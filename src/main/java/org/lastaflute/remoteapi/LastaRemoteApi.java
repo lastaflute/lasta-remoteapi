@@ -51,13 +51,16 @@ public class LastaRemoteApi extends FlutyRemoteApi {
     // ===================================================================================
     //                                                                           Attribute
     //                                                                           =========
-    protected final RequestManager requestManager; // for validation and various purpose
+    protected RequestManager requestManager; // not null after set, for validation and various purpose
 
     // ===================================================================================
     //                                                                         Constructor
     //                                                                         ===========
-    public LastaRemoteApi(RequestManager requestManager, Consumer<FlutyRemoteApiOption> defaultOpLambda, Object callerExp) {
+    public LastaRemoteApi(Consumer<FlutyRemoteApiOption> defaultOpLambda, Object callerExp) {
         super(defaultOpLambda, callerExp);
+    }
+
+    public void acceptRequestManager(RequestManager requestManager) {
         this.requestManager = requestManager;
     }
 

@@ -54,19 +54,20 @@ public abstract class FlutyRemoteBehavior {
     //                                      Create RemoteApi
     //                                      ----------------
     protected FlutyRemoteApi createRemoteApi() {
-        return newFlutyRemoteApi(prepareRemoteApiOptionSetupper(), getCallerExp());
+        return newFlutyRemoteApi(createRemoteApiOptionSetupper(), getCallerExp());
     }
 
     // -----------------------------------------------------
     //                                       Option Setupper
     //                                       ---------------
-    protected Consumer<FlutyRemoteApiOption> prepareRemoteApiOptionSetupper() {
+    protected Consumer<FlutyRemoteApiOption> createRemoteApiOptionSetupper() {
         return op -> setupDefaultRemoteApiOption(op);
     }
 
     protected void setupDefaultRemoteApiOption(FlutyRemoteApiOption option) {
         reflectMockHttpClientIfNeeds(option);
         option.setHeader("User-Agent", buildUserAgent());
+        yourOption(option);
     }
 
     protected void reflectMockHttpClientIfNeeds(FlutyRemoteApiOption option) {
@@ -98,6 +99,9 @@ public abstract class FlutyRemoteBehavior {
      * @return The application name for user-agent. (NullAllowed: then no use)
      */
     protected abstract String getUserAgentAppName();
+
+    protected void yourOption(FlutyRemoteApiOption option) { // may be overridden
+    }
 
     // -----------------------------------------------------
     //                                     Caller Expression
