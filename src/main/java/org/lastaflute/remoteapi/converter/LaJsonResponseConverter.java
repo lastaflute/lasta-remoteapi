@@ -16,10 +16,9 @@
 package org.lastaflute.remoteapi.converter;
 
 import java.lang.reflect.ParameterizedType;
-import java.lang.reflect.Type;
 
 import org.dbflute.optional.OptionalThing;
-import org.dbflute.remoteapi.converter.FlutyResponseConverter;
+import org.dbflute.remoteapi.converter.FlutyJsonResponseConverter;
 import org.lastaflute.core.json.JsonManager;
 import org.lastaflute.core.json.JsonMappingOption;
 import org.lastaflute.core.json.engine.RealJsonEngine;
@@ -29,7 +28,7 @@ import org.lastaflute.web.servlet.request.RequestManager;
  * @author inoue
  * @author jflute
  */
-public class LaJsonResponseConverter implements FlutyResponseConverter {
+public class LaJsonResponseConverter extends FlutyJsonResponseConverter {
 
     protected final RealJsonEngine jsonEngine; // to parse JSON response and request as JsonBody
 
@@ -43,12 +42,13 @@ public class LaJsonResponseConverter implements FlutyResponseConverter {
         }));
     }
 
-    @SuppressWarnings("unchecked")
     @Override
-    public <CONTENT extends Object> CONTENT toResult(String json, Type type) {
-        if (type instanceof Class) {
-            return (CONTENT) jsonEngine.fromJson(json, (Class<?>) type);
-        }
-        return (CONTENT) jsonEngine.fromJsonParameteried(json, (ParameterizedType) type);
+    protected <BEAN> BEAN fromJson(String json, Class<BEAN> beanType) {
+        return jsonEngine.fromJson(json, beanType);
+    }
+
+    @Override
+    protected <BEAN> BEAN fromJsonParameteried(String json, ParameterizedType parameterizedType) {
+        return jsonEngine.fromJsonParameteried(json, parameterizedType);
     }
 }

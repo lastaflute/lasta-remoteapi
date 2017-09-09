@@ -15,14 +15,8 @@
  */
 package org.lastaflute.remoteapi.converter;
 
-import java.nio.charset.StandardCharsets;
-
-import org.apache.http.client.methods.HttpPost;
-import org.apache.http.entity.StringEntity;
-import org.apache.http.message.BasicHeader;
-import org.apache.http.protocol.HTTP;
 import org.dbflute.optional.OptionalThing;
-import org.dbflute.remoteapi.converter.FlutyRequestConverter;
+import org.dbflute.remoteapi.converter.FlutyJsonRequestConverter;
 import org.lastaflute.core.json.JsonManager;
 import org.lastaflute.core.json.JsonMappingOption;
 import org.lastaflute.core.json.engine.RealJsonEngine;
@@ -32,7 +26,7 @@ import org.lastaflute.web.servlet.request.RequestManager;
  * @author inoue
  * @author jflute
  */
-public class LaJsonRequestConverter implements FlutyRequestConverter {
+public class LaJsonRequestConverter extends FlutyJsonRequestConverter {
 
     protected final RealJsonEngine jsonEngine; // to parse JSON response and request as JsonBody
 
@@ -47,10 +41,7 @@ public class LaJsonRequestConverter implements FlutyRequestConverter {
     }
 
     @Override
-    public void prepareHttpPost(HttpPost httpPost, Object form) {
-        final String json = jsonEngine.toJson(form);
-        final StringEntity entity = new StringEntity(json, StandardCharsets.UTF_8.name());
-        entity.setContentType(new BasicHeader(HTTP.CONTENT_TYPE, "application/json; charset=" + StandardCharsets.UTF_8.name()));
-        httpPost.setEntity(entity);
+    protected String toJson(Object form) {
+        return jsonEngine.toJson(form);
     }
 }
