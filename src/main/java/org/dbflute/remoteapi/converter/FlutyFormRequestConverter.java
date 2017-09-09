@@ -22,9 +22,9 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
+import org.apache.http.HttpEntityEnclosingRequest;
 import org.apache.http.NameValuePair;
 import org.apache.http.client.entity.UrlEncodedFormEntity;
-import org.apache.http.client.methods.HttpPost;
 import org.apache.http.message.BasicNameValuePair;
 import org.dbflute.helper.beans.DfBeanDesc;
 import org.dbflute.helper.beans.DfPropertyDesc;
@@ -36,16 +36,16 @@ import org.dbflute.remoteapi.rule.FlutyRemoteMappingPolicy;
  * @author awane
  * @author jflute
  */
-public class FlutyFormPostRequestConverter implements FlutyRequestConverter {
+public class FlutyFormRequestConverter implements FlutyRequestConverter {
 
     protected final FlutyRemoteMappingPolicy mappingPolicy;
 
-    public FlutyFormPostRequestConverter(FlutyRemoteMappingPolicy mappingPolicy) {
+    public FlutyFormRequestConverter(FlutyRemoteMappingPolicy mappingPolicy) {
         this.mappingPolicy = mappingPolicy;
     }
 
     @Override
-    public void prepareHttpPost(HttpPost httpPost, Object form) {
+    public void prepareEnclosingRequest(HttpEntityEnclosingRequest enclosingRequest, Object form) {
         final DfBeanDesc beanDesc = DfBeanDescFactory.getBeanDesc(form.getClass());
         final List<NameValuePair> parameters = new ArrayList<>();
         beanDesc.getProppertyNameList().stream().forEach(proppertyName -> {
@@ -61,7 +61,7 @@ public class FlutyFormPostRequestConverter implements FlutyRequestConverter {
                 parameters.add(new BasicNameValuePair(serializedParameterName, asSerializedParameterValue(plainValue)));
             }
         });
-        httpPost.setEntity(new UrlEncodedFormEntity(parameters, StandardCharsets.UTF_8));
+        enclosingRequest.setEntity(new UrlEncodedFormEntity(parameters, StandardCharsets.UTF_8));
     }
 
     // #hope awane copied from FlutyRemoteApi, needs to refactor (2017/06/27)

@@ -165,7 +165,7 @@ public class FlutyRemoteApi {
         final FlutyRequestConverter converter = option.getRequestConverter().orElseTranslatingThrow(cause -> {
             return new IllegalStateException("Not found the request converter: uri=" + uri, cause);
         });
-        converter.prepareHttpPost(httpPost, form);
+        converter.prepareEnclosingRequest(httpPost, form);
         return httpPost;
     }
 

@@ -15,7 +15,7 @@
  */
 package org.dbflute.remoteapi.converter;
 
-import org.apache.http.client.methods.HttpPost;
+import org.apache.http.HttpEntityEnclosingRequest;
 
 /**
  * @author inoue
@@ -23,5 +23,5 @@ import org.apache.http.client.methods.HttpPost;
  */
 public interface FlutyRequestConverter {
 
-    void prepareHttpPost(HttpPost httpPost, Object form);
+    void prepareEnclosingRequest(HttpEntityEnclosingRequest enclosingRequest, Object form);
 }

@@ -17,7 +17,7 @@ package org.dbflute.remoteapi.converter;
 
 import java.nio.charset.StandardCharsets;
 
-import org.apache.http.client.methods.HttpPost;
+import org.apache.http.HttpEntityEnclosingRequest;
 import org.apache.http.entity.StringEntity;
 import org.apache.http.message.BasicHeader;
 import org.apache.http.protocol.HTTP;
@@ -29,11 +29,11 @@ import org.apache.http.protocol.HTTP;
 public abstract class FlutyJsonRequestConverter implements FlutyRequestConverter {
 
     @Override
-    public void prepareHttpPost(HttpPost httpPost, Object form) {
+    public void prepareEnclosingRequest(HttpEntityEnclosingRequest enclosingRequest, Object form) {
         final String json = toJson(form);
         final StringEntity entity = new StringEntity(json, StandardCharsets.UTF_8.name());
         entity.setContentType(new BasicHeader(HTTP.CONTENT_TYPE, buildContentType()));
-        httpPost.setEntity(entity);
+        enclosingRequest.setEntity(entity);
     }
 
     protected abstract String toJson(Object form);

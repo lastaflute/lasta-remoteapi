@@ -16,7 +16,7 @@
 package org.lastaflute.remoteapi.converter;
 
 import org.dbflute.helper.beans.DfPropertyDesc;
-import org.dbflute.remoteapi.converter.FlutyFormPostRequestConverter;
+import org.dbflute.remoteapi.converter.FlutyFormRequestConverter;
 import org.dbflute.remoteapi.rule.FlutyRemoteMappingPolicy;
 
 import com.google.gson.annotations.SerializedName;
@@ -25,7 +25,7 @@ import com.google.gson.annotations.SerializedName;
  * @author awane
  * @author jflute
  */
-public class LaFormPostRequestConverter extends FlutyFormPostRequestConverter {
+public class LaFormPostRequestConverter extends FlutyFormRequestConverter {
 
     // ===================================================================================
     //                                                                         Constructor
