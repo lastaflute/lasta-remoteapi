@@ -61,10 +61,10 @@ public abstract class FlutyRemoteBehavior {
     //                                       Option Setupper
     //                                       ---------------
     protected Consumer<FlutyRemoteApiOption> prepareRemoteApiOptionSetupper() {
-        return op -> prepareDefaultRemoteApiOption(op);
+        return op -> setupDefaultRemoteApiOption(op);
     }
 
-    protected void prepareDefaultRemoteApiOption(FlutyRemoteApiOption option) {
+    protected void setupDefaultRemoteApiOption(FlutyRemoteApiOption option) {
         reflectMockHttpClientIfNeeds(option);
         option.setHeader("User-Agent", buildUserAgent());
     }

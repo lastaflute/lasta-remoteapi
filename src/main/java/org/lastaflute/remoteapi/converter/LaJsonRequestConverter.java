@@ -50,7 +50,7 @@ public class LaJsonRequestConverter implements FlutyRequestConverter {
     public void prepareHttpPost(HttpPost httpPost, Object form) {
         final String json = jsonEngine.toJson(form);
         final StringEntity entity = new StringEntity(json, StandardCharsets.UTF_8.name());
-        entity.setContentType(new BasicHeader(HTTP.CONTENT_TYPE, "application/json charset=" + StandardCharsets.UTF_8.name()));
+        entity.setContentType(new BasicHeader(HTTP.CONTENT_TYPE, "application/json; charset=" + StandardCharsets.UTF_8.name()));
         httpPost.setEntity(entity);
     }
 }
