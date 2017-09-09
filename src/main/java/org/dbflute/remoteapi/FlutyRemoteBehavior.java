@@ -50,8 +50,18 @@ public abstract class FlutyRemoteBehavior {
         this.remoteApi = createRemoteApi();
     }
 
+    // -----------------------------------------------------
+    //                                      Create RemoteApi
+    //                                      ----------------
     protected FlutyRemoteApi createRemoteApi() {
-        return new FlutyRemoteApi(op -> prepareDefaultRemoteApiOption(op), getClass());
+        return newFlutyRemoteApi(prepareRemoteApiOptionSetupper(), getCallerExp());
+    }
+
+    // -----------------------------------------------------
+    //                                       Option Setupper
+    //                                       ---------------
+    protected Consumer<FlutyRemoteApiOption> prepareRemoteApiOptionSetupper() {
+        return op -> prepareDefaultRemoteApiOption(op);
     }
 
     protected void prepareDefaultRemoteApiOption(FlutyRemoteApiOption option) {
@@ -88,6 +98,20 @@ public abstract class FlutyRemoteBehavior {
      * @return The application name for user-agent. (NullAllowed: then no use)
      */
     protected abstract String getUserAgentAppName();
+
+    // -----------------------------------------------------
+    //                                     Caller Expression
+    //                                     -----------------
+    protected Object getCallerExp() {
+        return getClass(); // as default
+    }
+
+    // -----------------------------------------------------
+    //                                    RemoteApi Instance
+    //                                    ------------------
+    protected FlutyRemoteApi newFlutyRemoteApi(Consumer<FlutyRemoteApiOption> optionSetupper, Object callerExp) {
+        return new FlutyRemoteApi(optionSetupper, callerExp);
+    }
 
     // ===================================================================================
     //                                                                         Basic Parts
