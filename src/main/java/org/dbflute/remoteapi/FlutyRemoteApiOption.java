@@ -37,8 +37,8 @@ import org.apache.http.ssl.TrustStrategy;
 import org.dbflute.optional.OptionalThing;
 import org.dbflute.remoteapi.converter.FlutyRequestConverter;
 import org.dbflute.remoteapi.converter.FlutyResponseConverter;
-import org.dbflute.remoteapi.rule.FlutyEmptyRemoteConversionRule;
-import org.dbflute.remoteapi.rule.FlutyRemoteConversionRule;
+import org.dbflute.remoteapi.rule.FlutyRemoteMappingPolicy;
+import org.dbflute.remoteapi.rule.FlutyVacantRemoteMappingPolicy;
 import org.dbflute.util.DfCollectionUtil;
 
 /**
@@ -56,12 +56,12 @@ public class FlutyRemoteApiOption {
     protected int connectTimeout = 3000;
     protected int connectionRequestTimeout = 3000;
     protected int socketTimeout = 3000;
-    protected Charset charset = StandardCharsets.UTF_8;
-    protected FlutyRequestConverter requestConverter;
-    protected FlutyResponseConverter responseConverter;
-    protected FlutyRemoteConversionRule remoteConversionRule = new FlutyEmptyRemoteConversionRule();
-    protected Map<String, String> headers;
-    protected Type failureResponseType;
+    protected Charset charset = StandardCharsets.UTF_8; // not null
+    protected FlutyRemoteMappingPolicy mappingPolicy = new FlutyVacantRemoteMappingPolicy(); // not null
+    protected FlutyRequestConverter requestConverter; // null allowed, but required
+    protected FlutyResponseConverter responseConverter; // null allowed, but required
+    protected Map<String, String> headers; // null allowed, lazy-loaded
+    protected Type failureResponseType; // null allowed, not required
 
     // ===================================================================================
     //                                                                         Http Client
@@ -94,13 +94,92 @@ public class FlutyRemoteApiOption {
     }
 
     // ===================================================================================
+    //                                                                              Facade
+    //                                                                              ======
+    public void setSslUntrusted(boolean sslUntrusted) {
+        this.sslUntrusted = sslUntrusted;
+    }
+
+    public void setConnectTimeout(int connectTimeout) {
+        this.connectTimeout = connectTimeout;
+    }
+
+    public void setConnectionRequestTimeout(int connectionRequestTimeout) {
+        this.connectionRequestTimeout = connectionRequestTimeout;
+    }
+
+    public void setSocketTimeout(int socketTimeout) {
+        this.socketTimeout = socketTimeout;
+    }
+
+    /**
+     * @param charset The charset of request for remote API. (NotNull)
+     */
+    public void setCharset(Charset charset) {
+        if (charset == null) {
+            throw new IllegalArgumentException("The argument 'charset' should not be null.");
+        }
+        this.charset = charset;
+    }
+
+    /**
+     * @param mappingPolicy The policy of mapping remote values. (NotNull) 
+     */
+    public void setMappingPolicy(FlutyRemoteMappingPolicy mappingPolicy) { // you can switch if it needs
+        if (mappingPolicy == null) {
+            throw new IllegalArgumentException("The argument 'mappingPolicy' should not be null.");
+        }
+        this.mappingPolicy = mappingPolicy;
+    }
+
+    /**
+     * @param requestConverter The converter of request. (NotNull)
+     */
+    public void setRequestConverter(FlutyRequestConverter requestConverter) {
+        if (requestConverter == null) {
+            throw new IllegalArgumentException("The argument 'requestConverter' should not be null.");
+        }
+        this.requestConverter = requestConverter;
+    }
+
+    /**
+     * @param responseConverter The converter of response. (NotNull)
+     */
+    public void setResponseConverter(FlutyResponseConverter responseConverter) {
+        if (responseConverter == null) {
+            throw new IllegalArgumentException("The argument 'responseConverter' should not be null.");
+        }
+        this.responseConverter = responseConverter;
+    }
+
+    public void setHeader(String name, String value) {
+        if (name == null) {
+            throw new IllegalArgumentException("The argument 'name' should not be null.");
+        }
+        if (value == null) {
+            throw new IllegalArgumentException("The argument 'value' should not be null: name=" + name);
+        }
+        if (headers == null) {
+            headers = DfCollectionUtil.newLinkedHashMap();
+        }
+        this.headers.put(name, value);
+    }
+
+    public void setFailureResponseType(Type failureResponseType) {
+        if (failureResponseType == null) {
+            throw new IllegalArgumentException("The argument 'failureResponseType' should not be null.");
+        }
+        this.failureResponseType = failureResponseType;
+    }
+
+    // ===================================================================================
     //                                                                      Basic Override
     //                                                                      ==============
     @Override
     public String toString() {
         return "option:{" + sslUntrusted + ", " + connectTimeout + ", " + connectionRequestTimeout + ", " + socketTimeout + ", " + charset
-                + ", " + remoteConversionRule + ", " + requestConverter + ", " + responseConverter + ", " + headers + ", "
-                + failureResponseType + "}";
+                + ", " + mappingPolicy + ", " + requestConverter + ", " + responseConverter + ", " + headers + ", " + failureResponseType
+                + "}";
     }
 
     // ===================================================================================
@@ -110,67 +189,42 @@ public class FlutyRemoteApiOption {
         return sslUntrusted;
     }
 
-    public void setSslUntrusted(boolean sslUntrusted) {
-        this.sslUntrusted = sslUntrusted;
-    }
-
     public int getConnectTimeout() {
         return connectTimeout;
-    }
-
-    public void setConnectTimeout(int connectTimeout) {
-        this.connectTimeout = connectTimeout;
     }
 
     public int getConnectionRequestTimeout() {
         return connectionRequestTimeout;
     }
 
-    public void setConnectionRequestTimeout(int connectionRequestTimeout) {
-        this.connectionRequestTimeout = connectionRequestTimeout;
-    }
-
     public int getSocketTimeout() {
         return socketTimeout;
     }
 
-    public void setSocketTimeout(int socketTimeout) {
-        this.socketTimeout = socketTimeout;
-    }
-
+    /**
+     * @return The charset of request for remote API. (NotNull)
+     */
     public Charset getCharset() {
         return charset;
     }
 
-    public void setCharset(Charset charset) {
-        this.charset = charset;
-    }
-
     /**
-     * @return The conversion rule for remote API values. (NotNull)
+     * @return The policy of mapping remote values. (NotNull)
      */
-    public FlutyRemoteConversionRule getConversionRule() { // you can switch if it needs
-        return remoteConversionRule;
+    public FlutyRemoteMappingPolicy getMappingPolicy() { // you can switch if it needs
+        return mappingPolicy;
     }
 
-    public void setConversionRule(FlutyRemoteConversionRule communicationTypeConversionRule) { // you can switch if it needs
-        this.remoteConversionRule = communicationTypeConversionRule;
+    public OptionalThing<FlutyRequestConverter> getRequestConverter() {
+        return OptionalThing.ofNullable(requestConverter, () -> {
+            throw new IllegalStateException("Not found the requestConverter.");
+        });
     }
 
-    public FlutyRequestConverter getRequestConverter() {
-        return requestConverter;
-    }
-
-    public void setRequestConverter(FlutyRequestConverter requestConverter) {
-        this.requestConverter = requestConverter;
-    }
-
-    public FlutyResponseConverter getResponseConverter() {
-        return responseConverter;
-    }
-
-    public void setResponseConverter(FlutyResponseConverter responseConverter) {
-        this.responseConverter = responseConverter;
+    public OptionalThing<FlutyResponseConverter> getResponseConverter() {
+        return OptionalThing.ofNullable(responseConverter, () -> {
+            throw new IllegalStateException("Not found the responseConverter.");
+        });
     }
 
     public OptionalThing<Map<String, String>> getHeaders() {
@@ -179,21 +233,10 @@ public class FlutyRemoteApiOption {
         });
     }
 
-    public void setHeader(String name, String value) {
-        if (headers == null) {
-            headers = DfCollectionUtil.newLinkedHashMap();
-        }
-        this.headers.put(name, value);
-    }
-
     public OptionalThing<Type> getFailureResponseType() {
         return OptionalThing.ofNullable(failureResponseType, () -> {
             throw new IllegalStateException("Not found the failureResponseType.");
         });
-    }
-
-    public void setFailureResponseType(Type failureResponseType) {
-        this.failureResponseType = failureResponseType;
     }
 
     // ===================================================================================

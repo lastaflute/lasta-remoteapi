@@ -38,10 +38,12 @@ import org.dbflute.helper.beans.factory.DfBeanDescFactory;
 import org.dbflute.helper.message.ExceptionMessageBuilder;
 import org.dbflute.jdbc.Classification;
 import org.dbflute.optional.OptionalThing;
+import org.dbflute.remoteapi.converter.FlutyRequestConverter;
+import org.dbflute.remoteapi.converter.FlutyResponseConverter;
 import org.dbflute.remoteapi.exception.RemoteApiHttpClientErrorException;
 import org.dbflute.remoteapi.exception.RemoteApiHttpServerErrorException;
 import org.dbflute.remoteapi.exception.RemoteApiRequestFailureException;
-import org.dbflute.remoteapi.rule.FlutyRemoteConversionRule;
+import org.dbflute.remoteapi.rule.FlutyRemoteMappingPolicy;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -139,7 +141,7 @@ public class FlutyRemoteApi {
         assertArgumentNotNull("form", form);
         assertArgumentNotNull("opLambda", opLambda);
         validateForm(beanType, urlBase, actionPath, pathVariables, form);
-        FlutyRemoteApiOption option = createRemoteApiOption(opLambda);
+        final FlutyRemoteApiOption option = createRemoteApiOption(opLambda);
         final String url = buildUrl(urlBase, actionPath, pathVariables, OptionalThing.empty(), option);
         logger.debug("#flow #remote ...Requesting as POST to Remote API:\n: {}\n with form: {}\n   => {}: ", url, form, beanType);
         return doRequestPost(beanType, url, form, option);
@@ -160,7 +162,10 @@ public class FlutyRemoteApi {
     protected HttpPost prepareHttpPost(String uri, Object form, FlutyRemoteApiOption option) throws UnsupportedEncodingException {
         final HttpPost httpPost = new HttpPost(uri);
         setupHeader(httpPost, option);
-        option.getRequestConverter().prepareHttpPost(httpPost, form);
+        final FlutyRequestConverter converter = option.getRequestConverter().orElseTranslatingThrow(cause -> {
+            return new IllegalStateException("Not found the request converter: uri=" + uri, cause);
+        });
+        converter.prepareHttpPost(httpPost, form);
         return httpPost;
     }
 
@@ -175,11 +180,12 @@ public class FlutyRemoteApi {
     //                                                                        URL Building
     //                                                                        ============
     protected String buildUrl(String urlBase, String actionPath, Object[] pathVariables, OptionalThing<Object> queryForm,
-            FlutyRemoteApiOption ruledRemoteApiOption) {
+            FlutyRemoteApiOption option) {
         assertArgumentNotNull("urlBase", urlBase);
         assertArgumentNotNull("actionPath", actionPath);
         assertArgumentNotNull("pathVariables", pathVariables);
         assertArgumentNotNull("queryForm", queryForm);
+        assertArgumentNotNull("option", option);
         final StringBuilder sb = new StringBuilder();
         sb.append(urlBase);
         sb.append(actionPath);
@@ -188,38 +194,45 @@ public class FlutyRemoteApi {
             sb.append(Stream.of(pathVariables).map(el -> el.toString()).collect(Collectors.joining("/")));
         }
         queryForm.ifPresent(form -> {
-            final String encoding = ruledRemoteApiOption.getCharset().name();
-            final DfBeanDesc beanDesc = DfBeanDescFactory.getBeanDesc(form.getClass());
-            final MyValueHolder<Integer> paramIndex = new MyValueHolder<>(0);
-            for (String propertyName : beanDesc.getProppertyNameList()) {
-                final DfPropertyDesc propertyDesc = beanDesc.getPropertyDesc(propertyName);
-                final Object plainValue = propertyDesc.getValue(form);
-                if (plainValue != null) {
-                    if (Iterable.class.isAssignableFrom(plainValue.getClass())) {
-                        Iterable<?> plainValueIterable = (Iterable<?>) plainValue;
-                        plainValueIterable.forEach(value -> {
-                            sb.append(paramIndex.getValue() == 0 ? "?" : "&");
-                            sb.append(asSerializedParameterName(propertyDesc)).append("=");
-                            try {
-                                sb.append(URLEncoder.encode(asSerializedParameterValue(value, ruledRemoteApiOption), encoding));
-                            } catch (UnsupportedEncodingException e) {
-                                throw new IllegalStateException("Unknown encoding: " + encoding);
-                            }
-                        });
-                    } else {
+            buildQueryParameter(sb, form, option);
+        });
+        return sb.toString();
+    }
+
+    // ===================================================================================
+    //                                                                     Query Parameter
+    //                                                                     ===============
+    protected void buildQueryParameter(StringBuilder sb, Object form, FlutyRemoteApiOption option) {
+        final String encoding = option.getCharset().name();
+        final DfBeanDesc beanDesc = DfBeanDescFactory.getBeanDesc(form.getClass());
+        final MyValueHolder<Integer> paramIndex = new MyValueHolder<>(0);
+        for (String propertyName : beanDesc.getProppertyNameList()) {
+            final DfPropertyDesc propertyDesc = beanDesc.getPropertyDesc(propertyName);
+            final Object plainValue = propertyDesc.getValue(form);
+            if (plainValue != null) {
+                if (Iterable.class.isAssignableFrom(plainValue.getClass())) {
+                    Iterable<?> plainValueIterable = (Iterable<?>) plainValue;
+                    plainValueIterable.forEach(value -> {
                         sb.append(paramIndex.getValue() == 0 ? "?" : "&");
                         sb.append(asSerializedParameterName(propertyDesc)).append("=");
                         try {
-                            sb.append(URLEncoder.encode(asSerializedParameterValue(plainValue, ruledRemoteApiOption), encoding));
+                            sb.append(URLEncoder.encode(asSerializedParameterValue(value, option), encoding));
                         } catch (UnsupportedEncodingException e) {
                             throw new IllegalStateException("Unknown encoding: " + encoding);
                         }
+                    });
+                } else {
+                    sb.append(paramIndex.getValue() == 0 ? "?" : "&");
+                    sb.append(asSerializedParameterName(propertyDesc)).append("=");
+                    try {
+                        sb.append(URLEncoder.encode(asSerializedParameterValue(plainValue, option), encoding));
+                    } catch (UnsupportedEncodingException e) {
+                        throw new IllegalStateException("Unknown encoding: " + encoding);
                     }
-                    paramIndex.setValue(paramIndex.getValue() + 1);
                 }
+                paramIndex.setValue(paramIndex.getValue() + 1);
             }
-        });
-        return sb.toString();
+        }
     }
 
     // ===================================================================================
@@ -234,7 +247,7 @@ public class FlutyRemoteApi {
             return null;
         }
         final String realValue;
-        final FlutyRemoteConversionRule conversionRule = option.getConversionRule();
+        final FlutyRemoteMappingPolicy conversionRule = option.getMappingPolicy();
         if (value instanceof LocalDate) {
             realValue = ((LocalDate) value).format(conversionRule.getDateFormatter());
         } else if (value instanceof LocalDateTime) {
@@ -291,12 +304,15 @@ public class FlutyRemoteApi {
         }).orElse(null); // when no option
     }
 
-    protected <RESULT> RESULT toResult(Type type, String url, OptionalThing<Object> form, int statusCode, String body,
+    protected <RESULT> RESULT toResult(Type beanType, String url, OptionalThing<Object> form, int statusCode, String body,
             FlutyRemoteApiOption option) {
         try {
-            return option.getResponseConverter().toResult(body, type);
+            final FlutyResponseConverter converter = option.getResponseConverter().orElseTranslatingThrow(cause -> {
+                return new IllegalStateException("Not found the response converter: url=" + url, cause);
+            });
+            return converter.toResult(body, beanType);
         } catch (RuntimeException e) {
-            throwRemoteApiResponseCannotParseException(type, url, form, statusCode, body, e);
+            throwRemoteApiResponseCannotParseException(beanType, url, form, statusCode, body, e);
             return null; // unreachable
         }
     }

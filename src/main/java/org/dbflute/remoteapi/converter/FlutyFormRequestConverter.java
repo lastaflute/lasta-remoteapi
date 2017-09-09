@@ -30,7 +30,7 @@ import org.dbflute.helper.beans.DfBeanDesc;
 import org.dbflute.helper.beans.DfPropertyDesc;
 import org.dbflute.helper.beans.factory.DfBeanDescFactory;
 import org.dbflute.jdbc.Classification;
-import org.dbflute.remoteapi.rule.FlutyRemoteConversionRule;
+import org.dbflute.remoteapi.rule.FlutyRemoteMappingPolicy;
 
 /**
  * @author awane
@@ -38,10 +38,10 @@ import org.dbflute.remoteapi.rule.FlutyRemoteConversionRule;
  */
 public class FlutyFormRequestConverter implements FlutyRequestConverter {
 
-    protected final FlutyRemoteConversionRule conversionRule;
+    protected final FlutyRemoteMappingPolicy mappingPolicy;
 
-    public FlutyFormRequestConverter(FlutyRemoteConversionRule conversionRule) {
-        this.conversionRule = conversionRule;
+    public FlutyFormRequestConverter(FlutyRemoteMappingPolicy mappingPolicy) {
+        this.mappingPolicy = mappingPolicy;
     }
 
     public void prepareHttpPost(HttpPost httpPost, Object form) {
@@ -77,15 +77,15 @@ public class FlutyFormRequestConverter implements FlutyRequestConverter {
         }
         final String realValue;
         if (value instanceof LocalDate) {
-            realValue = ((LocalDate) value).format(conversionRule.getDateFormatter());
+            realValue = ((LocalDate) value).format(mappingPolicy.getDateFormatter());
         } else if (value instanceof LocalDateTime) {
-            realValue = ((LocalDateTime) value).format(conversionRule.getDateTimeFormatter());
+            realValue = ((LocalDateTime) value).format(mappingPolicy.getDateTimeFormatter());
         } else if (value instanceof Boolean || boolean.class.equals(value.getClass())) {
-            realValue = conversionRule.serializeBoolean((boolean) value);
+            realValue = mappingPolicy.serializeBoolean((boolean) value);
         } else if (value instanceof Classification) {
             final Classification cls = (Classification) value;
             final Map<String, Object> map = cls.subItemMap();
-            final String preferredValue = (String) map.get(conversionRule.getClsPreferredItem());
+            final String preferredValue = (String) map.get(mappingPolicy.getClsPreferredItem());
             if (preferredValue != null) { // means Flg
                 realValue = preferredValue;
             } else {
