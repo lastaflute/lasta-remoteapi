@@ -36,14 +36,15 @@ import org.dbflute.remoteapi.rule.FlutyRemoteMappingPolicy;
  * @author awane
  * @author jflute
  */
-public class FlutyFormRequestConverter implements FlutyRequestConverter {
+public class FlutyFormPostRequestConverter implements FlutyRequestConverter {
 
     protected final FlutyRemoteMappingPolicy mappingPolicy;
 
-    public FlutyFormRequestConverter(FlutyRemoteMappingPolicy mappingPolicy) {
+    public FlutyFormPostRequestConverter(FlutyRemoteMappingPolicy mappingPolicy) {
         this.mappingPolicy = mappingPolicy;
     }
 
+    @Override
     public void prepareHttpPost(HttpPost httpPost, Object form) {
         final DfBeanDesc beanDesc = DfBeanDescFactory.getBeanDesc(form.getClass());
         final List<NameValuePair> parameters = new ArrayList<>();
