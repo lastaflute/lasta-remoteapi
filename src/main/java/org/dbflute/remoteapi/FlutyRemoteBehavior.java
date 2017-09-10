@@ -146,7 +146,7 @@ public abstract class FlutyRemoteBehavior {
     //                                                                         ===========
     /**
      * Get the base part of URL for remote API server. <br>
-     * The string is until context path.
+     * The string is from first to context path.
      * @return The base part of URL. e.g. http://localhost:8090/harbor (NotNull)
      */
     protected abstract String getUrlBase();

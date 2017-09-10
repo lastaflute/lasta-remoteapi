@@ -16,14 +16,14 @@
 package org.dbflute.remoteapi.exception;
 
 /**
- * @author awane
+ * @param <EXP> The type of exception.
  * @author jflute
+ * @since 0.2.1 (2017/09/10 Sunday at bay maihama)
  */
-public class RemoteApiHttpClientErrorException extends RemoteApiHttpBasisErrorException {
+public interface TranslatedExceptionProvider<EXP extends Exception> {
 
-    private static final long serialVersionUID = 1L;
-
-    public RemoteApiHttpClientErrorException(String msg, int httpStatus, Object failureResponse) {
-        super(msg, httpStatus, failureResponse);
-    }
+    /**
+     * @return The new-created exception to be thrown as translating. (NotNull)
+     */
+    EXP provide();
 }

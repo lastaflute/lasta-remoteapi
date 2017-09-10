@@ -18,11 +18,11 @@ package org.dbflute.remoteapi.exception;
 /**
  * @author jflute
  */
-public class RemoteApiHttpServerErrorException extends RemoteApiBaseException {
+public class RemoteApiHttpServerErrorException extends RemoteApiHttpBasisErrorException {
 
     private static final long serialVersionUID = 1L;
 
-    public RemoteApiHttpServerErrorException(String msg) {
-        super(msg);
+    public RemoteApiHttpServerErrorException(String msg, int httpStatus) {
+        super(msg, httpStatus, /*failureResponse*/null);
     }
 }

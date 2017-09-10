@@ -196,7 +196,7 @@ public class FlutyRemoteApi {
         // you can override
     }
 
-    protected void validateResult(Type beanType, String url, OptionalThing<Object> form, int statusCode, String body, Object result,
+    protected void validateResult(Type beanType, String url, OptionalThing<Object> form, int httpStatus, String body, Object result,
             FlutyRemoteApiRule ruledRemoteApiOption) {
         // you can override
     }
@@ -284,50 +284,50 @@ public class FlutyRemoteApi {
     //                                                                   =================
     protected <RESULT> RESULT handleResponse(Type beanType, String url, OptionalThing<Object> form, CloseableHttpResponse response,
             FlutyRemoteApiRule rule) throws IOException {
-        final int statusCode = response.getStatusLine().getStatusCode();
+        final int httpStatus = response.getStatusLine().getStatusCode();
         final String body = extractResponseBody(response, rule);
-        final RESULT resut = parseResponse(beanType, url, form, statusCode, body, rule);
-        validateResult(beanType, url, form, statusCode, body, resut, rule);
+        final RESULT resut = parseResponse(beanType, url, form, httpStatus, body, rule);
+        validateResult(beanType, url, form, httpStatus, body, resut, rule);
         return resut;
     }
 
-    protected <RESULT> RESULT parseResponse(Type beanType, String url, OptionalThing<Object> form, int statusCode, String body,
+    protected <RESULT> RESULT parseResponse(Type beanType, String url, OptionalThing<Object> form, int httpStatus, String body,
             FlutyRemoteApiRule rule) {
         logger.debug("#flow #remote ...Parsing response to Remote API:\n {}\n   => {}\n{}", url, beanType, body);
-        if (statusCode >= 200 && statusCode < 300) {
-            final RESULT result = toResult(beanType, url, form, statusCode, body, rule);
+        if (httpStatus >= 200 && httpStatus < 300) {
+            final RESULT result = toResult(beanType, url, form, httpStatus, body, rule);
             return result;
-        } else if (statusCode >= 400 && statusCode < 500) { // e.g. not found, bad request
-            final Object failureResponse = prepareFailureResponse(url, form, statusCode, body, rule);
-            throwRemoteApiHttpClientErrorException(beanType, url, form, statusCode, body, failureResponse);
+        } else if (httpStatus >= 400 && httpStatus < 500) { // e.g. not found, bad request
+            final Object failureResponse = prepareFailureResponse(url, form, httpStatus, body, rule);
+            throwRemoteApiHttpClientErrorException(beanType, url, form, httpStatus, body, failureResponse);
         } else { // might be framework error
-            throwRemoteApiHttpServerErrorException(beanType, url, form, statusCode, body);
+            throwRemoteApiHttpServerErrorException(beanType, url, form, httpStatus, body);
         }
         return null; // unreachable
     }
 
-    protected Object prepareFailureResponse(String url, OptionalThing<Object> form, int statusCode, String body, FlutyRemoteApiRule rule) {
+    protected Object prepareFailureResponse(String url, OptionalThing<Object> form, int httpStatus, String body, FlutyRemoteApiRule rule) {
         return rule.getFailureResponseType().map(failureResponseType -> {
             // #hope jflute parse failure should be warning? because of already failureo
-            return toResult(failureResponseType, url, form, statusCode, body, rule);
+            return toResult(failureResponseType, url, form, httpStatus, body, rule);
         }).orElse(null); // when no rule
     }
 
-    protected <RESULT> RESULT toResult(Type beanType, String url, OptionalThing<Object> form, int statusCode, String body,
+    protected <RESULT> RESULT toResult(Type beanType, String url, OptionalThing<Object> form, int httpStatus, String body,
             FlutyRemoteApiRule rule) {
         final ResponseBodyReceiver converter = rule.getResponseBodyReceiver().orElseThrow(() -> {
-            return createRemoteApiReceiverOfResponseBodyNotFoundException(beanType, url, form, statusCode, body, rule);
+            return createRemoteApiReceiverOfResponseBodyNotFoundException(beanType, url, form, httpStatus, body, rule);
         });
         try {
             return converter.toResult(body, beanType);
         } catch (RuntimeException e) {
-            throwRemoteApiResponseCannotParseException(beanType, url, form, statusCode, body, e);
+            throwRemoteApiResponseCannotParseException(beanType, url, form, httpStatus, body, e);
             return null; // unreachable
         }
     }
 
     protected RuntimeException createRemoteApiReceiverOfResponseBodyNotFoundException(Type beanType, String url, OptionalThing<Object> form,
-            int statusCode, String body, FlutyRemoteApiRule rule) {
+            int httpStatus, String body, FlutyRemoteApiRule rule) {
         final ExceptionMessageBuilder br = new ExceptionMessageBuilder();
         br.addNotice("Not found the receiver for response body.");
         br.addItem("Advice");
@@ -345,8 +345,8 @@ public class FlutyRemoteApi {
         br.addElement(url);
         br.addItem("Form");
         br.addElement(form);
-        br.addItem("Response Status");
-        br.addElement(statusCode);
+        br.addItem("Response HTTP Status");
+        br.addElement(httpStatus);
         br.addItem("Response Body");
         br.addElement(body);
         br.addItem("Your Rule");
@@ -362,26 +362,26 @@ public class FlutyRemoteApi {
     // -----------------------------------------------------
     //                                           HTTP Status
     //                                           -----------
-    protected void throwRemoteApiHttpClientErrorException(Type beanType, String url, OptionalThing<Object> form, int statusCode,
+    protected void throwRemoteApiHttpClientErrorException(Type beanType, String url, OptionalThing<Object> form, int httpStatus,
             String body, Object failureResponse) {
         final ExceptionMessageBuilder br = new ExceptionMessageBuilder();
         br.addNotice("Client Error as HTTP status from the remote API.");
         setupRequestInfo(br, beanType, url, form);
-        setupResponseInfo(br, statusCode, body);
+        setupResponseInfo(br, httpStatus, body);
         setupCallerExpression(br);
         final String msg = br.buildExceptionMessage();
-        throw new RemoteApiHttpClientErrorException(msg, failureResponse);
+        throw new RemoteApiHttpClientErrorException(msg, httpStatus, failureResponse);
     }
 
-    protected void throwRemoteApiHttpServerErrorException(Type beanType, String url, OptionalThing<Object> form, int statusCode,
+    protected void throwRemoteApiHttpServerErrorException(Type beanType, String url, OptionalThing<Object> form, int httpStatus,
             String body) {
         final ExceptionMessageBuilder br = new ExceptionMessageBuilder();
         br.addNotice("Server Error as HTTP status from the remote API.");
         setupRequestInfo(br, beanType, url, form);
-        setupResponseInfo(br, statusCode, body);
+        setupResponseInfo(br, httpStatus, body);
         setupCallerExpression(br);
         final String msg = br.buildExceptionMessage();
-        throw new RemoteApiHttpServerErrorException(msg);
+        throw new RemoteApiHttpServerErrorException(msg, httpStatus);
     }
 
     // -----------------------------------------------------
@@ -399,12 +399,12 @@ public class FlutyRemoteApi {
     // -----------------------------------------------------
     //                                          Cannot Parse
     //                                          ------------
-    protected void throwRemoteApiResponseCannotParseException(Type type, String url, OptionalThing<Object> form, int statusCode,
+    protected void throwRemoteApiResponseCannotParseException(Type type, String url, OptionalThing<Object> form, int httpStatus,
             String body, RuntimeException e) {
         final ExceptionMessageBuilder br = new ExceptionMessageBuilder();
         br.addNotice("Failed to parse the JSON of remote API.");
         setupRequestInfo(br, type, url, form);
-        setupResponseInfo(br, statusCode, body);
+        setupResponseInfo(br, httpStatus, body);
         setupCallerExpression(br);
         final String msg = br.buildExceptionMessage();
         throw new RemoteApiRequestFailureException(msg, e);
@@ -428,9 +428,9 @@ public class FlutyRemoteApi {
         return form.toString(); // as default
     }
 
-    protected void setupResponseInfo(ExceptionMessageBuilder br, int statusCode, String body) {
-        br.addItem("Response Status Code");
-        br.addElement(statusCode);
+    protected void setupResponseInfo(ExceptionMessageBuilder br, int httpStatus, String body) {
+        br.addItem("Response HTTP Status");
+        br.addElement(httpStatus);
         br.addItem("Response Body");
         br.addElement(body);
     }
