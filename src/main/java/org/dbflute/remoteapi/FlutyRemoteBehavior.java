@@ -54,7 +54,7 @@ public abstract class FlutyRemoteBehavior {
     //                                      Create RemoteApi
     //                                      ----------------
     protected FlutyRemoteApi createRemoteApi() {
-        return newFlutyRemoteApi(createRemoteApiOptionSetupper(), getCallerExp());
+        return newRemoteApi(createRemoteApiOptionSetupper(), getCallerExp());
     }
 
     // -----------------------------------------------------
@@ -137,7 +137,7 @@ public abstract class FlutyRemoteBehavior {
     // -----------------------------------------------------
     //                                    RemoteApi Instance
     //                                    ------------------
-    protected FlutyRemoteApi newFlutyRemoteApi(Consumer<FlutyRemoteApiRule> ruleSetupper, Object callerExp) {
+    protected FlutyRemoteApi newRemoteApi(Consumer<FlutyRemoteApiRule> ruleSetupper, Object callerExp) {
         return new FlutyRemoteApi(ruleSetupper, callerExp);
     }
 

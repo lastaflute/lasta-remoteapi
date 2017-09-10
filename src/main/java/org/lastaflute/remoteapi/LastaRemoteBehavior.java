@@ -16,10 +16,12 @@
 package org.lastaflute.remoteapi;
 
 import java.util.Arrays;
+import java.util.function.Consumer;
 
 import javax.annotation.Resource;
 
 import org.dbflute.remoteapi.FlutyRemoteApi;
+import org.dbflute.remoteapi.FlutyRemoteApiRule;
 import org.dbflute.remoteapi.FlutyRemoteBehavior;
 import org.dbflute.util.DfStringUtil;
 import org.lastaflute.core.direction.AccessibleConfig;
@@ -60,11 +62,6 @@ public abstract class LastaRemoteBehavior extends FlutyRemoteBehavior {
     }
 
     @Override
-    protected FlutyRemoteApi createRemoteApi() { // in constructor so you cannot use DI components
-        return new LastaRemoteApi(op -> setupDefaultRemoteApiRule(op), getClass());
-    }
-
-    @Override
     protected String getUserAgentServiceName() { // in callback so you can use DI components
         return Arrays.stream(namingConvention.getRootPackageNames()).filter(name -> name.contains(".app")).map(name -> {
             return DfStringUtil.substringLastRear(DfStringUtil.substringFirstFront(name, ".app"), ".");
@@ -74,5 +71,10 @@ public abstract class LastaRemoteBehavior extends FlutyRemoteBehavior {
     @Override
     protected String getUserAgentAppName() { // in callback so you can use DI components
         return config.getOrDefault("domain.name", null);
+    }
+
+    @Override
+    protected FlutyRemoteApi newRemoteApi(Consumer<FlutyRemoteApiRule> ruleSetupper, Object callerExp) {
+        return new LastaRemoteApi(ruleSetupper, callerExp); // in constructor so you cannot use DI components
     }
 }
