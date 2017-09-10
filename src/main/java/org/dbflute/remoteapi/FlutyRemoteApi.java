@@ -16,7 +16,6 @@
 package org.dbflute.remoteapi;
 
 import java.io.IOException;
-import java.io.UnsupportedEncodingException;
 import java.lang.reflect.Type;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
@@ -32,7 +31,10 @@ import org.dbflute.helper.message.ExceptionMessageBuilder;
 import org.dbflute.optional.OptionalThing;
 import org.dbflute.remoteapi.exception.RemoteApiHttpClientErrorException;
 import org.dbflute.remoteapi.exception.RemoteApiHttpServerErrorException;
+import org.dbflute.remoteapi.exception.RemoteApiReceiverOfResponseBodyNotFoundException;
 import org.dbflute.remoteapi.exception.RemoteApiRequestFailureException;
+import org.dbflute.remoteapi.exception.RemoteApiSenderOfQueryParameterNotFoundException;
+import org.dbflute.remoteapi.exception.RemoteApiSenderOfRequestBodyNotFoundException;
 import org.dbflute.remoteapi.receiver.ResponseBodyReceiver;
 import org.dbflute.remoteapi.sender.body.RequestBodySender;
 import org.dbflute.remoteapi.sender.query.QueryParameterSender;
@@ -69,7 +71,7 @@ public class FlutyRemoteApi {
     //                                                                         Request GET
     //                                                                         ===========
     /**
-     * @param <RESULT> The type of result.
+     * @param <RESULT> The type of request result (response).
      * @param beanType The class type of bean to convert, should have default constructor. (NotNull)
      * @param urlBase The base part of URL to remote API server. e.g. http://localhost:8090/harbor (NotNull)
      * @param actionPath The path to action without URL parameter, and trailing slash is no difference. e.g. /sea/land (NotNull)
@@ -115,7 +117,7 @@ public class FlutyRemoteApi {
     //                                                                        Request POST
     //                                                                        ============
     /**
-     * @param <RESULT> The type of result.
+     * @param <RESULT> The type of request result (response).
      * @param beanType The class type of bean to convert, should have default constructor. (NotNull)
      * @param urlBase The base part of URL to remote API server. e.g. http://localhost:8090/harbor (NotNull)
      * @param actionPath The path to action without URL parameter, and trailing slash is no difference. e.g. /sea/land (NotNull)
@@ -141,7 +143,7 @@ public class FlutyRemoteApi {
 
     protected <RESULT> RESULT doRequestPost(Type beanType, String url, Object form, FlutyRemoteApiRule rule) {
         try (CloseableHttpClient httpClient = buildHttpClient(rule)) {
-            final HttpPost httpPost = prepareHttpPost(url, form, rule);
+            final HttpPost httpPost = prepareHttpPost(beanType, url, form, rule);
             try (CloseableHttpResponse response = httpClient.execute(httpPost)) {
                 return handleResponse(beanType, url, OptionalThing.of(form), response, rule);
             }
@@ -151,14 +153,39 @@ public class FlutyRemoteApi {
         return null;
     }
 
-    protected HttpPost prepareHttpPost(String uri, Object form, FlutyRemoteApiRule rule) throws UnsupportedEncodingException {
-        final HttpPost httpPost = new HttpPost(uri);
+    protected HttpPost prepareHttpPost(Type beanType, String url, Object form, FlutyRemoteApiRule rule) {
+        final HttpPost httpPost = new HttpPost(url);
         setupHeader(httpPost, rule);
-        final RequestBodySender converter = rule.getRequestBodySender().orElseTranslatingThrow(cause -> {
-            return new IllegalStateException("Not found the request converter: uri=" + uri, cause);
+        final RequestBodySender converter = rule.getRequestBodySender().orElseThrow(() -> {
+            return createRemoteApiSenderOfRequestBodyNotFoundException(beanType, url, form, rule);
         });
         converter.prepareBodyRequest(httpPost, form);
         return httpPost;
+    }
+
+    protected RuntimeException createRemoteApiSenderOfRequestBodyNotFoundException(Type beanType, String url, Object form,
+            FlutyRemoteApiRule rule) {
+        final ExceptionMessageBuilder br = new ExceptionMessageBuilder();
+        br.addNotice("Not found the sender for request body.");
+        br.addItem("Advice");
+        br.addElement("Request body sender is required for e.g. JSON response.");
+        br.addElement("Set sender to your rule like this:");
+        br.addElement("  (o):");
+        br.addElement("    protected void yourDefaultRule(FlutyRemoteApiRule rule) {");
+        br.addElement("        rule.sendBodyBy(new LaJsonSender());");
+        br.addElement("    }");
+        br.addElement("  (o):");
+        br.addElement("    doRequestGet(..., rule -> rule.sendBodyBy(new LaJsonSender());");
+        br.addItem("Bean Type");
+        br.addElement(beanType);
+        br.addItem("Request URL");
+        br.addElement(url);
+        br.addItem("Form");
+        br.addElement(form);
+        br.addItem("Your Rule");
+        br.addElement(rule);
+        final String msg = br.buildExceptionMessage();
+        return new RemoteApiSenderOfRequestBodyNotFoundException(msg);
     }
 
     // ===================================================================================
@@ -196,9 +223,32 @@ public class FlutyRemoteApi {
     //                                                                     ===============
     protected void buildQueryParameter(StringBuilder sb, Object form, FlutyRemoteApiRule rule) {
         final QueryParameterSender sender = rule.getQueryParameterSender().orElseThrow(() -> {
-            return new IllegalStateException("xxxxxxx"); // TODO jflute xxxxxxxxxxx (2017/09/10)
+            return createRemoteApiSenderOfQueryParameterNotFoundException(sb, form, rule);
         });
         sb.append(sender.toQueryString(form, rule.getQueryParameterCharset()));
+    }
+
+    protected RuntimeException createRemoteApiSenderOfQueryParameterNotFoundException(StringBuilder sb, Object form,
+            FlutyRemoteApiRule rule) {
+        final ExceptionMessageBuilder br = new ExceptionMessageBuilder();
+        br.addNotice("Not found the sender for query parameter.");
+        br.addItem("Advice");
+        br.addElement("Query parameter sender is required for e.g. GET request.");
+        br.addElement("Set sender to your rule like this:");
+        br.addElement("  (o):");
+        br.addElement("    protected void yourDefaultRule(FlutyRemoteApiRule rule) {");
+        br.addElement("        rule.sendQueryBy(new LaQuerySender());");
+        br.addElement("    }");
+        br.addElement("  (o):");
+        br.addElement("    doRequestGet(..., rule -> rule.sendQueryBy(new LaQuerySender()));");
+        br.addItem("Request URL");
+        br.addElement(sb.toString()); // just it
+        br.addItem("Query Form");
+        br.addElement(form);
+        br.addItem("Your Rule");
+        br.addElement(rule);
+        final String msg = br.buildExceptionMessage();
+        return new RemoteApiSenderOfQueryParameterNotFoundException(msg);
     }
 
     // ===================================================================================
@@ -237,15 +287,44 @@ public class FlutyRemoteApi {
 
     protected <RESULT> RESULT toResult(Type beanType, String url, OptionalThing<Object> form, int statusCode, String body,
             FlutyRemoteApiRule rule) {
+        final ResponseBodyReceiver converter = rule.getResponseBodyReceiver().orElseThrow(() -> {
+            return createRemoteApiReceiverOfResponseBodyNotFoundException(beanType, url, form, statusCode, body, rule);
+        });
         try {
-            final ResponseBodyReceiver converter = rule.getResponseBodyReceiver().orElseTranslatingThrow(cause -> {
-                return new IllegalStateException("Not found the response converter: url=" + url, cause);
-            });
             return converter.toResult(body, beanType);
         } catch (RuntimeException e) {
             throwRemoteApiResponseCannotParseException(beanType, url, form, statusCode, body, e);
             return null; // unreachable
         }
+    }
+
+    protected RuntimeException createRemoteApiReceiverOfResponseBodyNotFoundException(Type beanType, String url, OptionalThing<Object> form,
+            int statusCode, String body, FlutyRemoteApiRule rule) {
+        final ExceptionMessageBuilder br = new ExceptionMessageBuilder();
+        br.addNotice("Not found the receiver for response body.");
+        br.addItem("Advice");
+        br.addElement("Response body receiver is required for e.g. JSON response.");
+        br.addElement("Set receiver to your rule like this:");
+        br.addElement("  (o):");
+        br.addElement("    protected void yourDefaultRule(FlutyRemoteApiRule rule) {");
+        br.addElement("        rule.receiveBodyBy(new LaJsonReceiver());");
+        br.addElement("    }");
+        br.addElement("  (o):");
+        br.addElement("    doRequestGet(..., rule -> rule.receiveBodyBy(new LaJsonReceiver()));");
+        br.addItem("BeanType");
+        br.addElement(beanType);
+        br.addItem("Request URL");
+        br.addElement(url);
+        br.addItem("Form");
+        br.addElement(form);
+        br.addItem("Response Status");
+        br.addElement(statusCode);
+        br.addItem("Response Body");
+        br.addElement(body);
+        br.addItem("Your Rule");
+        br.addElement(rule);
+        final String msg = br.buildExceptionMessage();
+        return new RemoteApiReceiverOfResponseBodyNotFoundException(msg);
     }
 
     // ===================================================================================

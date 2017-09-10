@@ -36,7 +36,7 @@ public abstract class FlutyRemoteBehavior {
     // ===================================================================================
     //                                                                          Definition
     //                                                                          ==========
-    protected static final Object[] EMPTY_PARAMS = new Object[] {};
+    protected static final Object[] EMPTY_OBJECTS = new Object[] {};
 
     // ===================================================================================
     //                                                                           Attribute
@@ -125,8 +125,7 @@ public abstract class FlutyRemoteBehavior {
      * </pre>
      * @param rule The rule of remote API. (NotNull)
      */
-    protected void yourDefaultRule(FlutyRemoteApiRule rule) { // may be overridden
-    }
+    protected abstract void yourDefaultRule(FlutyRemoteApiRule rule);
 
     // -----------------------------------------------------
     //                                     Caller Expression
@@ -159,7 +158,18 @@ public abstract class FlutyRemoteBehavior {
     //                                                  GET
     //                                                 -----
     /**
-     * @param <RESULT> The type of request result.
+     * Request as POST, receiving as simple bean type.
+     * <pre>
+     * e.g. if sender, receiver are already set as default: /lido/product/list/7
+     *  return doRequestGet(HbProductListResult.class, "/lido/product/list", moreUrl(7), OptionalThing.of(form), rule -&gt; {});
+     *  
+     * e.g. if sender, receiver are not set yet, so set them here: /lido/product/list/7
+     *  return doRequestGet(HbProductListResult.class, "/lido/product/list", moreUrl(7), OptionalThing.of(form), rule -&gt; {
+     *      rule.sendQueryBy(new LaQuerySender(...));
+     *      rule.receiveBodyBy(new LaJsonReceiver(...));
+     *  });
+     * </pre>
+     * @param <RESULT> The type of request result (response).
      * @param beanType The class type of bean to convert, should have default constructor. (NotNull)
      * @param actionPath The path to action without URL parameter. e.g. /sea/land (NotNull)
      * @param pathVariables The array of URL path variables, e.g. ["hangar", 3]. (NotNull, EmptyAllowed)
@@ -173,7 +183,20 @@ public abstract class FlutyRemoteBehavior {
     }
 
     /**
-     * @param <RESULT> The type of request result.
+     * Request as POST, receiving as parameterized type (has nested generics).
+     * <pre>
+     * e.g. if sender, receiver are already set as default: /lido/product/list/7
+     *  return doRequestGet(new ParameterizedRef&lt;HbSearchPagingResult&lt;HbProductRowResult&gt;&gt;() {
+     *  }.getType(), "/lido/product/list", moreUrl(7), OptionalThing.of(form), rule -&gt; {});
+     *  
+     * e.g. if sender, receiver are not set yet, so set them here: /lido/product/list/7
+     *  return doRequestGet(new ParameterizedRef&lt;HbSearchPagingResult&lt;HbProductRowResult&gt;&gt;() {
+     *  }.getType(), "/lido/product/list", moreUrl(7), OptionalThing.of(form), rule -&gt; {
+     *      rule.sendQueryBy(new LaQuerySender(...));
+     *      rule.receiveBodyBy(new LaJsonReceiver(...));
+     *  });
+     * </pre>
+     * @param <RESULT> The type of request result (response).
      * @param beanType The parameterized type of bean to convert, should have default constructor. (NotNull)
      * @param actionPath The path to action without URL parameter. e.g. /sea/land (NotNull)
      * @param pathVariables The array of URL path variables, e.g. ["hangar", 3]. (NotNull, EmptyAllowed)
@@ -190,8 +213,19 @@ public abstract class FlutyRemoteBehavior {
     //                                                 Post
     //                                                ------
     /**
-     * @param <RESULT> The type of request result.
-     * @param beanType The class type of bean to convert, should have default constructor. (NotNull)
+     * Request as POST, receiving as simple bean type.
+     * <pre>
+     * e.g. if sender, receiver are already set as default: /lido/product/list/7
+     *  return doRequestPost(HbProductListResult.class, "/lido/product/list", moreUrl(7), body, rule -&gt; {});
+     *  
+     * e.g. if sender, receiver are not set yet, so set them here: /lido/product/list/7
+     *  return doRequestPost(HbProductListResult.class, "/lido/product/list", moreUrl(7), body, rule -&gt; {
+     *      rule.sendBodyBy(new LaJsonSender(...));
+     *      rule.receiveBodyBy(new LaJsonReceiver(...));
+     *  });
+     * </pre>
+     * @param <RESULT> The type of request result (response).
+     * @param beanType The class type of bean for response body, should have default constructor. (NotNull)
      * @param actionPath The path to action without URL parameter. e.g. /sea/land (NotNull)
      * @param pathVariables The array of URL path variables, e.g. ["hangar", 3]. (NotNull, EmptyAllowed)
      * @param form The form of POST parameters. (NotNull)
@@ -204,8 +238,21 @@ public abstract class FlutyRemoteBehavior {
     }
 
     /**
-     * @param <RESULT> The type of request result.
-     * @param beanType The parameterized type of bean to convert, should have default constructor. (NotNull)
+     * Request as POST, receiving as parameterized type (has nested generics).
+     * <pre>
+     * e.g. if sender, receiver are already set as default: /lido/product/list/7
+     *  return doRequestPost(new ParameterizedRef&lt;HbSearchPagingResult&lt;HbProductRowResult&gt;&gt;() {
+     *  }.getType(), "/lido/product/list", moreUrl(7), body, rule -&gt; {});
+     *  
+     * e.g. if sender, receiver are not set yet, so set them here: /lido/product/list/7
+     *  return doRequestPost(new ParameterizedRef&lt;HbSearchPagingResult&lt;HbProductRowResult&gt;&gt;() {
+     *  }.getType(), "/lido/product/list", moreUrl(7), body, rule -&gt; {
+     *      rule.sendBodyBy(new LaJsonSender(...));
+     *      rule.receiveBodyBy(new LaJsonReceiver(...));
+     *  });
+     * </pre>
+     * @param <RESULT> The type of request result (response).
+     * @param beanType The parameterized type of bean for response body, should have default constructor. (NotNull)
      * @param actionPath The path to action without URL parameter. e.g. /sea/land (NotNull)
      * @param pathVariables The array of URL path variables, e.g. ["hangar", 3]. (NotNull, EmptyAllowed)
      * @param form The form of POST parameters. (NotNull)
@@ -215,6 +262,24 @@ public abstract class FlutyRemoteBehavior {
     protected <RESULT extends Object> RESULT doRequestPost(ParameterizedType beanType //
             , String actionPath, Object[] pathVariables, Object form, Consumer<FlutyRemoteApiRule> ruleLambda) {
         return remoteApi.requestPost(beanType, getUrlBase(), actionPath, pathVariables, form, ruleLambda);
+    }
+
+    // ===================================================================================
+    //                                                                        Assist Logic
+    //                                                                        ============
+    /**
+     * Make array for path variables. (easy utility)
+     * <pre>
+     * return doRequestPost(..., "/lido/product/list", moreUrl(7), body, rule -&gt; {});
+     * </pre>
+     * @param pathVariables The varying arguments for path variables. (NotNull)
+     * @return The array of object. (NotNull)
+     */
+    protected Object[] moreUrl(Object... pathVariables) {
+        if (pathVariables == null) {
+            throw new IllegalArgumentException("The argument 'pathVariables' should not be null.");
+        }
+        return pathVariables;
     }
 
     // ===================================================================================
