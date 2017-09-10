@@ -57,7 +57,7 @@ public class FlutyRemoteApi {
     //                                                                           Attribute
     //                                                                           =========
     protected final Consumer<FlutyRemoteApiRule> defaultRuleLambda;
-    protected final Object callerExp;
+    protected final Object callerExp; // for various purpose, basically debug
 
     // ===================================================================================
     //                                                                         Constructor
@@ -184,6 +184,7 @@ public class FlutyRemoteApi {
         br.addElement(form);
         br.addItem("Your Rule");
         br.addElement(rule);
+        setupCallerExpression(br);
         final String msg = br.buildExceptionMessage();
         return new RemoteApiSenderOfRequestBodyNotFoundException(msg);
     }
@@ -247,6 +248,7 @@ public class FlutyRemoteApi {
         br.addElement(form);
         br.addItem("Your Rule");
         br.addElement(rule);
+        setupCallerExpression(br);
         final String msg = br.buildExceptionMessage();
         return new RemoteApiSenderOfQueryParameterNotFoundException(msg);
     }
@@ -323,6 +325,7 @@ public class FlutyRemoteApi {
         br.addElement(body);
         br.addItem("Your Rule");
         br.addElement(rule);
+        setupCallerExpression(br);
         final String msg = br.buildExceptionMessage();
         return new RemoteApiReceiverOfResponseBodyNotFoundException(msg);
     }
@@ -339,6 +342,7 @@ public class FlutyRemoteApi {
         br.addNotice("Client Error as HTTP status from the remote API.");
         setupRequestInfo(br, beanType, url, form);
         setupResponseInfo(br, statusCode, body);
+        setupCallerExpression(br);
         final String msg = br.buildExceptionMessage();
         throw new RemoteApiHttpClientErrorException(msg, failureResponse);
     }
@@ -349,6 +353,7 @@ public class FlutyRemoteApi {
         br.addNotice("Server Error as HTTP status from the remote API.");
         setupRequestInfo(br, beanType, url, form);
         setupResponseInfo(br, statusCode, body);
+        setupCallerExpression(br);
         final String msg = br.buildExceptionMessage();
         throw new RemoteApiHttpServerErrorException(msg);
     }
@@ -360,6 +365,7 @@ public class FlutyRemoteApi {
         final ExceptionMessageBuilder br = new ExceptionMessageBuilder();
         br.addNotice("IO Error to the remote API.");
         setupRequestInfo(br, beanType, url, form);
+        setupCallerExpression(br);
         final String msg = br.buildExceptionMessage();
         throw new RemoteApiRequestFailureException(msg, cause);
     }
@@ -373,6 +379,7 @@ public class FlutyRemoteApi {
         br.addNotice("Failed to parse the JSON of remote API.");
         setupRequestInfo(br, type, url, form);
         setupResponseInfo(br, statusCode, body);
+        setupCallerExpression(br);
         final String msg = br.buildExceptionMessage();
         throw new RemoteApiRequestFailureException(msg, e);
     }
@@ -405,6 +412,11 @@ public class FlutyRemoteApi {
     protected <RESULT> void setupResultInfo(ExceptionMessageBuilder br, RESULT result) {
         br.addItem("Result");
         br.addElement(result);
+    }
+
+    protected void setupCallerExpression(final ExceptionMessageBuilder br) {
+        br.addItem("Caller Expression");
+        br.addElement(callerExp);
     }
 
     // ===================================================================================
