@@ -33,11 +33,11 @@ import org.apache.http.params.HttpParams;
  * @author jflute
  */
 @SuppressWarnings("all")
-public class MockRemoteApiHttpResponse implements CloseableHttpResponse {
+public class MockHttpResponse implements CloseableHttpResponse {
 
     protected final HttpEntity httpEntity;
 
-    public MockRemoteApiHttpResponse(HttpEntity httpEntity) {
+    public MockHttpResponse(HttpEntity httpEntity) {
         this.httpEntity = httpEntity;
     }
 
