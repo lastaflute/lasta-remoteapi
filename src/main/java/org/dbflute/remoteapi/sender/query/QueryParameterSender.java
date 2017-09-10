@@ -26,7 +26,7 @@ public interface QueryParameterSender {
     /**
      * @param form The form data for query string. (NotNull)
      * @param queryParameterCharset The charset of query parameter. (NotNull)
-     * @return The converted query string. e.g. ?sea=mystic&land=oneman (NotNull)
+     * @return The converted query string. e.g. ?sea=mystic&amp;land=oneman (NotNull)
      */
     String toQueryString(Object form, Charset queryParameterCharset);
 }
