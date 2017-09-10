@@ -24,7 +24,7 @@ import java.util.stream.Stream;
 import org.dbflute.helper.message.ExceptionMessageBuilder;
 import org.dbflute.optional.OptionalThing;
 import org.dbflute.remoteapi.FlutyRemoteApi;
-import org.dbflute.remoteapi.FlutyRemoteApiOption;
+import org.dbflute.remoteapi.FlutyRemoteApiRule;
 import org.dbflute.remoteapi.exception.RemoteApiRequestValidationErrorException;
 import org.dbflute.remoteapi.exception.RemoteApiResponseValidationErrorException;
 import org.lastaflute.core.message.UserMessages;
@@ -53,7 +53,7 @@ public class LastaRemoteApi extends FlutyRemoteApi {
     // ===================================================================================
     //                                                                         Constructor
     //                                                                         ===========
-    public LastaRemoteApi(Consumer<FlutyRemoteApiOption> defaultOpLambda, Object callerExp) {
+    public LastaRemoteApi(Consumer<FlutyRemoteApiRule> defaultOpLambda, Object callerExp) {
         super(defaultOpLambda, callerExp);
     }
 
@@ -83,7 +83,7 @@ public class LastaRemoteApi extends FlutyRemoteApi {
 
     @Override
     protected void validateResult(Type beanType, String url, OptionalThing<Object> form, int statusCode, String body, Object result,
-            FlutyRemoteApiOption ruledRemoteApiOption) {
+            FlutyRemoteApiRule ruledRemoteApiOption) {
         try {
             createTransferredBeanValidator().validate(result);
         } catch (ResponseBeanValidationErrorException | ValidationStoppedException e) {

@@ -15,12 +15,12 @@
  */
 package org.lastaflute.remoteapi;
 
-import org.dbflute.remoteapi.FlutyRemoteApiOption;
+import org.dbflute.remoteapi.FlutyRemoteApiRule;
 
 /**
  * @author jflute
  */
-public class LastaRemoteApiOption extends FlutyRemoteApiOption {
+public class LastaRemoteApiRule extends FlutyRemoteApiRule {
 
     // for future
 }

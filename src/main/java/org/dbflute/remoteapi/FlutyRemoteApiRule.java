@@ -41,15 +41,25 @@ import org.dbflute.remoteapi.sender.query.QueryParameterSender;
 import org.dbflute.util.DfCollectionUtil;
 
 /**
- * The option of ruled remote API.
+ * The rule of remote API.
  * @author awane
  * @author jflute
  */
-public class FlutyRemoteApiOption {
+public class FlutyRemoteApiRule {
 
     // ===================================================================================
     //                                                                           Attribute
     //                                                                           =========
+    // -----------------------------------------------------
+    //                                         Required Rule
+    //                                         -------------
+    protected QueryParameterSender queryParameterSender; // null allowed, but required
+    protected RequestBodySender requestBodySender; // null allowed, but required
+    protected ResponseBodyReceiver responseBodyReceiver; // null allowed, but required
+
+    // -----------------------------------------------------
+    //                                         Optional Rule
+    //                                         -------------
     // default values are defined here
     protected boolean sslUntrusted;
     protected int connectTimeout = 3000;
@@ -57,16 +67,13 @@ public class FlutyRemoteApiOption {
     protected int socketTimeout = 3000;
     protected Charset queryParameterCharset = StandardCharsets.UTF_8; // not null
     protected Charset responseBodyCharset = StandardCharsets.UTF_8; // not null
-    protected QueryParameterSender queryParameterSender; // null allowed, but required
-    protected RequestBodySender requestBodySender; // null allowed, but required
-    protected ResponseBodyReceiver responseBodyReceiver; // null allowed, but required
-    protected Map<String, String> headers; // null allowed, lazy-loaded
+    protected Map<String, String> headers; // null allowed, not required, lazy-loaded
     protected Type failureResponseType; // null allowed, not required
 
     // ===================================================================================
     //                                                                         Http Client
     //                                                                         ===========
-    public CloseableHttpClient prepareHttpClient() {
+    public CloseableHttpClient prepareHttpClient() { // not null
         if (__xmockHttpClient != null) {
             return __xmockHttpClient;
         }
@@ -86,7 +93,7 @@ public class FlutyRemoteApiOption {
             try {
                 sslContext = SSLContexts.custom().loadTrustMaterial(trustStrategy).build();
             } catch (KeyManagementException | NoSuchAlgorithmException | KeyStoreException e) {
-                throw new RuntimeException(e);
+                throw new IllegalStateException("Failed to build SSL context: trustStrategy=" + trustStrategy, e);
             }
             httpClientBuilder.setSSLContext(sslContext).setSSLHostnameVerifier(NoopHostnameVerifier.INSTANCE);
         }
@@ -94,8 +101,38 @@ public class FlutyRemoteApiOption {
     }
 
     // ===================================================================================
-    //                                                                              Facade
-    //                                                                              ======
+    //                                                                      Setting Facade
+    //                                                                      ==============
+    // -----------------------------------------------------
+    //                                         Required Rule
+    //                                         -------------
+    /**
+     * @param queryParameterSender The sender of (request) query parameter. (NotNull)
+     */
+    public void sendQueryBy(QueryParameterSender queryParameterSender) {
+        assertArgumentNotNull("queryParameterSender", queryParameterSender);
+        this.queryParameterSender = queryParameterSender;
+    }
+
+    /**
+     * @param requestBodySender The sender of request body. (NotNull)
+     */
+    public void sendBodyBy(RequestBodySender requestBodySender) {
+        assertArgumentNotNull("requestBodySender", requestBodySender);
+        this.requestBodySender = requestBodySender;
+    }
+
+    /**
+     * @param responseBodyReceiver The receiver of response body. (NotNull)
+     */
+    public void receiveBodyBy(ResponseBodyReceiver responseBodyReceiver) {
+        assertArgumentNotNull("responseBodyReceiver", responseBodyReceiver);
+        this.responseBodyReceiver = responseBodyReceiver;
+    }
+
+    // -----------------------------------------------------
+    //                                         Optional Rule
+    //                                         -------------
     public void setSslUntrusted(boolean sslUntrusted) {
         this.sslUntrusted = sslUntrusted;
     }
@@ -115,60 +152,22 @@ public class FlutyRemoteApiOption {
     /**
      * @param requestQueryCharset The charset of request query parameter. (NotNull)
      */
-    public void setRequestQueryCharset(Charset requestQueryCharset) {
-        if (requestQueryCharset == null) {
-            throw new IllegalArgumentException("The argument 'requestQueryCharset' should not be null.");
-        }
+    public void encodeRequestQueryAs(Charset requestQueryCharset) {
+        assertArgumentNotNull("requestQueryCharset", requestQueryCharset);
         this.queryParameterCharset = requestQueryCharset;
     }
 
     /**
      * @param responseBodyCharset The charset of response body. (NotNull)
      */
-    public void setResponseBodyCharset(Charset responseBodyCharset) {
-        if (responseBodyCharset == null) {
-            throw new IllegalArgumentException("The argument 'responseBodyCharset' should not be null.");
-        }
+    public void encodeResponseBodyAs(Charset responseBodyCharset) {
+        assertArgumentNotNull("responseBodyCharset", responseBodyCharset);
         this.responseBodyCharset = responseBodyCharset;
     }
 
-    /**
-     * @param queryParameterSender The sender of (request) query parameter. (NotNull)
-     */
-    public void sendQueryBy(QueryParameterSender queryParameterSender) {
-        if (queryParameterSender == null) {
-            throw new IllegalArgumentException("The argument 'queryParameterSender' should not be null.");
-        }
-        this.queryParameterSender = queryParameterSender;
-    }
-
-    /**
-     * @param requestBodySender The sender of request body. (NotNull)
-     */
-    public void sendBodyBy(RequestBodySender requestBodySender) {
-        if (requestBodySender == null) {
-            throw new IllegalArgumentException("The argument 'requestBodySender' should not be null.");
-        }
-        this.requestBodySender = requestBodySender;
-    }
-
-    /**
-     * @param responseBodyReceiver The receiver of response body. (NotNull)
-     */
-    public void receiveBodyBy(ResponseBodyReceiver responseBodyReceiver) {
-        if (responseBodyReceiver == null) {
-            throw new IllegalArgumentException("The argument 'responseBodyReceiver' should not be null.");
-        }
-        this.responseBodyReceiver = responseBodyReceiver;
-    }
-
     public void setHeader(String name, String value) {
-        if (name == null) {
-            throw new IllegalArgumentException("The argument 'name' should not be null.");
-        }
-        if (value == null) {
-            throw new IllegalArgumentException("The argument 'value' should not be null: name=" + name);
-        }
+        assertArgumentNotNull("name", name);
+        assertArgumentNotNull("value", value);
         if (headers == null) {
             headers = DfCollectionUtil.newLinkedHashMap();
         }
@@ -176,10 +175,20 @@ public class FlutyRemoteApiOption {
     }
 
     public void setFailureResponseType(Type failureResponseType) {
-        if (failureResponseType == null) {
-            throw new IllegalArgumentException("The argument 'failureResponseType' should not be null.");
-        }
+        assertArgumentNotNull("failureResponseType", failureResponseType);
         this.failureResponseType = failureResponseType;
+    }
+
+    // ===================================================================================
+    //                                                                        Small Helper
+    //                                                                        ============
+    protected void assertArgumentNotNull(String variableName, Object value) {
+        if (variableName == null) {
+            throw new IllegalArgumentException("The variableName should not be null.");
+        }
+        if (value == null) {
+            throw new IllegalArgumentException("The argument '" + variableName + "' should not be null.");
+        }
     }
 
     // ===================================================================================
@@ -187,14 +196,50 @@ public class FlutyRemoteApiOption {
     //                                                                      ==============
     @Override
     public String toString() {
-        return "option:{" + sslUntrusted + ", " + connectTimeout + ", " + connectionRequestTimeout + ", " + socketTimeout + ", "
-                + queryParameterCharset + ", " + queryParameterSender + ", " + requestBodySender + ", " + responseBodyReceiver + ", "
-                + headers + ", " + failureResponseType + "}";
+        final StringBuilder sb = new StringBuilder();
+        sb.append("option:{");
+        sb.append("sender:{").append(queryParameterSender);
+        sb.append("}, receiver:{").append(requestBodySender);
+        sb.append(", ").append(responseBodyReceiver);
+        sb.append("}, ").append(sslUntrusted);
+        sb.append(", timeout:{").append(connectTimeout);
+        sb.append(", ").append(connectionRequestTimeout);
+        sb.append(", ").append(socketTimeout);
+        sb.append("}, ").append(headers);
+        sb.append(", ").append(failureResponseType);
+        sb.append(", charset:{").append(queryParameterCharset);
+        sb.append(", ").append(responseBodyCharset);
+        sb.append("}}");
+        return sb.toString();
     }
 
     // ===================================================================================
     //                                                                            Accessor
     //                                                                            ========
+    // -----------------------------------------------------
+    //                                         Required Rule
+    //                                         -------------
+    public OptionalThing<QueryParameterSender> getQueryParameterSender() {
+        return OptionalThing.ofNullable(queryParameterSender, () -> {
+            throw new IllegalStateException("Not found the queryParameterSender in the option: " + toString());
+        });
+    }
+
+    public OptionalThing<RequestBodySender> getRequestBodySender() {
+        return OptionalThing.ofNullable(requestBodySender, () -> {
+            throw new IllegalStateException("Not found the requestConverter in the option: " + toString());
+        });
+    }
+
+    public OptionalThing<ResponseBodyReceiver> getResponseBodyReceiver() {
+        return OptionalThing.ofNullable(responseBodyReceiver, () -> {
+            throw new IllegalStateException("Not found the responseConverter in the option: " + toString());
+        });
+    }
+
+    // -----------------------------------------------------
+    //                                         Optional Rule
+    //                                         -------------
     public boolean isSslUntrusted() {
         return sslUntrusted;
     }
@@ -223,24 +268,6 @@ public class FlutyRemoteApiOption {
      */
     public Charset getResponseBodyCharset() {
         return responseBodyCharset;
-    }
-
-    public OptionalThing<QueryParameterSender> getQueryParameterSender() {
-        return OptionalThing.ofNullable(queryParameterSender, () -> {
-            throw new IllegalStateException("Not found the queryParameterSender in the option: " + toString());
-        });
-    }
-
-    public OptionalThing<RequestBodySender> getRequestBodySender() {
-        return OptionalThing.ofNullable(requestBodySender, () -> {
-            throw new IllegalStateException("Not found the requestConverter in the option: " + toString());
-        });
-    }
-
-    public OptionalThing<ResponseBodyReceiver> getResponseBodyReceiver() {
-        return OptionalThing.ofNullable(responseBodyReceiver, () -> {
-            throw new IllegalStateException("Not found the responseConverter in the option: " + toString());
-        });
     }
 
     public OptionalThing<Map<String, String>> getHeaders() {

@@ -60,23 +60,32 @@ public abstract class FlutyRemoteBehavior {
     // -----------------------------------------------------
     //                                       Option Setupper
     //                                       ---------------
-    protected Consumer<FlutyRemoteApiOption> createRemoteApiOptionSetupper() {
-        return op -> setupDefaultRemoteApiOption(op);
+    protected Consumer<FlutyRemoteApiRule> createRemoteApiOptionSetupper() {
+        return op -> setupDefaultRemoteApiRule(op);
     }
 
-    protected void setupDefaultRemoteApiOption(FlutyRemoteApiOption option) {
-        reflectMockHttpClientIfNeeds(option);
-        option.setHeader("User-Agent", buildUserAgent());
-        yourOption(option);
+    protected void setupDefaultRemoteApiRule(FlutyRemoteApiRule rule) {
+        reflectMockHttpClientIfNeeds(rule);
+        if (isUseApplicationalUserAgent()) {
+            rule.setHeader("User-Agent", buildApplicationalUserAgent());
+        }
+        yourDefaultRule(rule); // you can override default rules
     }
 
-    protected void reflectMockHttpClientIfNeeds(FlutyRemoteApiOption option) {
+    protected void reflectMockHttpClientIfNeeds(FlutyRemoteApiRule rule) {
         if (__xmockHttpClient != null) {
-            option.xregisterMockHttpClient(__xmockHttpClient);
+            rule.xregisterMockHttpClient(__xmockHttpClient);
         }
     }
 
-    protected String buildUserAgent() {
+    // -----------------------------------------------------
+    //                               Applicational UserAgent
+    //                               -----------------------
+    protected boolean isUseApplicationalUserAgent() {
+        return false; // as default, for security
+    }
+
+    protected String buildApplicationalUserAgent() { // basically for internal remote AIP
         final List<String> wordList = DfCollectionUtil.newArrayList();
         final String serviceName = getUserAgentServiceName();
         if (serviceName != null) {
@@ -93,36 +102,48 @@ public abstract class FlutyRemoteBehavior {
     /**
      * @return The service name for user-agent. (NullAllowed: then no use)
      */
-    protected abstract String getUserAgentServiceName();
+    protected String getUserAgentServiceName() {
+        return null; // as default
+    }
 
     /**
      * @return The application name for user-agent. (NullAllowed: then no use)
      */
-    protected abstract String getUserAgentAppName();
+    protected String getUserAgentAppName() {
+        return null; // as default
+    }
 
-    protected void yourOption(FlutyRemoteApiOption option) { // may be overridden
+    // -----------------------------------------------------
+    //                                             Your Rule
+    //                                             ---------
+    // TODO jflute javadoc (2017/09/10)
+    /**
+     * @param option
+     */
+    protected void yourDefaultRule(FlutyRemoteApiRule option) { // may be overridden
     }
 
     // -----------------------------------------------------
     //                                     Caller Expression
     //                                     -----------------
-    protected Object getCallerExp() {
+    protected Object getCallerExp() { // for various purpose (basically debug)
         return getClass(); // as default
     }
 
     // -----------------------------------------------------
     //                                    RemoteApi Instance
     //                                    ------------------
-    protected FlutyRemoteApi newFlutyRemoteApi(Consumer<FlutyRemoteApiOption> optionSetupper, Object callerExp) {
-        return new FlutyRemoteApi(optionSetupper, callerExp);
+    protected FlutyRemoteApi newFlutyRemoteApi(Consumer<FlutyRemoteApiRule> ruleSetupper, Object callerExp) {
+        return new FlutyRemoteApi(ruleSetupper, callerExp);
     }
 
     // ===================================================================================
     //                                                                         Basic Parts
     //                                                                         ===========
     /**
-     * Get the base string of URL for remote API server.
-     * @return The base part of URL to remote API server. e.g. http://localhost:8090/harbor (NotNull)
+     * Get the base part of URL for remote API server. <br>
+     * The string is until context path.
+     * @return The base part of URL. e.g. http://localhost:8090/harbor (NotNull)
      */
     protected abstract String getUrlBase();
 
@@ -138,12 +159,12 @@ public abstract class FlutyRemoteBehavior {
      * @param actionPath The path to action without URL parameter. e.g. /sea/land (NotNull)
      * @param pathVariables The array of URL path variables, e.g. ["hangar", 3]. (NotNull, EmptyAllowed)
      * @param queryForm The optional form of query (GET parameters). (NotNull, EmptyAllowed)
-     * @param opLambda The callback for option of remote API. (NotNull)
+     * @param ruleLambda The callback for rule of remote API. (NotNull)
      * @return The JSON result of response as result, returned from the request. (NotNull)
      */
     protected <RESULT extends Object> RESULT doRequestGet(Class<? extends Object> beanType //
-            , String actionPath, Object[] pathVariables, OptionalThing<Object> queryForm, Consumer<FlutyRemoteApiOption> opLambda) {
-        return remoteApi.requestGet(beanType, getUrlBase(), actionPath, pathVariables, queryForm, opLambda);
+            , String actionPath, Object[] pathVariables, OptionalThing<Object> queryForm, Consumer<FlutyRemoteApiRule> ruleLambda) {
+        return remoteApi.requestGet(beanType, getUrlBase(), actionPath, pathVariables, queryForm, ruleLambda);
     }
 
     /**
@@ -152,12 +173,12 @@ public abstract class FlutyRemoteBehavior {
      * @param actionPath The path to action without URL parameter. e.g. /sea/land (NotNull)
      * @param pathVariables The array of URL path variables, e.g. ["hangar", 3]. (NotNull, EmptyAllowed)
      * @param queryForm The optional form of query (GET parameters). (NotNull, EmptyAllowed)
-     * @param opLambda The callback for option of remote API. (NotNull)
+     * @param ruleLambda The callback for rule of remote API. (NotNull)
      * @return The JSON result of response as result, returned from the request. (NotNull)
      */
     protected <RESULT extends Object> RESULT doRequestGet(ParameterizedType beanType //
-            , String actionPath, Object[] pathVariables, OptionalThing<Object> queryForm, Consumer<FlutyRemoteApiOption> opLambda) {
-        return remoteApi.requestGet(beanType, getUrlBase(), actionPath, pathVariables, queryForm, opLambda);
+            , String actionPath, Object[] pathVariables, OptionalThing<Object> queryForm, Consumer<FlutyRemoteApiRule> ruleLambda) {
+        return remoteApi.requestGet(beanType, getUrlBase(), actionPath, pathVariables, queryForm, ruleLambda);
     }
 
     // -----------------------------------------------------
@@ -169,12 +190,12 @@ public abstract class FlutyRemoteBehavior {
      * @param actionPath The path to action without URL parameter. e.g. /sea/land (NotNull)
      * @param pathVariables The array of URL path variables, e.g. ["hangar", 3]. (NotNull, EmptyAllowed)
      * @param form The form of POST parameters. (NotNull)
-     * @param opLambda The callback for option of remote API. (NotNull)
+     * @param ruleLambda The callback for rule of remote API. (NotNull)
      * @return The JSON result of response as result, returned from the request. (NotNull)
      */
     protected <RESULT extends Object> RESULT doRequestPost(Class<? extends Object> beanType //
-            , String actionPath, Object[] pathVariables, Object form, Consumer<FlutyRemoteApiOption> opLambda) {
-        return remoteApi.requestPost(beanType, getUrlBase(), actionPath, pathVariables, form, opLambda);
+            , String actionPath, Object[] pathVariables, Object form, Consumer<FlutyRemoteApiRule> ruleLambda) {
+        return remoteApi.requestPost(beanType, getUrlBase(), actionPath, pathVariables, form, ruleLambda);
     }
 
     /**
@@ -183,12 +204,12 @@ public abstract class FlutyRemoteBehavior {
      * @param actionPath The path to action without URL parameter. e.g. /sea/land (NotNull)
      * @param pathVariables The array of URL path variables, e.g. ["hangar", 3]. (NotNull, EmptyAllowed)
      * @param form The form of POST parameters. (NotNull)
-     * @param opLambda The callback for option of remote API. (NotNull)
+     * @param ruleLambda The callback for rule of remote API. (NotNull)
      * @return The JSON result of response as result, returned from the request. (NotNull)
      */
     protected <RESULT extends Object> RESULT doRequestPost(ParameterizedType beanType //
-            , String actionPath, Object[] pathVariables, Object form, Consumer<FlutyRemoteApiOption> opLambda) {
-        return remoteApi.requestPost(beanType, getUrlBase(), actionPath, pathVariables, form, opLambda);
+            , String actionPath, Object[] pathVariables, Object form, Consumer<FlutyRemoteApiRule> ruleLambda) {
+        return remoteApi.requestPost(beanType, getUrlBase(), actionPath, pathVariables, form, ruleLambda);
     }
 
     // ===================================================================================
@@ -196,6 +217,7 @@ public abstract class FlutyRemoteBehavior {
     //                                                                         ===========
     protected CloseableHttpClient __xmockHttpClient;
 
+    // #hope jflute too easy, so want to switch other way...
     public void xregisterMockHttpClient(CloseableHttpClient mockHttpClient) {
         this.__xmockHttpClient = mockHttpClient;
     }

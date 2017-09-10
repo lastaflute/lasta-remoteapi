@@ -61,7 +61,7 @@ public abstract class LastaRemoteBehavior extends FlutyRemoteBehavior {
 
     @Override
     protected FlutyRemoteApi createRemoteApi() { // in constructor so you cannot use DI components
-        return new LastaRemoteApi(op -> setupDefaultRemoteApiOption(op), getClass());
+        return new LastaRemoteApi(op -> setupDefaultRemoteApiRule(op), getClass());
     }
 
     @Override
