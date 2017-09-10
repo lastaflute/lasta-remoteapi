@@ -190,6 +190,32 @@ public class FlutyRemoteApi {
     }
 
     // ===================================================================================
+    //                                                                          Validation
+    //                                                                          ==========
+    protected void validateForm(Type beanType, String urlBase, String actionPath, Object[] pathVariables, Object form) {
+        // you can override
+    }
+
+    protected void validateResult(Type beanType, String url, OptionalThing<Object> form, int statusCode, String body, Object result,
+            FlutyRemoteApiRule ruledRemoteApiOption) {
+        // you can override
+    }
+
+    // ===================================================================================
+    //                                                                      RemoteApi Rule
+    //                                                                      ==============
+    protected FlutyRemoteApiRule createRemoteApiRule(Consumer<FlutyRemoteApiRule> ruleLambda) {
+        final FlutyRemoteApiRule rule = newRemoteApiRule();
+        defaultRuleLambda.accept(rule);
+        ruleLambda.accept(rule);
+        return rule;
+    }
+
+    protected FlutyRemoteApiRule newRemoteApiRule() {
+        return new FlutyRemoteApiRule();
+    }
+
+    // ===================================================================================
     //                                                                 HttpClient Building
     //                                                                 ===================
     protected CloseableHttpClient buildHttpClient(FlutyRemoteApiRule rule) {
@@ -420,31 +446,8 @@ public class FlutyRemoteApi {
     }
 
     // ===================================================================================
-    //                                                                          Validation
-    //                                                                          ==========
-    protected void validateForm(Type beanType, String urlBase, String actionPath, Object[] pathVariables, Object form) {
-        // you can override
-    }
-
-    protected void validateResult(Type beanType, String url, OptionalThing<Object> form, int statusCode, String body, Object result,
-            FlutyRemoteApiRule ruledRemoteApiOption) {
-        // you can override
-    }
-
-    // ===================================================================================
     //                                                                        Assist Logic
     //                                                                        ============
-    protected FlutyRemoteApiRule createRemoteApiRule(Consumer<FlutyRemoteApiRule> ruleLambda) {
-        final FlutyRemoteApiRule rule = newRemoteApiRule();
-        defaultRuleLambda.accept(rule);
-        ruleLambda.accept(rule);
-        return rule;
-    }
-
-    protected FlutyRemoteApiRule newRemoteApiRule() {
-        return new FlutyRemoteApiRule();
-    }
-
     protected void setupHeader(HttpMessage httpMessage, FlutyRemoteApiRule rule) {
         rule.getHeaders().ifPresent(map -> map.forEach((name, value) -> {
             httpMessage.addHeader(name, value);

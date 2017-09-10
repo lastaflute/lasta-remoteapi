@@ -62,14 +62,6 @@ public class LastaRemoteApi extends FlutyRemoteApi {
     }
 
     // ===================================================================================
-    //                                                                      Error Handling
-    //                                                                      ==============
-    @Override
-    protected String convertFormToDebugString(Object form) {
-        return Lato.string(form); // because its toString() may not be overridden
-    }
-
-    // ===================================================================================
     //                                                                          Validation
     //                                                                          ==========
     @Override
@@ -144,5 +136,21 @@ public class LastaRemoteApi extends FlutyRemoteApi {
         setupResultInfo(br, result);
         final String msg = br.buildExceptionMessage();
         throw new RemoteApiResponseValidationErrorException(msg, e);
+    }
+
+    // ===================================================================================
+    //                                                                      RemoteApi Rule
+    //                                                                      ==============
+    @Override
+    protected FlutyRemoteApiRule newRemoteApiRule() {
+        return new LastaRemoteApiRule();
+    }
+
+    // ===================================================================================
+    //                                                                      Error Handling
+    //                                                                      ==============
+    @Override
+    protected String convertFormToDebugString(Object form) {
+        return Lato.string(form); // because its toString() may not be overridden
     }
 }
