@@ -116,17 +116,22 @@ public abstract class FlutyRemoteBehavior {
     // -----------------------------------------------------
     //                                             Your Rule
     //                                             ---------
-    // TODO jflute javadoc (2017/09/10)
     /**
-     * @param option
+     * Set up your default rule of remote API.
+     * <pre>
+     * rule.sendQueryBy(new FlQuerySender(...));
+     * rule.sendBodyBy(new FlJsonSender(...));
+     * rule.receiveBodyBy(new FlJsonReceiver(...));
+     * </pre>
+     * @param rule The rule of remote API. (NotNull)
      */
-    protected void yourDefaultRule(FlutyRemoteApiRule option) { // may be overridden
+    protected void yourDefaultRule(FlutyRemoteApiRule rule) { // may be overridden
     }
 
     // -----------------------------------------------------
     //                                     Caller Expression
     //                                     -----------------
-    protected Object getCallerExp() { // for various purpose (basically debug)
+    protected Object getCallerExp() { // not null, for various purpose (basically debug)
         return getClass(); // as default
     }
 
