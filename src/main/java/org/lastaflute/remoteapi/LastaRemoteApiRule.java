@@ -13,15 +13,14 @@
  * either express or implied. See the License for the specific language
  * governing permissions and limitations under the License.
  */
-package org.dbflute.remoteapi.converter;
+package org.lastaflute.remoteapi;
 
-import org.apache.http.client.methods.HttpPost;
+import org.dbflute.remoteapi.FlutyRemoteApiRule;
 
 /**
- * @author inoue
  * @author jflute
  */
-public interface FlutyRequestConverter {
+public class LastaRemoteApiRule extends FlutyRemoteApiRule {
 
-    void prepareHttpPost(HttpPost httpPost, Object form);
+    // for future
 }

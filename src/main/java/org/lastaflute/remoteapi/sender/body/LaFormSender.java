@@ -13,11 +13,11 @@
  * either express or implied. See the License for the specific language
  * governing permissions and limitations under the License.
  */
-package org.lastaflute.remoteapi.converter;
+package org.lastaflute.remoteapi.sender.body;
 
 import org.dbflute.helper.beans.DfPropertyDesc;
-import org.dbflute.remoteapi.converter.FlutyFormRequestConverter;
-import org.dbflute.remoteapi.rule.FlutyRemoteConversionRule;
+import org.dbflute.remoteapi.mapping.FlRemoteMappingPolicy;
+import org.dbflute.remoteapi.sender.body.FlFormSender;
 
 import com.google.gson.annotations.SerializedName;
 
@@ -25,13 +25,13 @@ import com.google.gson.annotations.SerializedName;
  * @author awane
  * @author jflute
  */
-public class LaFormRequestConverter extends FlutyFormRequestConverter {
+public class LaFormSender extends FlFormSender {
 
     // ===================================================================================
     //                                                                         Constructor
     //                                                                         ===========
-    public LaFormRequestConverter(FlutyRemoteConversionRule conversionRule) {
-        super(conversionRule);
+    public LaFormSender(FlRemoteMappingPolicy mappingPolicy) {
+        super(mappingPolicy);
     }
 
     // ===================================================================================

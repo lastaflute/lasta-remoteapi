@@ -13,46 +13,59 @@
  * either express or implied. See the License for the specific language
  * governing permissions and limitations under the License.
  */
-package org.dbflute.remoteapi.converter;
+package org.dbflute.remoteapi.sender.body;
 
 import java.nio.charset.StandardCharsets;
-import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 
+import org.apache.http.HttpEntityEnclosingRequest;
 import org.apache.http.NameValuePair;
 import org.apache.http.client.entity.UrlEncodedFormEntity;
-import org.apache.http.client.methods.HttpPost;
 import org.apache.http.message.BasicNameValuePair;
 import org.dbflute.helper.beans.DfBeanDesc;
 import org.dbflute.helper.beans.DfPropertyDesc;
 import org.dbflute.helper.beans.factory.DfBeanDescFactory;
-import org.dbflute.jdbc.Classification;
-import org.dbflute.remoteapi.rule.FlutyRemoteConversionRule;
+import org.dbflute.remoteapi.mapping.FlParameterSerializer;
+import org.dbflute.remoteapi.mapping.FlRemoteMappingPolicy;
 
 /**
  * @author awane
  * @author jflute
  */
-public class FlutyFormRequestConverter implements FlutyRequestConverter {
+public class FlFormSender implements RequestBodySender {
 
-    protected final FlutyRemoteConversionRule conversionRule;
+    // ===================================================================================
+    //                                                                           Attribute
+    //                                                                           =========
+    protected final FlRemoteMappingPolicy mappingPolicy;
+    protected final FlParameterSerializer parameterSerializer;
 
-    public FlutyFormRequestConverter(FlutyRemoteConversionRule conversionRule) {
-        this.conversionRule = conversionRule;
+    // ===================================================================================
+    //                                                                         Constructor
+    //                                                                         ===========
+    public FlFormSender(FlRemoteMappingPolicy mappingPolicy) {
+        this.mappingPolicy = mappingPolicy;
+        this.parameterSerializer = createParameterSerializer();
     }
 
-    public void prepareHttpPost(HttpPost httpPost, Object form) {
+    protected FlParameterSerializer createParameterSerializer() {
+        return new FlParameterSerializer();
+    }
+
+    // ===================================================================================
+    //                                                                             Prepare
+    //                                                                             =======
+    @Override
+    public void prepareBodyRequest(HttpEntityEnclosingRequest enclosingRequest, Object form) {
         final DfBeanDesc beanDesc = DfBeanDescFactory.getBeanDesc(form.getClass());
         final List<NameValuePair> parameters = new ArrayList<>();
         beanDesc.getProppertyNameList().stream().forEach(proppertyName -> {
-            DfPropertyDesc propertyDesc = beanDesc.getPropertyDesc(proppertyName);
-            String serializedParameterName = asSerializedParameterName(propertyDesc);
+            final DfPropertyDesc propertyDesc = beanDesc.getPropertyDesc(proppertyName);
+            final String serializedParameterName = asSerializedParameterName(propertyDesc);
             final Object plainValue = beanDesc.getPropertyDesc(proppertyName).getValue(form);
             if (plainValue != null && Iterable.class.isAssignableFrom(plainValue.getClass())) {
-                Iterable<?> plainValueIterable = (Iterable<?>) plainValue;
+                final Iterable<?> plainValueIterable = (Iterable<?>) plainValue;
                 plainValueIterable.forEach(value -> {
                     parameters.add(new BasicNameValuePair(serializedParameterName, asSerializedParameterValue(value)));
                 });
@@ -60,10 +73,9 @@ public class FlutyFormRequestConverter implements FlutyRequestConverter {
                 parameters.add(new BasicNameValuePair(serializedParameterName, asSerializedParameterValue(plainValue)));
             }
         });
-        httpPost.setEntity(new UrlEncodedFormEntity(parameters, StandardCharsets.UTF_8));
+        enclosingRequest.setEntity(new UrlEncodedFormEntity(parameters, StandardCharsets.UTF_8));
     }
 
-    // #hope awane copied from FlutyRemoteApi, needs to refactor (2017/06/27)
     // ===================================================================================
     //                                                                  Parameter Handling
     //                                                                  ==================
@@ -71,29 +83,7 @@ public class FlutyFormRequestConverter implements FlutyRequestConverter {
         return propertyDesc.getPropertyName();
     }
 
-    protected String asSerializedParameterValue(Object value) { // with standard rule filter
-        if (value == null) {
-            return null;
-        }
-        final String realValue;
-        if (value instanceof LocalDate) {
-            realValue = ((LocalDate) value).format(conversionRule.getDateFormatter());
-        } else if (value instanceof LocalDateTime) {
-            realValue = ((LocalDateTime) value).format(conversionRule.getDateTimeFormatter());
-        } else if (value instanceof Boolean || boolean.class.equals(value.getClass())) {
-            realValue = conversionRule.serializeBoolean((boolean) value);
-        } else if (value instanceof Classification) {
-            final Classification cls = (Classification) value;
-            final Map<String, Object> map = cls.subItemMap();
-            final String preferredValue = (String) map.get(conversionRule.getClsPreferredItem());
-            if (preferredValue != null) { // means Flg
-                realValue = preferredValue;
-            } else {
-                realValue = cls.code();
-            }
-        } else {
-            realValue = value.toString();
-        }
-        return realValue;
+    protected String asSerializedParameterValue(Object value) {
+        return parameterSerializer.asSerializedParameterValue(value, mappingPolicy);
     }
 }

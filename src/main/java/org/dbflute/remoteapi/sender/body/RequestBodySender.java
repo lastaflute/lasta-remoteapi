@@ -13,17 +13,20 @@
  * either express or implied. See the License for the specific language
  * governing permissions and limitations under the License.
  */
-package org.dbflute.remoteapi.exception;
+package org.dbflute.remoteapi.sender.body;
+
+import org.apache.http.HttpEntityEnclosingRequest;
 
 /**
- * @author awane
+ * The sender of request body.
+ * @author inoue
  * @author jflute
  */
-public class RemoteApiHttpClientErrorException extends RemoteApiHttpBasisErrorException {
+public interface RequestBodySender {
 
-    private static final long serialVersionUID = 1L;
-
-    public RemoteApiHttpClientErrorException(String msg, int httpStatus, Object failureResponse) {
-        super(msg, httpStatus, failureResponse);
-    }
+    /**
+     * @param enclosingRequest The HTTP request as entity enclosing, e.g. POST/PUT/PATCH. (NotNull)
+     * @param form The form data for body part. (NotNull)
+     */
+    void prepareBodyRequest(HttpEntityEnclosingRequest enclosingRequest, Object form);
 }

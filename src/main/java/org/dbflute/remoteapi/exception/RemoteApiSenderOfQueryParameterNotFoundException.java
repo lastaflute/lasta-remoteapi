@@ -13,15 +13,17 @@
  * either express or implied. See the License for the specific language
  * governing permissions and limitations under the License.
  */
-package org.dbflute.remoteapi.converter;
-
-import java.lang.reflect.Type;
+package org.dbflute.remoteapi.exception;
 
 /**
- * @author inoue
  * @author jflute
+ * @since 0.2.0 (2017/09/10 Sunday at american waterfront)
  */
-public interface FlutyResponseConverter {
+public class RemoteApiSenderOfQueryParameterNotFoundException extends RemoteApiBaseException {
 
-    <CONTENT extends Object> CONTENT toResult(String body, Type type);
+    private static final long serialVersionUID = 1L;
+
+    public RemoteApiSenderOfQueryParameterNotFoundException(String msg) {
+        super(msg);
+    }
 }

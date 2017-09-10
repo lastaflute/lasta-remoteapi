@@ -16,12 +16,7 @@
 package org.dbflute.remoteapi;
 
 import java.io.IOException;
-import java.io.UnsupportedEncodingException;
 import java.lang.reflect.Type;
-import java.net.URLEncoder;
-import java.time.LocalDate;
-import java.time.LocalDateTime;
-import java.util.Map;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -32,16 +27,17 @@ import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.util.EntityUtils;
-import org.dbflute.helper.beans.DfBeanDesc;
-import org.dbflute.helper.beans.DfPropertyDesc;
-import org.dbflute.helper.beans.factory.DfBeanDescFactory;
 import org.dbflute.helper.message.ExceptionMessageBuilder;
-import org.dbflute.jdbc.Classification;
 import org.dbflute.optional.OptionalThing;
 import org.dbflute.remoteapi.exception.RemoteApiHttpClientErrorException;
 import org.dbflute.remoteapi.exception.RemoteApiHttpServerErrorException;
+import org.dbflute.remoteapi.exception.RemoteApiReceiverOfResponseBodyNotFoundException;
 import org.dbflute.remoteapi.exception.RemoteApiRequestFailureException;
-import org.dbflute.remoteapi.rule.FlutyRemoteConversionRule;
+import org.dbflute.remoteapi.exception.RemoteApiSenderOfQueryParameterNotFoundException;
+import org.dbflute.remoteapi.exception.RemoteApiSenderOfRequestBodyNotFoundException;
+import org.dbflute.remoteapi.receiver.ResponseBodyReceiver;
+import org.dbflute.remoteapi.sender.body.RequestBodySender;
+import org.dbflute.remoteapi.sender.query.QueryParameterSender;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -60,14 +56,14 @@ public class FlutyRemoteApi {
     // ===================================================================================
     //                                                                           Attribute
     //                                                                           =========
-    protected final Consumer<FlutyRemoteApiOption> defaultOpLambda;
-    protected final Object callerExp;
+    protected final Consumer<FlutyRemoteApiRule> defaultRuleLambda;
+    protected final Object callerExp; // for various purpose, basically debug
 
     // ===================================================================================
     //                                                                         Constructor
     //                                                                         ===========
-    public FlutyRemoteApi(Consumer<FlutyRemoteApiOption> defaultOpLambda, Object callerExp) {
-        this.defaultOpLambda = defaultOpLambda;
+    public FlutyRemoteApi(Consumer<FlutyRemoteApiRule> defaultRuleLambda, Object callerExp) {
+        this.defaultRuleLambda = defaultRuleLambda;
         this.callerExp = callerExp;
     }
 
@@ -75,36 +71,35 @@ public class FlutyRemoteApi {
     //                                                                         Request GET
     //                                                                         ===========
     /**
-     * @param <RESULT> The type of result.
+     * @param <RESULT> The type of request result (response).
      * @param beanType The class type of bean to convert, should have default constructor. (NotNull)
      * @param urlBase The base part of URL to remote API server. e.g. http://localhost:8090/harbor (NotNull)
      * @param actionPath The path to action without URL parameter, and trailing slash is no difference. e.g. /sea/land (NotNull)
      * @param pathVariables The array of URL path variables, e.g. ["hangar", 3]. (NotNull, EmptyAllowed)
      * @param queryForm The optional form of query (GET parameters). (NotNull, EmptyAllowed)
-     * @param opLambda The callback for option of remote API. (NotNull)
+     * @param ruleLambda The callback for rule of remote API. (NotNull)
      * @return The JSON result of response as result, returned from the request. (NotNull)
      */
     public <RESULT> RESULT requestGet(Type beanType, String urlBase, String actionPath, Object[] pathVariables,
-            OptionalThing<Object> queryForm, Consumer<FlutyRemoteApiOption> opLambda) {
+            OptionalThing<Object> queryForm, Consumer<FlutyRemoteApiRule> ruleLambda) {
         assertArgumentNotNull("beanType", beanType);
         assertArgumentNotNull("urlBase", urlBase);
         assertArgumentNotNull("actionPath", actionPath);
         assertArgumentNotNull("pathVariables", pathVariables);
         assertArgumentNotNull("queryForm", queryForm);
+        assertArgumentNotNull("ruleLambda", ruleLambda);
         queryForm.ifPresent(form -> validateForm(beanType, urlBase, actionPath, pathVariables, form));
-        FlutyRemoteApiOption option = new FlutyRemoteApiOption();
-        defaultOpLambda.accept(option);
-        opLambda.accept(option);
+        final FlutyRemoteApiRule option = createRemoteApiRule(ruleLambda);
         final String url = buildUrl(urlBase, actionPath, pathVariables, queryForm, option);
         logger.debug("#flow #remote ...Requesting as GET to Remote API:\n {}\n   => {}", url, beanType);
         return doRequestGet(beanType, url, option);
     }
 
-    protected <RESULT> RESULT doRequestGet(Type beanType, String url, FlutyRemoteApiOption option) {
-        try (CloseableHttpClient httpClient = buildHttpClient(option)) {
-            final HttpGet httpGet = prepareHttpGet(url, option);
+    protected <RESULT> RESULT doRequestGet(Type beanType, String url, FlutyRemoteApiRule rule) {
+        try (CloseableHttpClient httpClient = buildHttpClient(rule)) {
+            final HttpGet httpGet = prepareHttpGet(url, rule);
             try (CloseableHttpResponse response = httpClient.execute(httpGet)) {
-                return handleResponse(beanType, url, /*form*/OptionalThing.empty(), response, option);
+                return handleResponse(beanType, url, /*form*/OptionalThing.empty(), response, rule);
             }
         } catch (IOException e) {
             handleRemoteIOException(beanType, url, /*form*/OptionalThing.empty(), e);
@@ -112,9 +107,9 @@ public class FlutyRemoteApi {
         }
     }
 
-    protected HttpGet prepareHttpGet(String uri, FlutyRemoteApiOption option) {
+    protected HttpGet prepareHttpGet(String uri, FlutyRemoteApiRule rule) {
         final HttpGet httpGet = new HttpGet(uri);
-        setupHeader(httpGet, option);
+        setupHeader(httpGet, rule);
         return httpGet;
     }
 
@@ -122,36 +117,35 @@ public class FlutyRemoteApi {
     //                                                                        Request POST
     //                                                                        ============
     /**
-     * @param <RESULT> The type of result.
+     * @param <RESULT> The type of request result (response).
      * @param beanType The class type of bean to convert, should have default constructor. (NotNull)
      * @param urlBase The base part of URL to remote API server. e.g. http://localhost:8090/harbor (NotNull)
      * @param actionPath The path to action without URL parameter, and trailing slash is no difference. e.g. /sea/land (NotNull)
      * @param pathVariables The array of URL path variables, e.g. ["hangar", 3]. (NotNull, EmptyAllowed)
      * @param form The form of POST parameters, or request body if Body class. (NotNull)
-     * @param opLambda The callback for option of remote API. (NotNull)
+     * @param ruleLambda The callback for rule of remote API. (NotNull)
      * @return The JSON result of response as result, returned from the request. (NotNull)
      */
     public <RESULT> RESULT requestPost(Type beanType, String urlBase, String actionPath, Object[] pathVariables, Object form,
-            Consumer<FlutyRemoteApiOption> opLambda) {
+            Consumer<FlutyRemoteApiRule> ruleLambda) {
         assertArgumentNotNull("beanType", beanType);
         assertArgumentNotNull("urlBase", urlBase);
         assertArgumentNotNull("actionPath", actionPath);
         assertArgumentNotNull("pathVariables", pathVariables);
         assertArgumentNotNull("form", form);
+        assertArgumentNotNull("ruleLambda", ruleLambda);
         validateForm(beanType, urlBase, actionPath, pathVariables, form);
-        FlutyRemoteApiOption option = new FlutyRemoteApiOption();
-        defaultOpLambda.accept(option);
-        opLambda.accept(option);
-        final String url = buildUrl(urlBase, actionPath, pathVariables, OptionalThing.empty(), option);
+        final FlutyRemoteApiRule rule = createRemoteApiRule(ruleLambda);
+        final String url = buildUrl(urlBase, actionPath, pathVariables, OptionalThing.empty(), rule);
         logger.debug("#flow #remote ...Requesting as POST to Remote API:\n: {}\n with form: {}\n   => {}: ", url, form, beanType);
-        return doRequestPost(beanType, url, form, option);
+        return doRequestPost(beanType, url, form, rule);
     }
 
-    protected <RESULT> RESULT doRequestPost(Type beanType, String url, Object form, FlutyRemoteApiOption option) {
-        try (CloseableHttpClient httpClient = buildHttpClient(option)) {
-            final HttpPost httpPost = prepareHttpPost(url, form, option);
+    protected <RESULT> RESULT doRequestPost(Type beanType, String url, Object form, FlutyRemoteApiRule rule) {
+        try (CloseableHttpClient httpClient = buildHttpClient(rule)) {
+            final HttpPost httpPost = prepareHttpPost(beanType, url, form, rule);
             try (CloseableHttpResponse response = httpClient.execute(httpPost)) {
-                return handleResponse(beanType, url, OptionalThing.of(form), response, option);
+                return handleResponse(beanType, url, OptionalThing.of(form), response, rule);
             }
         } catch (IOException e) {
             handleRemoteIOException(beanType, url, OptionalThing.of(form), e);
@@ -159,29 +153,85 @@ public class FlutyRemoteApi {
         return null;
     }
 
-    protected HttpPost prepareHttpPost(String uri, Object form, FlutyRemoteApiOption option) throws UnsupportedEncodingException {
-        final HttpPost httpPost = new HttpPost(uri);
-        setupHeader(httpPost, option);
-        option.getRequestConverter().prepareHttpPost(httpPost, form);
+    protected HttpPost prepareHttpPost(Type beanType, String url, Object form, FlutyRemoteApiRule rule) {
+        final HttpPost httpPost = new HttpPost(url);
+        setupHeader(httpPost, rule);
+        final RequestBodySender converter = rule.getRequestBodySender().orElseThrow(() -> {
+            return createRemoteApiSenderOfRequestBodyNotFoundException(beanType, url, form, rule);
+        });
+        converter.prepareBodyRequest(httpPost, form);
         return httpPost;
+    }
+
+    protected RuntimeException createRemoteApiSenderOfRequestBodyNotFoundException(Type beanType, String url, Object form,
+            FlutyRemoteApiRule rule) {
+        final ExceptionMessageBuilder br = new ExceptionMessageBuilder();
+        br.addNotice("Not found the sender for request body.");
+        br.addItem("Advice");
+        br.addElement("Request body sender is required for e.g. JSON response.");
+        br.addElement("Set sender to your rule like this:");
+        br.addElement("  (o):");
+        br.addElement("    protected void yourDefaultRule(FlutyRemoteApiRule rule) {");
+        br.addElement("        rule.sendBodyBy(new LaJsonSender());");
+        br.addElement("    }");
+        br.addElement("  (o):");
+        br.addElement("    doRequestGet(..., rule -> rule.sendBodyBy(new LaJsonSender());");
+        br.addItem("Bean Type");
+        br.addElement(beanType);
+        br.addItem("Request URL");
+        br.addElement(url);
+        br.addItem("Form");
+        br.addElement(form);
+        br.addItem("Your Rule");
+        br.addElement(rule);
+        setupCallerExpression(br);
+        final String msg = br.buildExceptionMessage();
+        return new RemoteApiSenderOfRequestBodyNotFoundException(msg);
+    }
+
+    // ===================================================================================
+    //                                                                          Validation
+    //                                                                          ==========
+    protected void validateForm(Type beanType, String urlBase, String actionPath, Object[] pathVariables, Object form) {
+        // you can override
+    }
+
+    protected void validateResult(Type beanType, String url, OptionalThing<Object> form, int httpStatus, String body, Object result,
+            FlutyRemoteApiRule ruledRemoteApiOption) {
+        // you can override
+    }
+
+    // ===================================================================================
+    //                                                                      RemoteApi Rule
+    //                                                                      ==============
+    protected FlutyRemoteApiRule createRemoteApiRule(Consumer<FlutyRemoteApiRule> ruleLambda) {
+        final FlutyRemoteApiRule rule = newRemoteApiRule();
+        defaultRuleLambda.accept(rule);
+        ruleLambda.accept(rule);
+        return rule;
+    }
+
+    protected FlutyRemoteApiRule newRemoteApiRule() {
+        return new FlutyRemoteApiRule();
     }
 
     // ===================================================================================
     //                                                                 HttpClient Building
     //                                                                 ===================
-    protected CloseableHttpClient buildHttpClient(FlutyRemoteApiOption option) {
-        return option.prepareHttpClient();
+    protected CloseableHttpClient buildHttpClient(FlutyRemoteApiRule rule) {
+        return rule.prepareHttpClient();
     }
 
     // ===================================================================================
     //                                                                        URL Building
     //                                                                        ============
     protected String buildUrl(String urlBase, String actionPath, Object[] pathVariables, OptionalThing<Object> queryForm,
-            FlutyRemoteApiOption ruledRemoteApiOption) {
+            FlutyRemoteApiRule rule) {
         assertArgumentNotNull("urlBase", urlBase);
         assertArgumentNotNull("actionPath", actionPath);
         assertArgumentNotNull("pathVariables", pathVariables);
         assertArgumentNotNull("queryForm", queryForm);
+        assertArgumentNotNull("rule", rule);
         final StringBuilder sb = new StringBuilder();
         sb.append(urlBase);
         sb.append(actionPath);
@@ -190,117 +240,120 @@ public class FlutyRemoteApi {
             sb.append(Stream.of(pathVariables).map(el -> el.toString()).collect(Collectors.joining("/")));
         }
         queryForm.ifPresent(form -> {
-            final String encoding = ruledRemoteApiOption.getCharset().name();
-            final DfBeanDesc beanDesc = DfBeanDescFactory.getBeanDesc(form.getClass());
-            final MyValueHolder<Integer> paramIndex = new MyValueHolder<>(0);
-            for (String propertyName : beanDesc.getProppertyNameList()) {
-                final DfPropertyDesc propertyDesc = beanDesc.getPropertyDesc(propertyName);
-                final Object plainValue = propertyDesc.getValue(form);
-                if (plainValue != null) {
-                    if (Iterable.class.isAssignableFrom(plainValue.getClass())) {
-                        Iterable<?> plainValueIterable = (Iterable<?>) plainValue;
-                        plainValueIterable.forEach(value -> {
-                            sb.append(paramIndex.getValue() == 0 ? "?" : "&");
-                            sb.append(asSerializedParameterName(propertyDesc)).append("=");
-                            try {
-                                sb.append(URLEncoder.encode(asSerializedParameterValue(value, ruledRemoteApiOption), encoding));
-                            } catch (UnsupportedEncodingException e) {
-                                throw new IllegalStateException("Unknown encoding: " + encoding);
-                            }
-                        });
-                    } else {
-                        sb.append(paramIndex.getValue() == 0 ? "?" : "&");
-                        sb.append(asSerializedParameterName(propertyDesc)).append("=");
-                        try {
-                            sb.append(URLEncoder.encode(asSerializedParameterValue(plainValue, ruledRemoteApiOption), encoding));
-                        } catch (UnsupportedEncodingException e) {
-                            throw new IllegalStateException("Unknown encoding: " + encoding);
-                        }
-                    }
-                    paramIndex.setValue(paramIndex.getValue() + 1);
-                }
-            }
+            buildQueryParameter(sb, form, rule);
         });
         return sb.toString();
     }
 
     // ===================================================================================
-    //                                                                  Parameter Handling
-    //                                                                  ==================
-    protected String asSerializedParameterName(DfPropertyDesc propertyDesc) { // may be overridden
-        return propertyDesc.getPropertyName();
+    //                                                                     Query Parameter
+    //                                                                     ===============
+    protected void buildQueryParameter(StringBuilder sb, Object form, FlutyRemoteApiRule rule) {
+        final QueryParameterSender sender = rule.getQueryParameterSender().orElseThrow(() -> {
+            return createRemoteApiSenderOfQueryParameterNotFoundException(sb, form, rule);
+        });
+        sb.append(sender.toQueryString(form, rule.getQueryParameterCharset()));
     }
 
-    protected String asSerializedParameterValue(Object value, FlutyRemoteApiOption option) { // with standard rule filter
-        if (value == null) {
-            return null;
-        }
-        final String realValue;
-        final FlutyRemoteConversionRule conversionRule = option.getConversionRule();
-        if (value instanceof LocalDate) {
-            realValue = ((LocalDate) value).format(conversionRule.getDateFormatter());
-        } else if (value instanceof LocalDateTime) {
-            realValue = ((LocalDateTime) value).format(conversionRule.getDateTimeFormatter());
-        } else if (value instanceof Boolean || boolean.class.equals(value.getClass())) {
-            realValue = conversionRule.serializeBoolean((boolean) value);
-        } else if (value instanceof Classification) {
-            final Classification cls = (Classification) value;
-            final Map<String, Object> map = cls.subItemMap();
-            final String preferredValue = (String) map.get(conversionRule.getClsPreferredItem());
-            if (preferredValue != null) { // means Flg
-                realValue = preferredValue;
-            } else {
-                realValue = cls.code();
-            }
-        } else {
-            realValue = value.toString();
-        }
-        return realValue;
+    protected RuntimeException createRemoteApiSenderOfQueryParameterNotFoundException(StringBuilder sb, Object form,
+            FlutyRemoteApiRule rule) {
+        final ExceptionMessageBuilder br = new ExceptionMessageBuilder();
+        br.addNotice("Not found the sender for query parameter.");
+        br.addItem("Advice");
+        br.addElement("Query parameter sender is required for e.g. GET request.");
+        br.addElement("Set sender to your rule like this:");
+        br.addElement("  (o):");
+        br.addElement("    protected void yourDefaultRule(FlutyRemoteApiRule rule) {");
+        br.addElement("        rule.sendQueryBy(new LaQuerySender());");
+        br.addElement("    }");
+        br.addElement("  (o):");
+        br.addElement("    doRequestGet(..., rule -> rule.sendQueryBy(new LaQuerySender()));");
+        br.addItem("Request URL");
+        br.addElement(sb.toString()); // just it
+        br.addItem("Query Form");
+        br.addElement(form);
+        br.addItem("Your Rule");
+        br.addElement(rule);
+        setupCallerExpression(br);
+        final String msg = br.buildExceptionMessage();
+        return new RemoteApiSenderOfQueryParameterNotFoundException(msg);
     }
 
     // ===================================================================================
     //                                                                   Response Handling
     //                                                                   =================
     protected <RESULT> RESULT handleResponse(Type beanType, String url, OptionalThing<Object> form, CloseableHttpResponse response,
-            FlutyRemoteApiOption option) throws IOException {
-        final int statusCode = response.getStatusLine().getStatusCode();
-        final String body = extractResponseBody(response, option);
-        final RESULT resut = parseResponse(beanType, url, form, statusCode, body, option);
-        validateResult(beanType, url, form, statusCode, body, resut, option);
+            FlutyRemoteApiRule rule) throws IOException {
+        final int httpStatus = response.getStatusLine().getStatusCode();
+        final String body = extractResponseBody(response, rule);
+        final RESULT resut = parseResponse(beanType, url, form, httpStatus, body, rule);
+        validateResult(beanType, url, form, httpStatus, body, resut, rule);
         return resut;
     }
 
-    protected <RESULT> RESULT parseResponse(Type beanType, String url, OptionalThing<Object> form, int statusCode, String body,
-            FlutyRemoteApiOption option) {
+    protected <RESULT> RESULT parseResponse(Type beanType, String url, OptionalThing<Object> form, int httpStatus, String body,
+            FlutyRemoteApiRule rule) {
         logger.debug("#flow #remote ...Parsing response to Remote API:\n {}\n   => {}\n{}", url, beanType, body);
-        if (statusCode >= 200 && statusCode < 300) {
-            final RESULT result = toResult(beanType, url, form, statusCode, body, option);
+        if (httpStatus >= 200 && httpStatus < 300) {
+            final RESULT result = toResult(beanType, url, form, httpStatus, body, rule);
             return result;
-        } else if (statusCode >= 400 && statusCode < 500) { // e.g. not found, bad request
-            final Object failureResponse = prepareFailureResponse(url, form, statusCode, body, option);
-            throwRemoteApiHttpClientErrorException(beanType, url, form, statusCode, body, failureResponse);
+        } else if (httpStatus >= 400 && httpStatus < 500) { // e.g. not found, bad request
+            final Object failureResponse = prepareFailureResponse(url, form, httpStatus, body, rule);
+            throwRemoteApiHttpClientErrorException(beanType, url, form, httpStatus, body, failureResponse);
         } else { // might be framework error
-            throwRemoteApiHttpServerErrorException(beanType, url, form, statusCode, body);
+            throwRemoteApiHttpServerErrorException(beanType, url, form, httpStatus, body);
         }
         return null; // unreachable
     }
 
-    protected Object prepareFailureResponse(String url, OptionalThing<Object> form, int statusCode, String body,
-            FlutyRemoteApiOption option) {
-        return option.getFailureResponseType().map(failureResponseType -> {
+    protected Object prepareFailureResponse(String url, OptionalThing<Object> form, int httpStatus, String body, FlutyRemoteApiRule rule) {
+        return rule.getFailureResponseType().map(failureResponseType -> {
             // #hope jflute parse failure should be warning? because of already failureo
-            return toResult(failureResponseType, url, form, statusCode, body, option);
-        }).orElse(null); // when no option
+            return toResult(failureResponseType, url, form, httpStatus, body, rule);
+        }).orElse(null); // when no rule
     }
 
-    protected <RESULT> RESULT toResult(Type type, String url, OptionalThing<Object> form, int statusCode, String body,
-            FlutyRemoteApiOption option) {
+    protected <RESULT> RESULT toResult(Type beanType, String url, OptionalThing<Object> form, int httpStatus, String body,
+            FlutyRemoteApiRule rule) {
+        final ResponseBodyReceiver converter = rule.getResponseBodyReceiver().orElseThrow(() -> {
+            return createRemoteApiReceiverOfResponseBodyNotFoundException(beanType, url, form, httpStatus, body, rule);
+        });
         try {
-            return option.getResponseConverter().toResult(body, type);
+            return converter.toResult(body, beanType);
         } catch (RuntimeException e) {
-            throwRemoteApiResponseCannotParseException(type, url, form, statusCode, body, e);
+            throwRemoteApiResponseCannotParseException(beanType, url, form, httpStatus, body, e);
             return null; // unreachable
         }
+    }
+
+    protected RuntimeException createRemoteApiReceiverOfResponseBodyNotFoundException(Type beanType, String url, OptionalThing<Object> form,
+            int httpStatus, String body, FlutyRemoteApiRule rule) {
+        final ExceptionMessageBuilder br = new ExceptionMessageBuilder();
+        br.addNotice("Not found the receiver for response body.");
+        br.addItem("Advice");
+        br.addElement("Response body receiver is required for e.g. JSON response.");
+        br.addElement("Set receiver to your rule like this:");
+        br.addElement("  (o):");
+        br.addElement("    protected void yourDefaultRule(FlutyRemoteApiRule rule) {");
+        br.addElement("        rule.receiveBodyBy(new LaJsonReceiver());");
+        br.addElement("    }");
+        br.addElement("  (o):");
+        br.addElement("    doRequestGet(..., rule -> rule.receiveBodyBy(new LaJsonReceiver()));");
+        br.addItem("BeanType");
+        br.addElement(beanType);
+        br.addItem("Request URL");
+        br.addElement(url);
+        br.addItem("Form");
+        br.addElement(form);
+        br.addItem("Response HTTP Status");
+        br.addElement(httpStatus);
+        br.addItem("Response Body");
+        br.addElement(body);
+        br.addItem("Your Rule");
+        br.addElement(rule);
+        setupCallerExpression(br);
+        final String msg = br.buildExceptionMessage();
+        return new RemoteApiReceiverOfResponseBodyNotFoundException(msg);
     }
 
     // ===================================================================================
@@ -309,24 +362,26 @@ public class FlutyRemoteApi {
     // -----------------------------------------------------
     //                                           HTTP Status
     //                                           -----------
-    protected void throwRemoteApiHttpClientErrorException(Type beanType, String url, OptionalThing<Object> form, int statusCode,
+    protected void throwRemoteApiHttpClientErrorException(Type beanType, String url, OptionalThing<Object> form, int httpStatus,
             String body, Object failureResponse) {
         final ExceptionMessageBuilder br = new ExceptionMessageBuilder();
         br.addNotice("Client Error as HTTP status from the remote API.");
         setupRequestInfo(br, beanType, url, form);
-        setupResponseInfo(br, statusCode, body);
+        setupResponseInfo(br, httpStatus, body);
+        setupCallerExpression(br);
         final String msg = br.buildExceptionMessage();
-        throw new RemoteApiHttpClientErrorException(msg, failureResponse);
+        throw new RemoteApiHttpClientErrorException(msg, httpStatus, failureResponse);
     }
 
-    protected void throwRemoteApiHttpServerErrorException(Type beanType, String url, OptionalThing<Object> form, int statusCode,
+    protected void throwRemoteApiHttpServerErrorException(Type beanType, String url, OptionalThing<Object> form, int httpStatus,
             String body) {
         final ExceptionMessageBuilder br = new ExceptionMessageBuilder();
         br.addNotice("Server Error as HTTP status from the remote API.");
         setupRequestInfo(br, beanType, url, form);
-        setupResponseInfo(br, statusCode, body);
+        setupResponseInfo(br, httpStatus, body);
+        setupCallerExpression(br);
         final String msg = br.buildExceptionMessage();
-        throw new RemoteApiHttpServerErrorException(msg);
+        throw new RemoteApiHttpServerErrorException(msg, httpStatus);
     }
 
     // -----------------------------------------------------
@@ -336,6 +391,7 @@ public class FlutyRemoteApi {
         final ExceptionMessageBuilder br = new ExceptionMessageBuilder();
         br.addNotice("IO Error to the remote API.");
         setupRequestInfo(br, beanType, url, form);
+        setupCallerExpression(br);
         final String msg = br.buildExceptionMessage();
         throw new RemoteApiRequestFailureException(msg, cause);
     }
@@ -343,12 +399,13 @@ public class FlutyRemoteApi {
     // -----------------------------------------------------
     //                                          Cannot Parse
     //                                          ------------
-    protected void throwRemoteApiResponseCannotParseException(Type type, String url, OptionalThing<Object> form, int statusCode,
+    protected void throwRemoteApiResponseCannotParseException(Type type, String url, OptionalThing<Object> form, int httpStatus,
             String body, RuntimeException e) {
         final ExceptionMessageBuilder br = new ExceptionMessageBuilder();
         br.addNotice("Failed to parse the JSON of remote API.");
         setupRequestInfo(br, type, url, form);
-        setupResponseInfo(br, statusCode, body);
+        setupResponseInfo(br, httpStatus, body);
+        setupCallerExpression(br);
         final String msg = br.buildExceptionMessage();
         throw new RemoteApiRequestFailureException(msg, e);
     }
@@ -371,9 +428,9 @@ public class FlutyRemoteApi {
         return form.toString(); // as default
     }
 
-    protected void setupResponseInfo(ExceptionMessageBuilder br, int statusCode, String body) {
-        br.addItem("Response Status Code");
-        br.addElement(statusCode);
+    protected void setupResponseInfo(ExceptionMessageBuilder br, int httpStatus, String body) {
+        br.addItem("Response HTTP Status");
+        br.addElement(httpStatus);
         br.addItem("Response Body");
         br.addElement(body);
     }
@@ -383,29 +440,22 @@ public class FlutyRemoteApi {
         br.addElement(result);
     }
 
-    // ===================================================================================
-    //                                                                          Validation
-    //                                                                          ==========
-    protected void validateForm(Type beanType, String urlBase, String actionPath, Object[] pathVariables, Object form) {
-        // you can override
-    }
-
-    protected void validateResult(Type beanType, String url, OptionalThing<Object> form, int statusCode, String body, Object result,
-            FlutyRemoteApiOption ruledRemoteApiOption) {
-        // you can override
+    protected void setupCallerExpression(final ExceptionMessageBuilder br) {
+        br.addItem("Caller Expression");
+        br.addElement(callerExp);
     }
 
     // ===================================================================================
     //                                                                        Assist Logic
     //                                                                        ============
-    protected void setupHeader(final HttpMessage http, FlutyRemoteApiOption option) {
-        option.getHeaders().ifPresent(map -> map.forEach((name, value) -> {
-            http.addHeader(name, value);
+    protected void setupHeader(HttpMessage httpMessage, FlutyRemoteApiRule rule) {
+        rule.getHeaders().ifPresent(map -> map.forEach((name, value) -> {
+            httpMessage.addHeader(name, value);
         }));
     }
 
-    protected String extractResponseBody(CloseableHttpResponse response, FlutyRemoteApiOption option) throws IOException {
-        return EntityUtils.toString(response.getEntity(), option.getCharset());
+    protected String extractResponseBody(CloseableHttpResponse response, FlutyRemoteApiRule rule) throws IOException {
+        return EntityUtils.toString(response.getEntity(), rule.getResponseBodyCharset());
     }
 
     // ===================================================================================
@@ -417,31 +467,6 @@ public class FlutyRemoteApi {
         }
         if (value == null) {
             throw new IllegalArgumentException("The argument '" + variableName + "' should not be null.");
-        }
-    }
-
-    protected static class MyValueHolder<T> { // copied from Lasta Di
-
-        protected T value;
-
-        public MyValueHolder() {
-        }
-
-        public MyValueHolder(T value) {
-            this.value = value;
-        }
-
-        public T getValue() {
-            return value;
-        }
-
-        public void setValue(final T value) {
-            this.value = value;
-        }
-
-        @Override
-        public String toString() {
-            return value.toString();
         }
     }
 }

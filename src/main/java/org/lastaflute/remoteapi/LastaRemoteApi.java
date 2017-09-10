@@ -21,11 +21,10 @@ import java.util.function.Consumer;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import org.dbflute.helper.beans.DfPropertyDesc;
 import org.dbflute.helper.message.ExceptionMessageBuilder;
 import org.dbflute.optional.OptionalThing;
 import org.dbflute.remoteapi.FlutyRemoteApi;
-import org.dbflute.remoteapi.FlutyRemoteApiOption;
+import org.dbflute.remoteapi.FlutyRemoteApiRule;
 import org.dbflute.remoteapi.exception.RemoteApiRequestValidationErrorException;
 import org.dbflute.remoteapi.exception.RemoteApiResponseValidationErrorException;
 import org.lastaflute.core.message.UserMessages;
@@ -39,46 +38,27 @@ import org.lastaflute.web.servlet.request.RequestManager;
 import org.lastaflute.web.validation.ActionValidator;
 import org.lastaflute.web.validation.exception.ValidationStoppedException;
 
-import com.google.gson.annotations.SerializedName;
-
 /**
  * @author jflute
  * @author awaawa
  * @author inoue
  */
-public class LaRemoteApi extends FlutyRemoteApi {
+public class LastaRemoteApi extends FlutyRemoteApi {
 
     // ===================================================================================
     //                                                                           Attribute
     //                                                                           =========
-    protected final RequestManager requestManager; // for validation and various purpose
+    protected RequestManager requestManager; // not null after set, for validation and various purpose
 
     // ===================================================================================
     //                                                                         Constructor
     //                                                                         ===========
-    public LaRemoteApi(RequestManager requestManager, Consumer<FlutyRemoteApiOption> defaultOpLambda, Object callerExp) {
+    public LastaRemoteApi(Consumer<FlutyRemoteApiRule> defaultOpLambda, Object callerExp) {
         super(defaultOpLambda, callerExp);
+    }
+
+    public void acceptRequestManager(RequestManager requestManager) {
         this.requestManager = requestManager;
-    }
-
-    // ===================================================================================
-    //                                                                  Parameter Handling
-    //                                                                  ==================
-    @Override
-    protected String asSerializedParameterName(DfPropertyDesc propertyDesc) {
-        final SerializedName serializedName = propertyDesc.getField().getAnnotation(SerializedName.class);
-        if (serializedName != null) {
-            return serializedName.value();
-        }
-        return super.asSerializedParameterName(propertyDesc);
-    }
-
-    // ===================================================================================
-    //                                                                      Error Handling
-    //                                                                      ==============
-    @Override
-    protected String convertFormToDebugString(Object form) {
-        return Lato.string(form); // because its toString() may not be overridden
     }
 
     // ===================================================================================
@@ -94,12 +74,12 @@ public class LaRemoteApi extends FlutyRemoteApi {
     }
 
     @Override
-    protected void validateResult(Type beanType, String url, OptionalThing<Object> form, int statusCode, String body, Object result,
-            FlutyRemoteApiOption ruledRemoteApiOption) {
+    protected void validateResult(Type beanType, String url, OptionalThing<Object> form, int httpStatus, String body, Object result,
+            FlutyRemoteApiRule ruledRemoteApiOption) {
         try {
             createTransferredBeanValidator().validate(result);
         } catch (ResponseBeanValidationErrorException | ValidationStoppedException e) {
-            throwRemoteApiResponseValidationErrorException(beanType, url, form, statusCode, body, result, e);
+            throwRemoteApiResponseValidationErrorException(beanType, url, form, httpStatus, body, result, e);
         }
     }
 
@@ -147,14 +127,30 @@ public class LaRemoteApi extends FlutyRemoteApi {
         throw new RemoteApiRequestValidationErrorException(msg, e);
     }
 
-    protected void throwRemoteApiResponseValidationErrorException(Type beanType, String url, OptionalThing<Object> form, int statusCode,
+    protected void throwRemoteApiResponseValidationErrorException(Type beanType, String url, OptionalThing<Object> form, int httpStatus,
             String body, Object result, RuntimeException e) {
         final ExceptionMessageBuilder br = new ExceptionMessageBuilder();
         br.addNotice("Validation Error as HTTP Response from the remote API.");
         setupRequestInfo(br, beanType, url, form);
-        setupResponseInfo(br, statusCode, body);
+        setupResponseInfo(br, httpStatus, body);
         setupResultInfo(br, result);
         final String msg = br.buildExceptionMessage();
         throw new RemoteApiResponseValidationErrorException(msg, e);
+    }
+
+    // ===================================================================================
+    //                                                                      RemoteApi Rule
+    //                                                                      ==============
+    @Override
+    protected FlutyRemoteApiRule newRemoteApiRule() {
+        return new LastaRemoteApiRule();
+    }
+
+    // ===================================================================================
+    //                                                                      Error Handling
+    //                                                                      ==============
+    @Override
+    protected String convertFormToDebugString(Object form) {
+        return Lato.string(form); // because its toString() may not be overridden
     }
 }

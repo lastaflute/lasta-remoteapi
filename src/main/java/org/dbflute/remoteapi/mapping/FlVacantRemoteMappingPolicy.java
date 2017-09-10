@@ -13,17 +13,11 @@
  * either express or implied. See the License for the specific language
  * governing permissions and limitations under the License.
  */
-package org.dbflute.remoteapi.exception;
+package org.dbflute.remoteapi.mapping;
 
 /**
- * @author awane
  * @author jflute
+ * @author mito
  */
-public class RemoteApiHttpClientErrorException extends RemoteApiHttpBasisErrorException {
-
-    private static final long serialVersionUID = 1L;
-
-    public RemoteApiHttpClientErrorException(String msg, int httpStatus, Object failureResponse) {
-        super(msg, httpStatus, failureResponse);
-    }
+public class FlVacantRemoteMappingPolicy implements FlRemoteMappingPolicy { // state-less
 }

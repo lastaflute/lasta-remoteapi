@@ -13,43 +13,59 @@
  * either express or implied. See the License for the specific language
  * governing permissions and limitations under the License.
  */
-package org.dbflute.remoteapi.rule;
+package org.dbflute.remoteapi.mapping;
 
 import java.time.format.DateTimeFormatter;
 
 /**
  * @author jflute
- * @author mito
  */
-public class FlutyEmptyRemoteConversionRule implements FlutyRemoteConversionRule { // state-less
+public interface FlRemoteMappingPolicy {
 
+    // not use optional for performance
     // ===================================================================================
     //                                                                               Date
     //                                                                              ======
-    public DateTimeFormatter getDateFormatter() {
-        return null; // uses default
+    /**
+     * @return The formatter of date. (NullAllowed: if null, use default format that is ISO)
+     */
+    default DateTimeFormatter getDateFormatter() {
+        return null;
     }
 
-    public DateTimeFormatter getDateTimeFormatter() {
-        return null; // uses default
+    /**
+     * @return The formatter of date-time. (NullAllowed: if null, use default format that is ISO)
+     */
+    default DateTimeFormatter getDateTimeFormatter() {
+        return null;
     }
 
     // ===================================================================================
     //                                                                             Boolean
     //                                                                             =======
-    // simple conversion, for e.g. form parameter
-    public String serializeBoolean(Boolean boo) {
+    /**
+     * @param boo The value of boolean converted to string. (NullAllowed: if null, returns null)
+     * @return The string for the boolean. (NullAllowed: if argument is null)
+     */
+    default String serializeBoolean(Boolean boo) {
         return boo != null ? boo.toString() : null; // e.g. "true", "false"
     }
 
-    public Boolean deserializeBoolean(Object exp) {
+    /**
+     * @param exp The expression converted to boolean. (NullAllowed: if null, returns null)
+     * @return The boolean for the expression. (NullAllowed: if argument is null)
+     */
+    default Boolean deserializeBoolean(Object exp) {
         return exp != null ? Boolean.valueOf(exp.toString()) : null; // expects "true" or not
     }
 
     // ===================================================================================
     //                                                                      Classification
     //                                                                      ==============
-    public String getClsPreferredItem() {
+    /**
+     * @return The preferred sub-item (name) for classification. (NullAllowed: if null, unused)
+     */
+    default String getClsPreferredItem() {
         return null; // means unused
     }
 }

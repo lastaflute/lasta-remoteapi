@@ -13,17 +13,12 @@
  * either express or implied. See the License for the specific language
  * governing permissions and limitations under the License.
  */
-package org.dbflute.remoteapi.exception;
+package org.lastaflute.remoteapi.receiver;
+
+import org.dbflute.remoteapi.receiver.FlXmlReceiver;
 
 /**
- * @author awane
  * @author jflute
  */
-public class RemoteApiHttpClientErrorException extends RemoteApiHttpBasisErrorException {
-
-    private static final long serialVersionUID = 1L;
-
-    public RemoteApiHttpClientErrorException(String msg, int httpStatus, Object failureResponse) {
-        super(msg, httpStatus, failureResponse);
-    }
+public class LaXmlReceiver extends FlXmlReceiver {
 }

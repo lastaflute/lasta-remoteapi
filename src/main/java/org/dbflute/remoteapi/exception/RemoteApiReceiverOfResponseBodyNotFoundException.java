@@ -16,14 +16,14 @@
 package org.dbflute.remoteapi.exception;
 
 /**
- * @author awane
  * @author jflute
+ * @since 0.2.0 (2017/09/10 Sunday at american waterfront)
  */
-public class RemoteApiHttpClientErrorException extends RemoteApiHttpBasisErrorException {
+public class RemoteApiReceiverOfResponseBodyNotFoundException extends RemoteApiBaseException {
 
     private static final long serialVersionUID = 1L;
 
-    public RemoteApiHttpClientErrorException(String msg, int httpStatus, Object failureResponse) {
-        super(msg, httpStatus, failureResponse);
+    public RemoteApiReceiverOfResponseBodyNotFoundException(String msg) {
+        super(msg);
     }
 }

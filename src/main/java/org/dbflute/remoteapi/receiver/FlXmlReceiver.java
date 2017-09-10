@@ -13,7 +13,7 @@
  * either express or implied. See the License for the specific language
  * governing permissions and limitations under the License.
  */
-package org.dbflute.remoteapi.converter;
+package org.dbflute.remoteapi.receiver;
 
 import java.io.StringReader;
 import java.lang.reflect.Type;
@@ -24,10 +24,10 @@ import javax.xml.bind.JAXB;
  * @author inoue
  * @author jflute
  */
-public class FlutyXmlResponseConverter implements FlutyResponseConverter {
+public class FlXmlReceiver implements ResponseBodyReceiver {
 
     @SuppressWarnings("unchecked")
-    public <CONTENT extends Object> CONTENT toResult(String target, Type type) {
-        return (CONTENT) JAXB.unmarshal(new StringReader(target), (Class<?>) type);
+    public <RESULT extends Object> RESULT toResult(String target, Type type) {
+        return (RESULT) JAXB.unmarshal(new StringReader(target), (Class<?>) type);
     }
 }

@@ -13,17 +13,23 @@
  * either express or implied. See the License for the specific language
  * governing permissions and limitations under the License.
  */
-package org.dbflute.remoteapi.exception;
+package org.dbflute.remoteapi.receiver;
+
+import java.lang.reflect.Type;
 
 /**
- * @author awane
+ * The receiver of response body.
+ * @author inoue
  * @author jflute
  */
-public class RemoteApiHttpClientErrorException extends RemoteApiHttpBasisErrorException {
+public interface ResponseBodyReceiver {
 
-    private static final long serialVersionUID = 1L;
-
-    public RemoteApiHttpClientErrorException(String msg, int httpStatus, Object failureResponse) {
-        super(msg, httpStatus, failureResponse);
-    }
+    /**
+     * Convert response body to result.
+     * @param <RESULT> the type of result.
+     * @param body The body string of response. (NotNull)
+     * @param beanType The specified bean type as result. (NotNull)
+     * @return The converted result. (NotNull)
+     */
+    <RESULT extends Object> RESULT toResult(String body, Type beanType);
 }

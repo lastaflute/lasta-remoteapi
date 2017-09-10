@@ -36,7 +36,7 @@ public abstract class FlutyRemoteBehavior {
     // ===================================================================================
     //                                                                          Definition
     //                                                                          ==========
-    protected static final Object[] EMPTY_PARAMS = new Object[] {};
+    protected static final Object[] EMPTY_OBJECTS = new Object[] {};
 
     // ===================================================================================
     //                                                                           Attribute
@@ -50,18 +50,42 @@ public abstract class FlutyRemoteBehavior {
         this.remoteApi = createRemoteApi();
     }
 
+    // -----------------------------------------------------
+    //                                      Create RemoteApi
+    //                                      ----------------
     protected FlutyRemoteApi createRemoteApi() {
-        return new FlutyRemoteApi(op -> prepareDefaultRuledRemoteApiOption(op), getClass());
+        return newRemoteApi(createRemoteApiOptionSetupper(), getCallerExp());
     }
 
-    protected void prepareDefaultRuledRemoteApiOption(FlutyRemoteApiOption option) {
-        if (__xmockHttpClient != null) {
-            option.xregisterMockHttpClient(__xmockHttpClient);
+    // -----------------------------------------------------
+    //                                       Option Setupper
+    //                                       ---------------
+    protected Consumer<FlutyRemoteApiRule> createRemoteApiOptionSetupper() {
+        return op -> setupDefaultRemoteApiRule(op);
+    }
+
+    protected void setupDefaultRemoteApiRule(FlutyRemoteApiRule rule) {
+        reflectMockHttpClientIfNeeds(rule);
+        if (isUseApplicationalUserAgent()) {
+            rule.setHeader("User-Agent", buildApplicationalUserAgent());
         }
-        option.setHeader("User-Agent", buildUserAgent());
+        yourDefaultRule(rule); // you can override default rules
     }
 
-    protected String buildUserAgent() {
+    protected void reflectMockHttpClientIfNeeds(FlutyRemoteApiRule rule) {
+        if (__xmockHttpClient != null) {
+            rule.xregisterMockHttpClient(__xmockHttpClient);
+        }
+    }
+
+    // -----------------------------------------------------
+    //                               Applicational UserAgent
+    //                               -----------------------
+    protected boolean isUseApplicationalUserAgent() {
+        return false; // as default, for security
+    }
+
+    protected String buildApplicationalUserAgent() { // basically for internal remote AIP
         final List<String> wordList = DfCollectionUtil.newArrayList();
         final String serviceName = getUserAgentServiceName();
         if (serviceName != null) {
@@ -78,19 +102,52 @@ public abstract class FlutyRemoteBehavior {
     /**
      * @return The service name for user-agent. (NullAllowed: then no use)
      */
-    protected abstract String getUserAgentServiceName();
+    protected String getUserAgentServiceName() {
+        return null; // as default
+    }
 
     /**
      * @return The application name for user-agent. (NullAllowed: then no use)
      */
-    protected abstract String getUserAgentAppName();
+    protected String getUserAgentAppName() {
+        return null; // as default
+    }
+
+    // -----------------------------------------------------
+    //                                             Your Rule
+    //                                             ---------
+    /**
+     * Set up your default rule of remote API.
+     * <pre>
+     * rule.sendQueryBy(new FlQuerySender(...));
+     * rule.sendBodyBy(new FlJsonSender(...));
+     * rule.receiveBodyBy(new FlJsonReceiver(...));
+     * </pre>
+     * @param rule The rule of remote API. (NotNull)
+     */
+    protected abstract void yourDefaultRule(FlutyRemoteApiRule rule);
+
+    // -----------------------------------------------------
+    //                                     Caller Expression
+    //                                     -----------------
+    protected Object getCallerExp() { // not null, for various purpose (basically debug)
+        return getClass(); // as default
+    }
+
+    // -----------------------------------------------------
+    //                                    RemoteApi Instance
+    //                                    ------------------
+    protected FlutyRemoteApi newRemoteApi(Consumer<FlutyRemoteApiRule> ruleSetupper, Object callerExp) {
+        return new FlutyRemoteApi(ruleSetupper, callerExp);
+    }
 
     // ===================================================================================
     //                                                                         Basic Parts
     //                                                                         ===========
     /**
-     * Get the base string of URL for remote API server.
-     * @return The base part of URL to remote API server. e.g. http://localhost:8090/harbor (NotNull)
+     * Get the base part of URL for remote API server. <br>
+     * The string is from first to context path.
+     * @return The base part of URL. e.g. http://localhost:8090/harbor (NotNull)
      */
     protected abstract String getUrlBase();
 
@@ -101,62 +158,128 @@ public abstract class FlutyRemoteBehavior {
     //                                                  GET
     //                                                 -----
     /**
-     * @param <RESULT> The type of request result.
+     * Request as POST, receiving as simple bean type.
+     * <pre>
+     * e.g. if sender, receiver are already set as default: /lido/product/list/7
+     *  return doRequestGet(HbProductListResult.class, "/lido/product/list", moreUrl(7), OptionalThing.of(form), rule -&gt; {});
+     *  
+     * e.g. if sender, receiver are not set yet, so set them here: /lido/product/list/7
+     *  return doRequestGet(HbProductListResult.class, "/lido/product/list", moreUrl(7), OptionalThing.of(form), rule -&gt; {
+     *      rule.sendQueryBy(new LaQuerySender(...));
+     *      rule.receiveBodyBy(new LaJsonReceiver(...));
+     *  });
+     * </pre>
+     * @param <RESULT> The type of request result (response).
      * @param beanType The class type of bean to convert, should have default constructor. (NotNull)
      * @param actionPath The path to action without URL parameter. e.g. /sea/land (NotNull)
      * @param pathVariables The array of URL path variables, e.g. ["hangar", 3]. (NotNull, EmptyAllowed)
      * @param queryForm The optional form of query (GET parameters). (NotNull, EmptyAllowed)
-     * @param opLambda The callback for option of remote API. (NotNull)
+     * @param ruleLambda The callback for rule of remote API. (NotNull)
      * @return The JSON result of response as result, returned from the request. (NotNull)
      */
     protected <RESULT extends Object> RESULT doRequestGet(Class<? extends Object> beanType //
-            , String actionPath, Object[] pathVariables, OptionalThing<Object> queryForm, Consumer<FlutyRemoteApiOption> opLambda) {
-        return remoteApi.requestGet(beanType, getUrlBase(), actionPath, pathVariables, queryForm, opLambda);
+            , String actionPath, Object[] pathVariables, OptionalThing<Object> queryForm, Consumer<FlutyRemoteApiRule> ruleLambda) {
+        return remoteApi.requestGet(beanType, getUrlBase(), actionPath, pathVariables, queryForm, ruleLambda);
     }
 
     /**
-     * @param <RESULT> The type of request result.
+     * Request as POST, receiving as parameterized type (has nested generics).
+     * <pre>
+     * e.g. if sender, receiver are already set as default: /lido/product/list/7
+     *  return doRequestGet(new ParameterizedRef&lt;HbSearchPagingResult&lt;HbProductRowResult&gt;&gt;() {
+     *  }.getType(), "/lido/product/list", moreUrl(7), OptionalThing.of(form), rule -&gt; {});
+     *  
+     * e.g. if sender, receiver are not set yet, so set them here: /lido/product/list/7
+     *  return doRequestGet(new ParameterizedRef&lt;HbSearchPagingResult&lt;HbProductRowResult&gt;&gt;() {
+     *  }.getType(), "/lido/product/list", moreUrl(7), OptionalThing.of(form), rule -&gt; {
+     *      rule.sendQueryBy(new LaQuerySender(...));
+     *      rule.receiveBodyBy(new LaJsonReceiver(...));
+     *  });
+     * </pre>
+     * @param <RESULT> The type of request result (response).
      * @param beanType The parameterized type of bean to convert, should have default constructor. (NotNull)
      * @param actionPath The path to action without URL parameter. e.g. /sea/land (NotNull)
      * @param pathVariables The array of URL path variables, e.g. ["hangar", 3]. (NotNull, EmptyAllowed)
      * @param queryForm The optional form of query (GET parameters). (NotNull, EmptyAllowed)
-     * @param opLambda The callback for option of remote API. (NotNull)
+     * @param ruleLambda The callback for rule of remote API. (NotNull)
      * @return The JSON result of response as result, returned from the request. (NotNull)
      */
     protected <RESULT extends Object> RESULT doRequestGet(ParameterizedType beanType //
-            , String actionPath, Object[] pathVariables, OptionalThing<Object> queryForm, Consumer<FlutyRemoteApiOption> opLambda) {
-        return remoteApi.requestGet(beanType, getUrlBase(), actionPath, pathVariables, queryForm, opLambda);
+            , String actionPath, Object[] pathVariables, OptionalThing<Object> queryForm, Consumer<FlutyRemoteApiRule> ruleLambda) {
+        return remoteApi.requestGet(beanType, getUrlBase(), actionPath, pathVariables, queryForm, ruleLambda);
     }
 
     // -----------------------------------------------------
     //                                                 Post
     //                                                ------
     /**
-     * @param <RESULT> The type of request result.
-     * @param beanType The class type of bean to convert, should have default constructor. (NotNull)
+     * Request as POST, receiving as simple bean type.
+     * <pre>
+     * e.g. if sender, receiver are already set as default: /lido/product/list/7
+     *  return doRequestPost(HbProductListResult.class, "/lido/product/list", moreUrl(7), body, rule -&gt; {});
+     *  
+     * e.g. if sender, receiver are not set yet, so set them here: /lido/product/list/7
+     *  return doRequestPost(HbProductListResult.class, "/lido/product/list", moreUrl(7), body, rule -&gt; {
+     *      rule.sendBodyBy(new LaJsonSender(...));
+     *      rule.receiveBodyBy(new LaJsonReceiver(...));
+     *  });
+     * </pre>
+     * @param <RESULT> The type of request result (response).
+     * @param beanType The class type of bean for response body, should have default constructor. (NotNull)
      * @param actionPath The path to action without URL parameter. e.g. /sea/land (NotNull)
      * @param pathVariables The array of URL path variables, e.g. ["hangar", 3]. (NotNull, EmptyAllowed)
      * @param form The form of POST parameters. (NotNull)
-     * @param opLambda The callback for option of remote API. (NotNull)
+     * @param ruleLambda The callback for rule of remote API. (NotNull)
      * @return The JSON result of response as result, returned from the request. (NotNull)
      */
     protected <RESULT extends Object> RESULT doRequestPost(Class<? extends Object> beanType //
-            , String actionPath, Object[] pathVariables, Object form, Consumer<FlutyRemoteApiOption> opLambda) {
-        return remoteApi.requestPost(beanType, getUrlBase(), actionPath, pathVariables, form, opLambda);
+            , String actionPath, Object[] pathVariables, Object form, Consumer<FlutyRemoteApiRule> ruleLambda) {
+        return remoteApi.requestPost(beanType, getUrlBase(), actionPath, pathVariables, form, ruleLambda);
     }
 
     /**
-     * @param <RESULT> The type of request result.
-     * @param beanType The parameterized type of bean to convert, should have default constructor. (NotNull)
+     * Request as POST, receiving as parameterized type (has nested generics).
+     * <pre>
+     * e.g. if sender, receiver are already set as default: /lido/product/list/7
+     *  return doRequestPost(new ParameterizedRef&lt;HbSearchPagingResult&lt;HbProductRowResult&gt;&gt;() {
+     *  }.getType(), "/lido/product/list", moreUrl(7), body, rule -&gt; {});
+     *  
+     * e.g. if sender, receiver are not set yet, so set them here: /lido/product/list/7
+     *  return doRequestPost(new ParameterizedRef&lt;HbSearchPagingResult&lt;HbProductRowResult&gt;&gt;() {
+     *  }.getType(), "/lido/product/list", moreUrl(7), body, rule -&gt; {
+     *      rule.sendBodyBy(new LaJsonSender(...));
+     *      rule.receiveBodyBy(new LaJsonReceiver(...));
+     *  });
+     * </pre>
+     * @param <RESULT> The type of request result (response).
+     * @param beanType The parameterized type of bean for response body, should have default constructor. (NotNull)
      * @param actionPath The path to action without URL parameter. e.g. /sea/land (NotNull)
      * @param pathVariables The array of URL path variables, e.g. ["hangar", 3]. (NotNull, EmptyAllowed)
      * @param form The form of POST parameters. (NotNull)
-     * @param opLambda The callback for option of remote API. (NotNull)
+     * @param ruleLambda The callback for rule of remote API. (NotNull)
      * @return The JSON result of response as result, returned from the request. (NotNull)
      */
     protected <RESULT extends Object> RESULT doRequestPost(ParameterizedType beanType //
-            , String actionPath, Object[] pathVariables, Object form, Consumer<FlutyRemoteApiOption> opLambda) {
-        return remoteApi.requestPost(beanType, getUrlBase(), actionPath, pathVariables, form, opLambda);
+            , String actionPath, Object[] pathVariables, Object form, Consumer<FlutyRemoteApiRule> ruleLambda) {
+        return remoteApi.requestPost(beanType, getUrlBase(), actionPath, pathVariables, form, ruleLambda);
+    }
+
+    // ===================================================================================
+    //                                                                        Assist Logic
+    //                                                                        ============
+    /**
+     * Make array for path variables. (easy utility)
+     * <pre>
+     * return doRequestPost(..., "/lido/product/list", moreUrl(7), body, rule -&gt; {});
+     * </pre>
+     * @param pathVariables The varying arguments for path variables. (NotNull)
+     * @return The array of object. (NotNull)
+     */
+    protected Object[] moreUrl(Object... pathVariables) {
+        if (pathVariables == null) {
+            throw new IllegalArgumentException("The argument 'pathVariables' should not be null.");
+        }
+        return pathVariables;
     }
 
     // ===================================================================================
@@ -164,6 +287,7 @@ public abstract class FlutyRemoteBehavior {
     //                                                                         ===========
     protected CloseableHttpClient __xmockHttpClient;
 
+    // #hope jflute too easy, so want to switch other way...
     public void xregisterMockHttpClient(CloseableHttpClient mockHttpClient) {
         this.__xmockHttpClient = mockHttpClient;
     }

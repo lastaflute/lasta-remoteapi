@@ -16,10 +16,12 @@
 package org.lastaflute.remoteapi;
 
 import java.util.Arrays;
+import java.util.function.Consumer;
 
 import javax.annotation.Resource;
 
 import org.dbflute.remoteapi.FlutyRemoteApi;
+import org.dbflute.remoteapi.FlutyRemoteApiRule;
 import org.dbflute.remoteapi.FlutyRemoteBehavior;
 import org.dbflute.util.DfStringUtil;
 import org.lastaflute.core.direction.AccessibleConfig;
@@ -33,12 +35,7 @@ import org.lastaflute.web.servlet.request.RequestManager;
  * @author jflute
  * @author inoue
  */
-public abstract class LaRemoteBehavior extends FlutyRemoteBehavior {
-
-    // ===================================================================================
-    //                                                                          Definition
-    //                                                                          ==========
-    protected static final Object[] EMPTY_PARAMS = new Object[] {};
+public abstract class LastaRemoteBehavior extends FlutyRemoteBehavior {
 
     // ===================================================================================
     //                                                                           Attribute
@@ -54,29 +51,30 @@ public abstract class LaRemoteBehavior extends FlutyRemoteBehavior {
     // -----------------------------------------------------
     //                                        Basic Resource
     //                                        --------------
-    protected final RequestManager requestManager; // injected via constructor
+    protected final RequestManager requestManager; // not null, injected via constructor of concrete class
 
     // ===================================================================================
     //                                                                         Constructor
     //                                                                         ===========
-    public LaRemoteBehavior(RequestManager requestManager) {
+    public LastaRemoteBehavior(RequestManager requestManager) {
         this.requestManager = requestManager;
+        ((LastaRemoteApi) remoteApi).acceptRequestManager(requestManager); // for constructor headache
     }
 
     @Override
-    protected FlutyRemoteApi createRemoteApi() {
-        return new LaRemoteApi(requestManager, op -> prepareDefaultRuledRemoteApiOption(op), getClass());
-    }
-
-    @Override
-    protected String getUserAgentServiceName() {
+    protected String getUserAgentServiceName() { // in callback so you can use DI components
         return Arrays.stream(namingConvention.getRootPackageNames()).filter(name -> name.contains(".app")).map(name -> {
             return DfStringUtil.substringLastRear(DfStringUtil.substringFirstFront(name, ".app"), ".");
         }).findFirst().orElse(null);
     }
 
     @Override
-    protected String getUserAgentAppName() {
+    protected String getUserAgentAppName() { // in callback so you can use DI components
         return config.getOrDefault("domain.name", null);
+    }
+
+    @Override
+    protected FlutyRemoteApi newRemoteApi(Consumer<FlutyRemoteApiRule> ruleSetupper, Object callerExp) {
+        return new LastaRemoteApi(ruleSetupper, callerExp); // in constructor so you cannot use DI components
     }
 }
