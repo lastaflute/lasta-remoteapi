@@ -13,14 +13,14 @@
  * either express or implied. See the License for the specific language
  * governing permissions and limitations under the License.
  */
-package org.dbflute.remoteapi.rule;
+package org.dbflute.remoteapi.mapping;
 
 import java.time.format.DateTimeFormatter;
 
 /**
  * @author jflute
  */
-public interface FlutyRemoteMappingPolicy {
+public interface FlRemoteMappingPolicy {
 
     // not use optional for performance
     // ===================================================================================

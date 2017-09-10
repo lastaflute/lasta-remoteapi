@@ -13,12 +13,10 @@
  * either express or implied. See the License for the specific language
  * governing permissions and limitations under the License.
  */
-package org.lastaflute.remoteapi.converter;
-
-import java.lang.reflect.ParameterizedType;
+package org.lastaflute.remoteapi.sender.body;
 
 import org.dbflute.optional.OptionalThing;
-import org.dbflute.remoteapi.converter.FlutyJsonResponseConverter;
+import org.dbflute.remoteapi.sender.body.FlJsonSender;
 import org.lastaflute.core.json.JsonManager;
 import org.lastaflute.core.json.JsonMappingOption;
 import org.lastaflute.core.json.engine.RealJsonEngine;
@@ -28,27 +26,22 @@ import org.lastaflute.web.servlet.request.RequestManager;
  * @author inoue
  * @author jflute
  */
-public class LaJsonResponseConverter extends FlutyJsonResponseConverter {
+public class LaJsonSender extends FlJsonSender {
 
     protected final RealJsonEngine jsonEngine; // to parse JSON response and request as JsonBody
 
-    public LaJsonResponseConverter(RequestManager requestManager, JsonMappingOption jsonMappingOption) {
-        this.jsonEngine = createJsonEngine(requestManager.getJsonManager(), jsonMappingOption);
+    public LaJsonSender(RequestManager requestManager, JsonMappingOption mappingOption) {
+        this.jsonEngine = createJsonEngine(requestManager.getJsonManager(), mappingOption);
     }
 
-    protected RealJsonEngine createJsonEngine(JsonManager jsonManager, JsonMappingOption jsonMappingOption) {
-        return jsonManager.newAnotherEngine(OptionalThing.ofNullable(jsonMappingOption, () -> {
-            throw new IllegalStateException("Not found the json mapping option: " + jsonMappingOption);
+    protected RealJsonEngine createJsonEngine(JsonManager jsonManager, JsonMappingOption mappingOption) {
+        return jsonManager.newAnotherEngine(OptionalThing.ofNullable(mappingOption, () -> {
+            throw new IllegalStateException("Not found the json mapping option: " + mappingOption);
         }));
     }
 
     @Override
-    protected <BEAN> BEAN fromJson(String json, Class<BEAN> beanType) {
-        return jsonEngine.fromJson(json, beanType);
-    }
-
-    @Override
-    protected <BEAN> BEAN fromJsonParameteried(String json, ParameterizedType parameterizedType) {
-        return jsonEngine.fromJsonParameteried(json, parameterizedType);
+    protected String toJson(Object form) {
+        return jsonEngine.toJson(form);
     }
 }

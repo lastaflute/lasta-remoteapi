@@ -13,7 +13,7 @@
  * either express or implied. See the License for the specific language
  * governing permissions and limitations under the License.
  */
-package org.dbflute.remoteapi.converter;
+package org.dbflute.remoteapi.sender.body;
 
 import java.nio.charset.StandardCharsets;
 
@@ -26,10 +26,10 @@ import org.apache.http.protocol.HTTP;
  * @author inoue
  * @author jflute
  */
-public abstract class FlutyJsonRequestConverter implements FlutyRequestConverter {
+public abstract class FlJsonSender implements RequestBodySender {
 
     @Override
-    public void prepareEnclosingRequest(HttpEntityEnclosingRequest enclosingRequest, Object form) {
+    public void prepareBodyRequest(HttpEntityEnclosingRequest enclosingRequest, Object form) {
         final String json = toJson(form);
         final StringEntity entity = new StringEntity(json, StandardCharsets.UTF_8.name());
         entity.setContentType(new BasicHeader(HTTP.CONTENT_TYPE, buildContentType()));

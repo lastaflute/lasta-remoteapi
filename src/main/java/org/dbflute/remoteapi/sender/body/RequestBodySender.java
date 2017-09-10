@@ -13,11 +13,20 @@
  * either express or implied. See the License for the specific language
  * governing permissions and limitations under the License.
  */
-package org.dbflute.remoteapi.rule;
+package org.dbflute.remoteapi.sender.body;
+
+import org.apache.http.HttpEntityEnclosingRequest;
 
 /**
+ * The sender of request body.
+ * @author inoue
  * @author jflute
- * @author mito
  */
-public class FlutyVacantRemoteMappingPolicy implements FlutyRemoteMappingPolicy { // state-less
+public interface RequestBodySender {
+
+    /**
+     * @param enclosingRequest The HTTP request as entity enclosing, e.g. POST/PUT/PATCH. (NotNull)
+     * @param form The form data for body part. (NotNull)
+     */
+    void prepareBodyRequest(HttpEntityEnclosingRequest enclosingRequest, Object form);
 }

@@ -21,7 +21,6 @@ import java.util.function.Consumer;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import org.dbflute.helper.beans.DfPropertyDesc;
 import org.dbflute.helper.message.ExceptionMessageBuilder;
 import org.dbflute.optional.OptionalThing;
 import org.dbflute.remoteapi.FlutyRemoteApi;
@@ -38,8 +37,6 @@ import org.lastaflute.web.ruts.process.validatebean.ResponseSimpleBeanValidator;
 import org.lastaflute.web.servlet.request.RequestManager;
 import org.lastaflute.web.validation.ActionValidator;
 import org.lastaflute.web.validation.exception.ValidationStoppedException;
-
-import com.google.gson.annotations.SerializedName;
 
 /**
  * @author jflute
@@ -62,18 +59,6 @@ public class LastaRemoteApi extends FlutyRemoteApi {
 
     public void acceptRequestManager(RequestManager requestManager) {
         this.requestManager = requestManager;
-    }
-
-    // ===================================================================================
-    //                                                                  Parameter Handling
-    //                                                                  ==================
-    @Override
-    protected String asSerializedParameterName(DfPropertyDesc propertyDesc) {
-        final SerializedName serializedName = propertyDesc.getField().getAnnotation(SerializedName.class);
-        if (serializedName != null) {
-            return serializedName.value();
-        }
-        return super.asSerializedParameterName(propertyDesc);
     }
 
     // ===================================================================================

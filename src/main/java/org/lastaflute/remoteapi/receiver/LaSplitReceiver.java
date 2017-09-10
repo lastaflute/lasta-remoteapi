@@ -13,10 +13,10 @@
  * either express or implied. See the License for the specific language
  * governing permissions and limitations under the License.
  */
-package org.lastaflute.remoteapi.converter;
+package org.lastaflute.remoteapi.receiver;
 
 import org.dbflute.helper.beans.DfPropertyDesc;
-import org.dbflute.remoteapi.converter.FlutySplitResponseConverter;
+import org.dbflute.remoteapi.receiver.FlSplitReceiver;
 
 import com.google.gson.annotations.SerializedName;
 
@@ -24,18 +24,18 @@ import com.google.gson.annotations.SerializedName;
  * @author awane
  * @author jflute
  */
-public class LaSplitResponseConverter extends FlutySplitResponseConverter {
+public class LaSplitReceiver extends FlSplitReceiver {
 
-    public LaSplitResponseConverter(String split, String splitByKeyValue) {
-        super(split, splitByKeyValue);
+    public LaSplitReceiver(String delimiter, String delimiterByKeyValue) {
+        super(delimiter, delimiterByKeyValue);
     }
 
     @Override
-    protected String asDeserializeDParameterName(DfPropertyDesc propertyDesc) {
+    protected String asDeserializedParameterName(DfPropertyDesc propertyDesc) {
         final SerializedName serializedName = propertyDesc.getField().getAnnotation(SerializedName.class);
         if (serializedName != null) {
             return serializedName.value();
         }
-        return super.asDeserializeDParameterName(propertyDesc);
+        return super.asDeserializedParameterName(propertyDesc);
     }
 }

@@ -13,7 +13,7 @@
  * either express or implied. See the License for the specific language
  * governing permissions and limitations under the License.
  */
-package org.dbflute.remoteapi.converter;
+package org.dbflute.remoteapi.receiver;
 
 import java.lang.reflect.Type;
 import java.util.Arrays;
@@ -29,50 +29,50 @@ import org.dbflute.util.DfReflectionUtil;
  * @author awane
  * @author jflute
  */
-public class FlutySplitResponseConverter implements FlutyResponseConverter {
+public class FlSplitReceiver implements ResponseBodyReceiver {
 
-    private final String split;
-    private final String splitByKeyValue;
+    protected final String delimiter;
+    protected final String delimiterByKeyValue;
 
-    public FlutySplitResponseConverter(String split, String splitByKeyValue) {
-        this.split = split;
-        this.splitByKeyValue = splitByKeyValue;
+    public FlSplitReceiver(String delimiter, String delimiterByKeyValue) {
+        this.delimiter = delimiter;
+        this.delimiterByKeyValue = delimiterByKeyValue;
     }
 
     @Override
-    public <CONTENT extends Object> CONTENT toResult(String target, Type type) {
+    public <RESULT extends Object> RESULT toResult(String target, Type type) {
         if (!(type instanceof Class<?>)) {
             throw new IllegalArgumentException("type is not Class." + type);
         }
-        Map<String, String> resultMap = DfCollectionUtil.newLinkedHashMap();
-        Arrays.stream(target.split(split)).forEach(keyValue -> {
-            String[] keyValueArray = keyValue.split(splitByKeyValue);
+        final Map<String, String> resultMap = DfCollectionUtil.newLinkedHashMap();
+        Arrays.stream(target.split(delimiter)).forEach(keyValue -> {
+            String[] keyValueArray = keyValue.split(delimiterByKeyValue);
             if (keyValueArray.length != 2) {
                 return;
             }
-            String key = keyValueArray[0];
-            String value = keyValueArray[1];
+            final String key = keyValueArray[0];
+            final String value = keyValueArray[1];
             resultMap.put(key, value);
         });
         final DfBeanDesc beanDesc = DfBeanDescFactory.getBeanDesc((Class<?>) type);
         @SuppressWarnings("unchecked")
-        CONTENT result = (CONTENT) DfReflectionUtil.newInstance((Class<?>) type);
+        final RESULT result = (RESULT) DfReflectionUtil.newInstance((Class<?>) type);
         beanDesc.getProppertyNameList().stream().forEach(proppertyName -> {
-            DfPropertyDesc propertyDesc = beanDesc.getPropertyDesc(proppertyName);
-            String deserializeDParameterName = asDeserializeDParameterName(propertyDesc);
+            final DfPropertyDesc propertyDesc = beanDesc.getPropertyDesc(proppertyName);
+            final String deserializeDParameterName = asDeserializedParameterName(propertyDesc);
             if (resultMap.containsKey(deserializeDParameterName)) {
-                String value = resultMap.get(deserializeDParameterName);
+                final String value = resultMap.get(deserializeDParameterName);
                 propertyDesc.setValue(result, value);
             }
         });
         return result;
     }
 
-    protected String asDeserializeDParameterName(DfPropertyDesc propertyDesc) {
+    protected String asDeserializedParameterName(DfPropertyDesc propertyDesc) {
         return propertyDesc.getPropertyName();
     }
 
-    protected Object asDeserializeDParameterValue(String value) {
+    protected Object asDeserializedParameterValue(String value) {
         if (value == null) {
             return null;
         }

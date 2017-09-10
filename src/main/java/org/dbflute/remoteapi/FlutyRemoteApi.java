@@ -18,10 +18,6 @@ package org.dbflute.remoteapi;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.lang.reflect.Type;
-import java.net.URLEncoder;
-import java.time.LocalDate;
-import java.time.LocalDateTime;
-import java.util.Map;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -32,18 +28,14 @@ import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.util.EntityUtils;
-import org.dbflute.helper.beans.DfBeanDesc;
-import org.dbflute.helper.beans.DfPropertyDesc;
-import org.dbflute.helper.beans.factory.DfBeanDescFactory;
 import org.dbflute.helper.message.ExceptionMessageBuilder;
-import org.dbflute.jdbc.Classification;
 import org.dbflute.optional.OptionalThing;
-import org.dbflute.remoteapi.converter.FlutyRequestConverter;
-import org.dbflute.remoteapi.converter.FlutyResponseConverter;
 import org.dbflute.remoteapi.exception.RemoteApiHttpClientErrorException;
 import org.dbflute.remoteapi.exception.RemoteApiHttpServerErrorException;
 import org.dbflute.remoteapi.exception.RemoteApiRequestFailureException;
-import org.dbflute.remoteapi.rule.FlutyRemoteMappingPolicy;
+import org.dbflute.remoteapi.receiver.ResponseBodyReceiver;
+import org.dbflute.remoteapi.sender.body.RequestBodySender;
+import org.dbflute.remoteapi.sender.query.QueryParameterSender;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -162,10 +154,10 @@ public class FlutyRemoteApi {
     protected HttpPost prepareHttpPost(String uri, Object form, FlutyRemoteApiOption option) throws UnsupportedEncodingException {
         final HttpPost httpPost = new HttpPost(uri);
         setupHeader(httpPost, option);
-        final FlutyRequestConverter converter = option.getRequestConverter().orElseTranslatingThrow(cause -> {
+        final RequestBodySender converter = option.getRequestBodySender().orElseTranslatingThrow(cause -> {
             return new IllegalStateException("Not found the request converter: uri=" + uri, cause);
         });
-        converter.prepareEnclosingRequest(httpPost, form);
+        converter.prepareBodyRequest(httpPost, form);
         return httpPost;
     }
 
@@ -203,70 +195,10 @@ public class FlutyRemoteApi {
     //                                                                     Query Parameter
     //                                                                     ===============
     protected void buildQueryParameter(StringBuilder sb, Object form, FlutyRemoteApiOption option) {
-        final String encoding = option.getCharset().name();
-        final DfBeanDesc beanDesc = DfBeanDescFactory.getBeanDesc(form.getClass());
-        final MyValueHolder<Integer> paramIndex = new MyValueHolder<>(0);
-        for (String propertyName : beanDesc.getProppertyNameList()) {
-            final DfPropertyDesc propertyDesc = beanDesc.getPropertyDesc(propertyName);
-            final Object plainValue = propertyDesc.getValue(form);
-            if (plainValue != null) {
-                if (Iterable.class.isAssignableFrom(plainValue.getClass())) {
-                    Iterable<?> plainValueIterable = (Iterable<?>) plainValue;
-                    plainValueIterable.forEach(value -> {
-                        sb.append(paramIndex.getValue() == 0 ? "?" : "&");
-                        sb.append(asSerializedParameterName(propertyDesc)).append("=");
-                        try {
-                            sb.append(URLEncoder.encode(asSerializedParameterValue(value, option), encoding));
-                        } catch (UnsupportedEncodingException e) {
-                            throw new IllegalStateException("Unknown encoding: " + encoding);
-                        }
-                    });
-                } else {
-                    sb.append(paramIndex.getValue() == 0 ? "?" : "&");
-                    sb.append(asSerializedParameterName(propertyDesc)).append("=");
-                    try {
-                        sb.append(URLEncoder.encode(asSerializedParameterValue(plainValue, option), encoding));
-                    } catch (UnsupportedEncodingException e) {
-                        throw new IllegalStateException("Unknown encoding: " + encoding);
-                    }
-                }
-                paramIndex.setValue(paramIndex.getValue() + 1);
-            }
-        }
-    }
-
-    // ===================================================================================
-    //                                                                  Parameter Handling
-    //                                                                  ==================
-    protected String asSerializedParameterName(DfPropertyDesc propertyDesc) { // may be overridden
-        return propertyDesc.getPropertyName();
-    }
-
-    protected String asSerializedParameterValue(Object value, FlutyRemoteApiOption option) { // with standard rule filter
-        if (value == null) {
-            return null;
-        }
-        final String realValue;
-        final FlutyRemoteMappingPolicy conversionRule = option.getMappingPolicy();
-        if (value instanceof LocalDate) {
-            realValue = ((LocalDate) value).format(conversionRule.getDateFormatter());
-        } else if (value instanceof LocalDateTime) {
-            realValue = ((LocalDateTime) value).format(conversionRule.getDateTimeFormatter());
-        } else if (value instanceof Boolean || boolean.class.equals(value.getClass())) {
-            realValue = conversionRule.serializeBoolean((boolean) value);
-        } else if (value instanceof Classification) {
-            final Classification cls = (Classification) value;
-            final Map<String, Object> map = cls.subItemMap();
-            final String preferredValue = (String) map.get(conversionRule.getClsPreferredItem());
-            if (preferredValue != null) { // means Flg
-                realValue = preferredValue;
-            } else {
-                realValue = cls.code();
-            }
-        } else {
-            realValue = value.toString();
-        }
-        return realValue;
+        final QueryParameterSender sender = option.getQueryParameterSender().orElseThrow(() -> {
+            return new IllegalStateException("xxxxxxx"); // TODO jflute xxxxxxxxxxx (2017/09/10)
+        });
+        sb.append(sender.toQueryString(form, option.getQueryParameterCharset()));
     }
 
     // ===================================================================================
@@ -307,7 +239,7 @@ public class FlutyRemoteApi {
     protected <RESULT> RESULT toResult(Type beanType, String url, OptionalThing<Object> form, int statusCode, String body,
             FlutyRemoteApiOption option) {
         try {
-            final FlutyResponseConverter converter = option.getResponseConverter().orElseTranslatingThrow(cause -> {
+            final ResponseBodyReceiver converter = option.getResponseBodyReceiver().orElseTranslatingThrow(cause -> {
                 return new IllegalStateException("Not found the response converter: url=" + url, cause);
             });
             return converter.toResult(body, beanType);
@@ -430,7 +362,7 @@ public class FlutyRemoteApi {
     }
 
     protected String extractResponseBody(CloseableHttpResponse response, FlutyRemoteApiOption option) throws IOException {
-        return EntityUtils.toString(response.getEntity(), option.getCharset());
+        return EntityUtils.toString(response.getEntity(), option.getResponseBodyCharset());
     }
 
     // ===================================================================================
@@ -442,31 +374,6 @@ public class FlutyRemoteApi {
         }
         if (value == null) {
             throw new IllegalArgumentException("The argument '" + variableName + "' should not be null.");
-        }
-    }
-
-    protected static class MyValueHolder<T> { // copied from Lasta Di
-
-        protected T value;
-
-        public MyValueHolder() {
-        }
-
-        public MyValueHolder(T value) {
-            this.value = value;
-        }
-
-        public T getValue() {
-            return value;
-        }
-
-        public void setValue(final T value) {
-            this.value = value;
-        }
-
-        @Override
-        public String toString() {
-            return value.toString();
         }
     }
 }

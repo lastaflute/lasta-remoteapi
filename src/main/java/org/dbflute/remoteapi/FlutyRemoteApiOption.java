@@ -35,10 +35,9 @@ import org.apache.http.impl.client.HttpClients;
 import org.apache.http.ssl.SSLContexts;
 import org.apache.http.ssl.TrustStrategy;
 import org.dbflute.optional.OptionalThing;
-import org.dbflute.remoteapi.converter.FlutyRequestConverter;
-import org.dbflute.remoteapi.converter.FlutyResponseConverter;
-import org.dbflute.remoteapi.rule.FlutyRemoteMappingPolicy;
-import org.dbflute.remoteapi.rule.FlutyVacantRemoteMappingPolicy;
+import org.dbflute.remoteapi.receiver.ResponseBodyReceiver;
+import org.dbflute.remoteapi.sender.body.RequestBodySender;
+import org.dbflute.remoteapi.sender.query.QueryParameterSender;
 import org.dbflute.util.DfCollectionUtil;
 
 /**
@@ -56,10 +55,11 @@ public class FlutyRemoteApiOption {
     protected int connectTimeout = 3000;
     protected int connectionRequestTimeout = 3000;
     protected int socketTimeout = 3000;
-    protected Charset charset = StandardCharsets.UTF_8; // not null
-    protected FlutyRemoteMappingPolicy mappingPolicy = new FlutyVacantRemoteMappingPolicy(); // not null
-    protected FlutyRequestConverter requestConverter; // null allowed, but required
-    protected FlutyResponseConverter responseConverter; // null allowed, but required
+    protected Charset queryParameterCharset = StandardCharsets.UTF_8; // not null
+    protected Charset responseBodyCharset = StandardCharsets.UTF_8; // not null
+    protected QueryParameterSender queryParameterSender; // null allowed, but required
+    protected RequestBodySender requestBodySender; // null allowed, but required
+    protected ResponseBodyReceiver responseBodyReceiver; // null allowed, but required
     protected Map<String, String> headers; // null allowed, lazy-loaded
     protected Type failureResponseType; // null allowed, not required
 
@@ -113,43 +113,53 @@ public class FlutyRemoteApiOption {
     }
 
     /**
-     * @param charset The charset of request for remote API. (NotNull)
+     * @param requestQueryCharset The charset of request query parameter. (NotNull)
      */
-    public void setCharset(Charset charset) {
-        if (charset == null) {
-            throw new IllegalArgumentException("The argument 'charset' should not be null.");
+    public void setRequestQueryCharset(Charset requestQueryCharset) {
+        if (requestQueryCharset == null) {
+            throw new IllegalArgumentException("The argument 'requestQueryCharset' should not be null.");
         }
-        this.charset = charset;
+        this.queryParameterCharset = requestQueryCharset;
     }
 
     /**
-     * @param mappingPolicy The policy of mapping remote values. (NotNull) 
+     * @param responseBodyCharset The charset of response body. (NotNull)
      */
-    public void setMappingPolicy(FlutyRemoteMappingPolicy mappingPolicy) { // you can switch if it needs
-        if (mappingPolicy == null) {
-            throw new IllegalArgumentException("The argument 'mappingPolicy' should not be null.");
+    public void setResponseBodyCharset(Charset responseBodyCharset) {
+        if (responseBodyCharset == null) {
+            throw new IllegalArgumentException("The argument 'responseBodyCharset' should not be null.");
         }
-        this.mappingPolicy = mappingPolicy;
+        this.responseBodyCharset = responseBodyCharset;
     }
 
     /**
-     * @param requestConverter The converter of request. (NotNull)
+     * @param queryParameterSender The sender of (request) query parameter. (NotNull)
      */
-    public void setRequestConverter(FlutyRequestConverter requestConverter) {
-        if (requestConverter == null) {
-            throw new IllegalArgumentException("The argument 'requestConverter' should not be null.");
+    public void sendQueryBy(QueryParameterSender queryParameterSender) {
+        if (queryParameterSender == null) {
+            throw new IllegalArgumentException("The argument 'queryParameterSender' should not be null.");
         }
-        this.requestConverter = requestConverter;
+        this.queryParameterSender = queryParameterSender;
     }
 
     /**
-     * @param responseConverter The converter of response. (NotNull)
+     * @param requestBodySender The sender of request body. (NotNull)
      */
-    public void setResponseConverter(FlutyResponseConverter responseConverter) {
-        if (responseConverter == null) {
-            throw new IllegalArgumentException("The argument 'responseConverter' should not be null.");
+    public void sendBodyBy(RequestBodySender requestBodySender) {
+        if (requestBodySender == null) {
+            throw new IllegalArgumentException("The argument 'requestBodySender' should not be null.");
         }
-        this.responseConverter = responseConverter;
+        this.requestBodySender = requestBodySender;
+    }
+
+    /**
+     * @param responseBodyReceiver The receiver of response body. (NotNull)
+     */
+    public void receiveBodyBy(ResponseBodyReceiver responseBodyReceiver) {
+        if (responseBodyReceiver == null) {
+            throw new IllegalArgumentException("The argument 'responseBodyReceiver' should not be null.");
+        }
+        this.responseBodyReceiver = responseBodyReceiver;
     }
 
     public void setHeader(String name, String value) {
@@ -177,9 +187,9 @@ public class FlutyRemoteApiOption {
     //                                                                      ==============
     @Override
     public String toString() {
-        return "option:{" + sslUntrusted + ", " + connectTimeout + ", " + connectionRequestTimeout + ", " + socketTimeout + ", " + charset
-                + ", " + mappingPolicy + ", " + requestConverter + ", " + responseConverter + ", " + headers + ", " + failureResponseType
-                + "}";
+        return "option:{" + sslUntrusted + ", " + connectTimeout + ", " + connectionRequestTimeout + ", " + socketTimeout + ", "
+                + queryParameterCharset + ", " + queryParameterSender + ", " + requestBodySender + ", " + responseBodyReceiver + ", "
+                + headers + ", " + failureResponseType + "}";
     }
 
     // ===================================================================================
@@ -202,40 +212,46 @@ public class FlutyRemoteApiOption {
     }
 
     /**
-     * @return The charset of request for remote API. (NotNull)
+     * @return The charset of request query parameter. (NotNull)
      */
-    public Charset getCharset() {
-        return charset;
+    public Charset getQueryParameterCharset() {
+        return queryParameterCharset;
     }
 
     /**
-     * @return The policy of mapping remote values. (NotNull)
+     * @return The charset of response body. (NotNull)
      */
-    public FlutyRemoteMappingPolicy getMappingPolicy() { // you can switch if it needs
-        return mappingPolicy;
+    public Charset getResponseBodyCharset() {
+        return responseBodyCharset;
     }
 
-    public OptionalThing<FlutyRequestConverter> getRequestConverter() {
-        return OptionalThing.ofNullable(requestConverter, () -> {
-            throw new IllegalStateException("Not found the requestConverter.");
+    public OptionalThing<QueryParameterSender> getQueryParameterSender() {
+        return OptionalThing.ofNullable(queryParameterSender, () -> {
+            throw new IllegalStateException("Not found the queryParameterSender in the option: " + toString());
         });
     }
 
-    public OptionalThing<FlutyResponseConverter> getResponseConverter() {
-        return OptionalThing.ofNullable(responseConverter, () -> {
-            throw new IllegalStateException("Not found the responseConverter.");
+    public OptionalThing<RequestBodySender> getRequestBodySender() {
+        return OptionalThing.ofNullable(requestBodySender, () -> {
+            throw new IllegalStateException("Not found the requestConverter in the option: " + toString());
+        });
+    }
+
+    public OptionalThing<ResponseBodyReceiver> getResponseBodyReceiver() {
+        return OptionalThing.ofNullable(responseBodyReceiver, () -> {
+            throw new IllegalStateException("Not found the responseConverter in the option: " + toString());
         });
     }
 
     public OptionalThing<Map<String, String>> getHeaders() {
         return OptionalThing.ofNullable(headers, () -> {
-            throw new IllegalStateException("Not found the headers.");
+            throw new IllegalStateException("Not found the headers in the option: " + toString());
         });
     }
 
     public OptionalThing<Type> getFailureResponseType() {
         return OptionalThing.ofNullable(failureResponseType, () -> {
-            throw new IllegalStateException("Not found the failureResponseType.");
+            throw new IllegalStateException("Not found the failureResponseType in the option: " + toString());
         });
     }
 

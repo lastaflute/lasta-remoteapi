@@ -13,21 +13,20 @@
  * either express or implied. See the License for the specific language
  * governing permissions and limitations under the License.
  */
-package org.dbflute.remoteapi.converter;
+package org.dbflute.remoteapi.sender.query;
 
-import java.io.StringReader;
-import java.lang.reflect.Type;
-
-import javax.xml.bind.JAXB;
+import java.nio.charset.Charset;
 
 /**
- * @author inoue
+ * The sender of query parameter.
  * @author jflute
  */
-public class FlutyXmlResponseConverter implements FlutyResponseConverter {
+public interface QueryParameterSender {
 
-    @SuppressWarnings("unchecked")
-    public <CONTENT extends Object> CONTENT toResult(String target, Type type) {
-        return (CONTENT) JAXB.unmarshal(new StringReader(target), (Class<?>) type);
-    }
+    /**
+     * @param form The form data for query string. (NotNull)
+     * @param queryParameterCharset The charset of query parameter. (NotNull)
+     * @return The converted query string. e.g. ?sea=mystic&land=oneman (NotNull)
+     */
+    String toQueryString(Object form, Charset queryParameterCharset);
 }

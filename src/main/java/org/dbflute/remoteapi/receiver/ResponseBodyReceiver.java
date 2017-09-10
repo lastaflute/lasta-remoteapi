@@ -13,12 +13,23 @@
  * either express or implied. See the License for the specific language
  * governing permissions and limitations under the License.
  */
-package org.lastaflute.remoteapi.converter;
+package org.dbflute.remoteapi.receiver;
 
-import org.dbflute.remoteapi.converter.FlutyXmlResponseConverter;
+import java.lang.reflect.Type;
 
 /**
+ * The receiver of response body.
+ * @author inoue
  * @author jflute
  */
-public class LaXmlResponseConverter extends FlutyXmlResponseConverter {
+public interface ResponseBodyReceiver {
+
+    /**
+     * Convert response body to result.
+     * @param <RESULT> the type of result.
+     * @param body The body string of response. (NotNull)
+     * @param beanType The specified bean type as result. (NotNull)
+     * @return The converted result. (NotNull)
+     */
+    <RESULT extends Object> RESULT toResult(String body, Type beanType);
 }

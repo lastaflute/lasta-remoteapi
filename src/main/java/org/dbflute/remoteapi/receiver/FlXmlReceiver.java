@@ -13,28 +13,21 @@
  * either express or implied. See the License for the specific language
  * governing permissions and limitations under the License.
  */
-package org.dbflute.remoteapi.converter;
+package org.dbflute.remoteapi.receiver;
 
-import java.lang.reflect.ParameterizedType;
+import java.io.StringReader;
 import java.lang.reflect.Type;
+
+import javax.xml.bind.JAXB;
 
 /**
  * @author inoue
  * @author jflute
  */
-public abstract class FlutyJsonResponseConverter implements FlutyResponseConverter {
+public class FlXmlReceiver implements ResponseBodyReceiver {
 
     @SuppressWarnings("unchecked")
-    @Override
-    public <CONTENT extends Object> CONTENT toResult(String json, Type type) {
-        if (type instanceof Class<?>) {
-            return (CONTENT) fromJson(json, (Class<?>) type);
-        } else {
-            return (CONTENT) fromJsonParameteried(json, (ParameterizedType) type);
-        }
+    public <RESULT extends Object> RESULT toResult(String target, Type type) {
+        return (RESULT) JAXB.unmarshal(new StringReader(target), (Class<?>) type);
     }
-
-    protected abstract <BEAN> BEAN fromJson(String json, Class<BEAN> beanType);
-
-    protected abstract <BEAN> BEAN fromJsonParameteried(String json, ParameterizedType parameterizedType);
 }

@@ -13,15 +13,11 @@
  * either express or implied. See the License for the specific language
  * governing permissions and limitations under the License.
  */
-package org.dbflute.remoteapi.converter;
-
-import org.apache.http.HttpEntityEnclosingRequest;
+package org.dbflute.remoteapi.mapping;
 
 /**
- * @author inoue
  * @author jflute
+ * @author mito
  */
-public interface FlutyRequestConverter {
-
-    void prepareEnclosingRequest(HttpEntityEnclosingRequest enclosingRequest, Object form);
+public class FlVacantRemoteMappingPolicy implements FlRemoteMappingPolicy { // state-less
 }

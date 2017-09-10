@@ -13,15 +13,12 @@
  * either express or implied. See the License for the specific language
  * governing permissions and limitations under the License.
  */
-package org.dbflute.remoteapi.converter;
+package org.lastaflute.remoteapi.receiver;
 
-import java.lang.reflect.Type;
+import org.dbflute.remoteapi.receiver.FlXmlReceiver;
 
 /**
- * @author inoue
  * @author jflute
  */
-public interface FlutyResponseConverter {
-
-    <CONTENT extends Object> CONTENT toResult(String body, Type type);
+public class LaXmlReceiver extends FlXmlReceiver {
 }
