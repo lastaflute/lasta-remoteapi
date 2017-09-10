@@ -137,7 +137,7 @@ public class FlutyRemoteApi {
         validateForm(beanType, urlBase, actionPath, pathVariables, form);
         final FlutyRemoteApiRule rule = createRemoteApiRule(ruleLambda);
         final String url = buildUrl(urlBase, actionPath, pathVariables, OptionalThing.empty(), rule);
-        logger.debug("#flow #remote ...Requesting as POST to Remote API:\n: {}\n with form: {}\n   => {}: ", url, form, beanType);
+        logger.debug("#flow #remote ...Requesting as POST to Remote API:\n {}\n with form: {}\n   => {}: ", url, form, beanType);
         return doRequestPost(beanType, url, form, rule);
     }
 
