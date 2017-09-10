@@ -435,13 +435,13 @@ public class FlutyRemoteApi {
     //                                                                        Assist Logic
     //                                                                        ============
     protected FlutyRemoteApiRule createRemoteApiRule(Consumer<FlutyRemoteApiRule> ruleLambda) {
-        final FlutyRemoteApiRule rule = newFlutyRemoteApiRule();
+        final FlutyRemoteApiRule rule = newRemoteApiRule();
         defaultRuleLambda.accept(rule);
         ruleLambda.accept(rule);
         return rule;
     }
 
-    protected FlutyRemoteApiRule newFlutyRemoteApiRule() {
+    protected FlutyRemoteApiRule newRemoteApiRule() {
         return new FlutyRemoteApiRule();
     }
 
