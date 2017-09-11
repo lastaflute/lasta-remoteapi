@@ -22,6 +22,7 @@ import java.util.stream.Collectors;
 
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.dbflute.optional.OptionalThing;
+import org.dbflute.remoteapi.mock.MockHttpClient;
 import org.dbflute.util.DfCollectionUtil;
 
 /**
@@ -283,12 +284,17 @@ public abstract class FlutyRemoteBehavior {
     }
 
     // ===================================================================================
-    //                                                                         For Testing
-    //                                                                         ===========
+    //                                                                        For UnitTest
+    //                                                                        ============
+    /** The mock of HTTP client. This is only for unit test. Don't use in main code. (NullAllowed) */
     protected CloseableHttpClient __xmockHttpClient;
 
-    // #hope jflute too easy, so want to switch other way...
-    public void xregisterMockHttpClient(CloseableHttpClient mockHttpClient) {
+    /**
+     * This is only for unit test. Don't use in main code. <br>
+     * The mock can be injected in inject().
+     * @param mockHttpClient The mock of HTTP client. (NullAllowed) 
+     */
+    public void setMockHttpClient(MockHttpClient mockHttpClient) {
         this.__xmockHttpClient = mockHttpClient;
     }
 }

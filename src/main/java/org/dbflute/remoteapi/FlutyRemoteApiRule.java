@@ -285,7 +285,7 @@ public class FlutyRemoteApiRule {
     // ===================================================================================
     //                                                                         For Testing
     //                                                                         ===========
-    private CloseableHttpClient __xmockHttpClient;
+    protected CloseableHttpClient __xmockHttpClient;
 
     public void xregisterMockHttpClient(CloseableHttpClient mockHttpClient) {
         this.__xmockHttpClient = mockHttpClient;
