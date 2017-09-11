@@ -28,8 +28,8 @@ public class MockSupposedRequest {
     //                                                                           =========
     protected final String url; // e.g. http://localhost:8090/harbor/lido/product/list/1
     protected final String body; // null allowed, not required
-    protected final String hostName; // null allowed if unknown
-    protected final Integer port; // null allowed if unknown
+    protected final String hostName; // null allowed if unknown (basically known)
+    protected final Integer port; // null allowed if unknown (basically known)
 
     // ===================================================================================
     //                                                                         Constructor
@@ -59,6 +59,18 @@ public class MockSupposedRequest {
     public OptionalThing<String> getBody() {
         return OptionalThing.ofNullable(body, () -> {
             throw new IllegalStateException("Not found the request body: url=" + url);
+        });
+    }
+
+    public OptionalThing<String> getHostName() {
+        return OptionalThing.ofNullable(hostName, () -> {
+            throw new IllegalStateException("Not found the host name: url=" + url);
+        });
+    }
+
+    public OptionalThing<Integer> getPort() {
+        return OptionalThing.ofNullable(port, () -> {
+            throw new IllegalStateException("Not found the port: url=" + url);
         });
     }
 }
