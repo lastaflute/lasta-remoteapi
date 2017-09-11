@@ -22,7 +22,7 @@ import java.io.UnsupportedEncodingException;
 import java.net.URLDecoder;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
-import java.util.function.Consumer;
+import java.util.List;
 
 import org.apache.http.HttpEntity;
 import org.apache.http.HttpHost;
@@ -32,6 +32,10 @@ import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.protocol.HttpContext;
+import org.dbflute.remoteapi.mock.supporter.MockFreedomResponse;
+import org.dbflute.remoteapi.mock.supporter.MockSupposedRequest;
+import org.dbflute.remoteapi.mock.supporter.MockFreedomResponse.MockHttpResponseProvider;
+import org.dbflute.remoteapi.mock.supporter.MockFreedomResponse.MockRequestHandler;
 import org.dbflute.util.DfResourceUtil;
 
 /**
@@ -43,15 +47,29 @@ public class MockHttpClient extends CloseableHttpClient {
     // ===================================================================================
     //                                                                           Attribute
     //                                                                           =========
-    protected final Consumer<MockSupposedRequest> requestLambda; // not null
-    protected final MockHttpResponse response; // not null
+    protected final MockFreedomResponse freedomResponse;
 
     // ===================================================================================
     //                                                                         Constructor
     //                                                                         ===========
-    public MockHttpClient(Consumer<MockSupposedRequest> requestLambda, MockHttpResponse response) {
-        this.requestLambda = requestLambda;
-        this.response = response;
+    protected MockHttpClient(MockFreedomResponse freedomResponse) {
+        this.freedomResponse = freedomResponse;
+    }
+
+    // e.g.
+    //  MockHttpClient.create(response -> {
+    //      response.asJson(path, request -> request...);
+    //      response.peekRequest(request -> {});
+    //  });
+    public static MockHttpClient create(MockFreedomResponseSetupper responseLambda) {
+        MockFreedomResponse response = new MockFreedomResponse();
+        responseLambda.setup(response);
+        return new MockHttpClient(response);
+    }
+
+    public static interface MockFreedomResponseSetupper {
+
+        void setup(MockFreedomResponse response);
     }
 
     // ===================================================================================
@@ -61,11 +79,23 @@ public class MockHttpClient extends CloseableHttpClient {
     protected CloseableHttpResponse doExecute(HttpHost target, HttpRequest request, HttpContext context)
             throws IOException, ClientProtocolException {
         final Charset charset = StandardCharsets.UTF_8;
-        final String url = extractRequestUrl(request);
+        final String url = extractRequestUrl(request); // e.g. http://localhost:8090/harbor/lido/product/list/1
         final String body = extractRequestBody(request, charset);
-        final MockSupposedRequest supposedRequest = new MockSupposedRequest(url, body);
-        requestLambda.accept(supposedRequest);
-        return response;
+        final String hostName = target.getHostName();
+        final Integer port = target.getPort() >= 0 ? target.getPort() : null;
+        final MockSupposedRequest supposedRequest = new MockSupposedRequest(url, body, hostName, port);
+        final List<MockRequestHandler> requestHandlerList = freedomResponse.getRequestHandlerList();
+        for (MockRequestHandler requestHandler : requestHandlerList) {
+            requestHandler.handle(supposedRequest);
+        }
+        final List<MockHttpResponseProvider> responseProviderList = freedomResponse.getResponseProviderList();
+        for (MockHttpResponseProvider responseProvider : responseProviderList) {
+            final MockHttpResponse provided = responseProvider.provide(supposedRequest);
+            if (provided != null) {
+                return provided;
+            }
+        }
+        throw new IllegalStateException("TODO jflute Not found!!!"); // TODO jflute xxxxxxxxxxxxx (2017/09/11)
     }
 
     protected String extractRequestUrl(HttpRequest request) {

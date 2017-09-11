@@ -13,7 +13,7 @@
  * either express or implied. See the License for the specific language
  * governing permissions and limitations under the License.
  */
-package org.dbflute.remoteapi.mock;
+package org.dbflute.remoteapi.mock.supporter;
 
 import org.dbflute.optional.OptionalThing;
 
@@ -27,14 +27,18 @@ public class MockSupposedRequest {
     //                                                                           Attribute
     //                                                                           =========
     protected final String url; // e.g. http://localhost:8090/harbor/lido/product/list/1
-    protected final String body; // null allowed
+    protected final String body; // null allowed, not required
+    protected final String hostName; // null allowed if unknown
+    protected final Integer port; // null allowed if unknown
 
     // ===================================================================================
     //                                                                         Constructor
     //                                                                         ===========
-    public MockSupposedRequest(String url, String body) {
+    public MockSupposedRequest(String url, String body, String hostName, Integer port) {
         this.url = url;
         this.body = body;
+        this.hostName = hostName;
+        this.port = port;
     }
 
     // ===================================================================================
