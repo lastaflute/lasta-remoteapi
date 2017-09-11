@@ -37,6 +37,8 @@ public class MockHttpResponse implements CloseableHttpResponse {
 
     protected final HttpEntity httpEntity;
 
+    protected Integer httpStatus;
+
     public MockHttpResponse(HttpEntity httpEntity) {
         this.httpEntity = httpEntity;
     }
@@ -88,7 +90,9 @@ public class MockHttpResponse implements CloseableHttpResponse {
 
     @Override
     public StatusLine getStatusLine() {
-        return new BasicStatusLine(getProtocolVersion(), 200, "OK");
+        final int statusCode = httpStatus != null ? httpStatus : 200;
+        final String reasonPhrase = httpStatus != null ? "OK" : "No Good"; // simple
+        return new BasicStatusLine(getProtocolVersion(), statusCode, reasonPhrase);
     }
 
     @Override
@@ -132,7 +136,7 @@ public class MockHttpResponse implements CloseableHttpResponse {
 
     @Override
     public void setStatusCode(int code) throws IllegalStateException {
-        throw new UnsupportedOperationException("not supported by mock.");
+        this.httpStatus = code;
     }
 
     @Override

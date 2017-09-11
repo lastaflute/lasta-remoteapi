@@ -25,6 +25,7 @@ import java.util.List;
 
 import org.apache.http.entity.ContentType;
 import org.apache.http.entity.InputStreamEntity;
+import org.dbflute.optional.OptionalThing;
 import org.dbflute.remoteapi.mock.MockHttpResponse;
 import org.dbflute.util.DfResourceUtil;
 
@@ -38,17 +39,8 @@ public class MockFreedomResponse {
     // ===================================================================================
     //                                                                           Attribute
     //                                                                           =========
-    protected final List<MockRequestPeeking> requestHandlerList = new ArrayList<>();
-    protected final List<MockHttpResponseProvider> responseProviderList = new ArrayList<>();
-
-    public static interface MockHttpResponseProvider {
-
-        /**
-         * @param request The supposed request that has URL and other information. (NotNull)
-         * @return The mock response matched with the request. (NullAllowed: if unmatched)
-         */
-        MockHttpResponse provide(MockSupposedRequest request);
-    }
+    protected final List<MockRequestPeeking> requestPeekingList = new ArrayList<>();
+    protected final List<MockHttpResponseResource> responseResourceList = new ArrayList<>();
 
     public static interface MockRequestDeterminer {
 
@@ -57,6 +49,43 @@ public class MockFreedomResponse {
          * @return The determination of corresponding request or not.
          */
         boolean determine(MockSupposedRequest request);
+    }
+
+    public static class MockHttpResponseResource {
+
+        protected final MockHttpResponseProvider responseProvider;
+        protected Integer httpStatus;
+
+        public MockHttpResponseResource(MockHttpResponseProvider responseProvider) {
+            this.responseProvider = responseProvider;
+        }
+
+        public MockHttpResponseResource httpStatus(Integer httpStatus) {
+            if (httpStatus == null) {
+                throw new IllegalArgumentException("The argument 'httpStatus' should not be null.");
+            }
+            this.httpStatus = httpStatus;
+            return this;
+        }
+
+        public MockHttpResponseProvider getResponseProvider() {
+            return responseProvider;
+        }
+
+        public OptionalThing<Integer> getHttpStatus() {
+            return OptionalThing.ofNullable(httpStatus, () -> {
+                throw new IllegalStateException("Not found the HTTP status: provider=" + responseProvider);
+            });
+        }
+    }
+
+    public static interface MockHttpResponseProvider {
+
+        /**
+         * @param request The supposed request that has URL and other information. (NotNull)
+         * @return The mock response matched with the request. (NullAllowed: if unmatched)
+         */
+        MockHttpResponse provide(MockSupposedRequest request);
     }
 
     // ===================================================================================
@@ -80,7 +109,7 @@ public class MockFreedomResponse {
      * @param requestLambda The callback for peeking request. (NotNull)
      */
     public void peekRequest(MockRequestPeeking requestLambda) {
-        requestHandlerList.add(requestLambda);
+        requestPeekingList.add(requestLambda);
     }
 
     public static interface MockRequestPeeking {
@@ -109,9 +138,10 @@ public class MockFreedomResponse {
      * </pre>
      * @param responseStream The input stream to JSON resource for mock response. (NotNull)
      * @param requestLambda The callback for determination of corresponding request. (NotNull)
+     * @return The resource to create mock HTTP response. (NotNull)
      */
-    public void asJson(InputStream responseStream, MockRequestDeterminer requestLambda) {
-        responseProviderList.add(request -> {
+    public MockHttpResponseResource asJson(InputStream responseStream, MockRequestDeterminer requestLambda) {
+        return registerProvider(request -> {
             return requestLambda.determine(request) ? responseJson(responseStream) : null;
         });
     }
@@ -127,9 +157,10 @@ public class MockFreedomResponse {
      * </pre>
      * @param responseFilePath The resource path to JSON resource file for mock response. (NotNull)
      * @param requestLambda The callback for determination of corresponding request. (NotNull)
+     * @return The resource to create mock HTTP response. (NotNull)
      */
-    public void asJson(String responseFilePath, MockRequestDeterminer requestLambda) {
-        responseProviderList.add(request -> {
+    public MockHttpResponseResource asJson(String responseFilePath, MockRequestDeterminer requestLambda) {
+        return registerProvider(request -> {
             return requestLambda.determine(request) ? responseJson(responseFilePath) : null;
         });
     }
@@ -145,9 +176,10 @@ public class MockFreedomResponse {
      * </pre>
      * @param json The string of JSON for mock response. (NotNull)
      * @param requestLambda The callback for determination of corresponding request. (NotNull)
+     * @return The resource to create mock HTTP response. (NotNull)
      */
-    public void asJsonDirectly(String json, MockRequestDeterminer requestLambda) {
-        responseProviderList.add(request -> {
+    public MockHttpResponseResource asJsonDirectly(String json, MockRequestDeterminer requestLambda) {
+        return registerProvider(request -> {
             return requestLambda.determine(request) ? responseJsonDirectly(json) : null;
         });
     }
@@ -180,14 +212,14 @@ public class MockFreedomResponse {
     // -----------------------------------------------------
     //                                                  XML
     //                                                 -----
-    public void asXml(InputStream responseStream, MockRequestDeterminer requestLambda) {
-        responseProviderList.add(request -> {
+    public MockHttpResponseResource asXml(InputStream responseStream, MockRequestDeterminer requestLambda) {
+        return registerProvider(request -> {
             return requestLambda.determine(request) ? responseXml(responseStream) : null;
         });
     }
 
-    public void asXml(String responseFilePath, MockRequestDeterminer requestLambda) {
-        responseProviderList.add(request -> {
+    public MockHttpResponseResource asXml(String responseFilePath, MockRequestDeterminer requestLambda) {
+        return registerProvider(request -> {
             return requestLambda.determine(request) ? responseXml(responseFilePath) : null;
         });
     }
@@ -209,13 +241,22 @@ public class MockFreedomResponse {
     }
 
     // ===================================================================================
-    //                                                                            Accessor
-    //                                                                            ========
-    public List<MockRequestPeeking> getRequestHandlerList() {
-        return Collections.unmodifiableList(requestHandlerList);
+    //                                                                        Assist Logic
+    //                                                                        ============
+    protected MockHttpResponseResource registerProvider(MockHttpResponseProvider provider) {
+        final MockHttpResponseResource resource = new MockHttpResponseResource(provider);
+        responseResourceList.add(resource);
+        return resource;
     }
 
-    public List<MockHttpResponseProvider> getResponseProviderList() {
-        return Collections.unmodifiableList(responseProviderList);
+    // ===================================================================================
+    //                                                                            Accessor
+    //                                                                            ========
+    public List<MockRequestPeeking> getRequestPeekingList() {
+        return Collections.unmodifiableList(requestPeekingList);
+    }
+
+    public List<MockHttpResponseResource> getResponseResourceList() {
+        return Collections.unmodifiableList(responseResourceList);
     }
 }

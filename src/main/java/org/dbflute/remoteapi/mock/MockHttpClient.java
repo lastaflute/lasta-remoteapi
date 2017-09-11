@@ -35,6 +35,7 @@ import org.apache.http.protocol.HttpContext;
 import org.dbflute.helper.message.ExceptionMessageBuilder;
 import org.dbflute.remoteapi.mock.supporter.MockFreedomResponse;
 import org.dbflute.remoteapi.mock.supporter.MockFreedomResponse.MockHttpResponseProvider;
+import org.dbflute.remoteapi.mock.supporter.MockFreedomResponse.MockHttpResponseResource;
 import org.dbflute.remoteapi.mock.supporter.MockFreedomResponse.MockRequestPeeking;
 import org.dbflute.remoteapi.mock.supporter.MockSupposedRequest;
 import org.dbflute.util.DfResourceUtil;
@@ -85,18 +86,22 @@ public class MockHttpClient extends CloseableHttpClient {
         final String hostName = httpHost.getHostName();
         final Integer port = httpHost.getPort() >= 0 ? httpHost.getPort() : null;
         final MockSupposedRequest supposedRequest = new MockSupposedRequest(url, body, hostName, port);
-        final List<MockRequestPeeking> requestHandlerList = freedomResponse.getRequestHandlerList();
+        final List<MockRequestPeeking> requestHandlerList = freedomResponse.getRequestPeekingList();
         for (MockRequestPeeking requestHandler : requestHandlerList) {
             requestHandler.peek(supposedRequest);
         }
-        final List<MockHttpResponseProvider> responseProviderList = freedomResponse.getResponseProviderList();
-        for (MockHttpResponseProvider responseProvider : responseProviderList) {
+        final List<MockHttpResponseResource> responseResourceList = freedomResponse.getResponseResourceList();
+        for (MockHttpResponseResource responseResource : responseResourceList) {
+            final MockHttpResponseProvider responseProvider = responseResource.getResponseProvider();
             final MockHttpResponse provided = responseProvider.provide(supposedRequest);
             if (provided != null) {
+                responseResource.getHttpStatus().ifPresent(httpStatus -> {
+                    provided.setStatusCode(httpStatus);
+                });
                 return provided;
             }
         }
-        throwMockHttpResponseNotFoundException(supposedRequest, responseProviderList);
+        throwMockHttpResponseNotFoundException(supposedRequest, responseResourceList);
         return null; // unreachable
     }
 
@@ -128,7 +133,7 @@ public class MockHttpClient extends CloseableHttpClient {
     }
 
     protected void throwMockHttpResponseNotFoundException(MockSupposedRequest supposedRequest,
-            List<MockHttpResponseProvider> responseProviderList) {
+            List<MockHttpResponseResource> responseResourceList) {
         final ExceptionMessageBuilder br = new ExceptionMessageBuilder();
         br.addNotice("Not found the mock response for the request.");
         br.addItem("Advice");
@@ -150,8 +155,8 @@ public class MockHttpClient extends CloseableHttpClient {
         supposedRequest.getBody().ifPresent(supportedBody -> {
             br.addElement(supportedBody);
         });
-        br.addItem("Response Provider");
-        br.addElement(responseProviderList);
+        br.addItem("Response Resource");
+        br.addElement(responseResourceList);
         final String msg = br.buildExceptionMessage();
         throw new IllegalStateException(msg);
     }
