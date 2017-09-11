@@ -32,10 +32,11 @@ import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.protocol.HttpContext;
+import org.dbflute.helper.message.ExceptionMessageBuilder;
 import org.dbflute.remoteapi.mock.supporter.MockFreedomResponse;
-import org.dbflute.remoteapi.mock.supporter.MockSupposedRequest;
 import org.dbflute.remoteapi.mock.supporter.MockFreedomResponse.MockHttpResponseProvider;
 import org.dbflute.remoteapi.mock.supporter.MockFreedomResponse.MockRequestHandler;
+import org.dbflute.remoteapi.mock.supporter.MockSupposedRequest;
 import org.dbflute.util.DfResourceUtil;
 
 /**
@@ -76,13 +77,13 @@ public class MockHttpClient extends CloseableHttpClient {
     //                                                                             Execute
     //                                                                             =======
     @Override
-    protected CloseableHttpResponse doExecute(HttpHost target, HttpRequest request, HttpContext context)
+    protected CloseableHttpResponse doExecute(HttpHost httpHost, HttpRequest httpRequest, HttpContext httpContext)
             throws IOException, ClientProtocolException {
         final Charset charset = StandardCharsets.UTF_8;
-        final String url = extractRequestUrl(request); // e.g. http://localhost:8090/harbor/lido/product/list/1
-        final String body = extractRequestBody(request, charset);
-        final String hostName = target.getHostName();
-        final Integer port = target.getPort() >= 0 ? target.getPort() : null;
+        final String url = extractRequestUrl(httpRequest); // e.g. http://localhost:8090/harbor/lido/product/list/1
+        final String body = extractRequestBody(httpRequest, charset);
+        final String hostName = httpHost.getHostName();
+        final Integer port = httpHost.getPort() >= 0 ? httpHost.getPort() : null;
         final MockSupposedRequest supposedRequest = new MockSupposedRequest(url, body, hostName, port);
         final List<MockRequestHandler> requestHandlerList = freedomResponse.getRequestHandlerList();
         for (MockRequestHandler requestHandler : requestHandlerList) {
@@ -95,7 +96,8 @@ public class MockHttpClient extends CloseableHttpClient {
                 return provided;
             }
         }
-        throw new IllegalStateException("TODO jflute Not found!!!"); // TODO jflute xxxxxxxxxxxxx (2017/09/11)
+        throwMockHttpResponseNotFoundException(supposedRequest, responseProviderList);
+        return null; // unreachable
     }
 
     protected String extractRequestUrl(HttpRequest request) {
@@ -123,6 +125,35 @@ public class MockHttpClient extends CloseableHttpClient {
             body = null;
         }
         return body;
+    }
+
+    protected void throwMockHttpResponseNotFoundException(MockSupposedRequest supposedRequest,
+            List<MockHttpResponseProvider> responseProviderList) {
+        final ExceptionMessageBuilder br = new ExceptionMessageBuilder();
+        br.addNotice("Not found the mock response for the request.");
+        br.addItem("Advice");
+        br.addElement("This is how to mock response:");
+        br.addElement("  (o):");
+        br.addElement("    MockHttpClient client = MockHttpClient.create(resopnse -> {");
+        br.addElement("        resopnse.asJson(json, request -> true); // *here");
+        br.addElement("    });");
+        br.addElement("The asJson()'s second argument is lambda");
+        br.addElement("to determine the target request like this:");
+        br.addElement("  (o):");
+        br.addElement("    MockHttpClient client = MockHttpClient.create(resopnse -> {");
+        br.addElement("        resopnse.asJson(json, request -> request.getUrl().contains(\"/harbor/\")); // *here");
+        br.addElement("    });");
+        br.addElement("So the condition is wrong then not found.");
+        br.addElement("Confirm your condition implementation.");
+        br.addItem("Requset");
+        br.addElement(supposedRequest.getUrl());
+        supposedRequest.getBody().ifPresent(supportedBody -> {
+            br.addElement(supportedBody);
+        });
+        br.addItem("Response Provider");
+        br.addElement(responseProviderList);
+        final String msg = br.buildExceptionMessage();
+        throw new IllegalStateException(msg);
     }
 
     // ===================================================================================
