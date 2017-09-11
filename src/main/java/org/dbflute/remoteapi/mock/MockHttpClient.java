@@ -35,7 +35,7 @@ import org.apache.http.protocol.HttpContext;
 import org.dbflute.helper.message.ExceptionMessageBuilder;
 import org.dbflute.remoteapi.mock.supporter.MockFreedomResponse;
 import org.dbflute.remoteapi.mock.supporter.MockFreedomResponse.MockHttpResponseProvider;
-import org.dbflute.remoteapi.mock.supporter.MockFreedomResponse.MockRequestHandler;
+import org.dbflute.remoteapi.mock.supporter.MockFreedomResponse.MockRequestPeeking;
 import org.dbflute.remoteapi.mock.supporter.MockSupposedRequest;
 import org.dbflute.util.DfResourceUtil;
 
@@ -85,9 +85,9 @@ public class MockHttpClient extends CloseableHttpClient {
         final String hostName = httpHost.getHostName();
         final Integer port = httpHost.getPort() >= 0 ? httpHost.getPort() : null;
         final MockSupposedRequest supposedRequest = new MockSupposedRequest(url, body, hostName, port);
-        final List<MockRequestHandler> requestHandlerList = freedomResponse.getRequestHandlerList();
-        for (MockRequestHandler requestHandler : requestHandlerList) {
-            requestHandler.handle(supposedRequest);
+        final List<MockRequestPeeking> requestHandlerList = freedomResponse.getRequestHandlerList();
+        for (MockRequestPeeking requestHandler : requestHandlerList) {
+            requestHandler.peek(supposedRequest);
         }
         final List<MockHttpResponseProvider> responseProviderList = freedomResponse.getResponseProviderList();
         for (MockHttpResponseProvider responseProvider : responseProviderList) {

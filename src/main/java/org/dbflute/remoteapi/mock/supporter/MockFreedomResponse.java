@@ -38,7 +38,7 @@ public class MockFreedomResponse {
     // ===================================================================================
     //                                                                           Attribute
     //                                                                           =========
-    protected final List<MockRequestHandler> requestHandlerList = new ArrayList<>();
+    protected final List<MockRequestPeeking> requestHandlerList = new ArrayList<>();
     protected final List<MockHttpResponseProvider> responseProviderList = new ArrayList<>();
 
     public static interface MockHttpResponseProvider {
@@ -52,19 +52,43 @@ public class MockFreedomResponse {
 
     public static interface MockRequestDeterminer {
 
+        /**
+         * @param request The supposed request that has e.g. URL, request Body. (NotNull)
+         * @return The determination of corresponding request or not.
+         */
         boolean determine(MockSupposedRequest request);
     }
 
     // ===================================================================================
     //                                                                             Request
     //                                                                             =======
-    public void peekRequest(MockRequestHandler requestLambda) {
+    /**
+     * Peek supposed request for the response. (Basically for unit-test assertion)
+     * <pre>
+     * e.g. request body should exist and contain request keywords if /harbor/product/list 
+     *  response.peekRequest(request -&gt; {
+     *      if (request.getUrl().contains("/harbor/product/list")) {
+     *          assertContainsAll(request.getBody().get(), "productName", body.productName);
+     *      }
+     *  });
+     * 
+     * e.g. request body should exist and contain request keywords at all requests 
+     *  response.peekRequest(request -&gt; {
+     *      assertContainsAll(request.getBody().get(), "productName", body.productName);
+     *  });
+     * </pre>
+     * @param requestLambda The callback for peeking request. (NotNull)
+     */
+    public void peekRequest(MockRequestPeeking requestLambda) {
         requestHandlerList.add(requestLambda);
     }
 
-    public static interface MockRequestHandler {
+    public static interface MockRequestPeeking {
 
-        void handle(MockSupposedRequest request);
+        /**
+         * @param request The supposed request that has e.g. URL, request Body. (NotNull)
+         */
+        void peek(MockSupposedRequest request);
     }
 
     // ===================================================================================
@@ -73,18 +97,55 @@ public class MockFreedomResponse {
     // -----------------------------------------------------
     //                                                 JSON
     //                                                ------
+    // #hope jflute non-determination method?
+    /**
+     * Return response as JSON from the input stream if the request is ...
+     * <pre>
+     * e.g. returns response as the json if the request is /harbor/
+     *  response.asJson(ins, request -&gt; request.getUrl().contains("/harbor/"));
+     * 
+     * e.g. returns response as the json at all requests
+     *  response.asJson(ins, request -&gt; true);
+     * </pre>
+     * @param responseStream The input stream to JSON resource for mock response. (NotNull)
+     * @param requestLambda The callback for determination of corresponding request. (NotNull)
+     */
     public void asJson(InputStream responseStream, MockRequestDeterminer requestLambda) {
         responseProviderList.add(request -> {
             return requestLambda.determine(request) ? responseJson(responseStream) : null;
         });
     }
 
+    /**
+     * Return response as JSON from the resource path if the request is ...
+     * <pre>
+     * e.g. returns response as the json if the request is /harbor/
+     *  response.asJson("/mock/harbor/product.json", request -&gt; request.getUrl().contains("/harbor/"));
+     * 
+     * e.g. returns response as the json at all requests
+     *  response.asJson("/mock/harbor/product.json", request -&gt; true);
+     * </pre>
+     * @param responseFilePath The resource path to JSON resource file for mock response. (NotNull)
+     * @param requestLambda The callback for determination of corresponding request. (NotNull)
+     */
     public void asJson(String responseFilePath, MockRequestDeterminer requestLambda) {
         responseProviderList.add(request -> {
             return requestLambda.determine(request) ? responseJson(responseFilePath) : null;
         });
     }
 
+    /**
+     * Return response as JSON directly if the request is ...
+     * <pre>
+     * e.g. returns response as the json if the request is /harbor/
+     *  response.asJsonDirectly("{sea = mystic, land = oneman}", request -&gt; request.getUrl().contains("/harbor/"));
+     * 
+     * e.g. returns response as the json at all requests
+     *  response.asJsonDirectly("{sea = mystic, land = oneman}", request -&gt; true);
+     * </pre>
+     * @param json The string of JSON for mock response. (NotNull)
+     * @param requestLambda The callback for determination of corresponding request. (NotNull)
+     */
     public void asJsonDirectly(String json, MockRequestDeterminer requestLambda) {
         responseProviderList.add(request -> {
             return requestLambda.determine(request) ? responseJsonDirectly(json) : null;
@@ -150,7 +211,7 @@ public class MockFreedomResponse {
     // ===================================================================================
     //                                                                            Accessor
     //                                                                            ========
-    public List<MockRequestHandler> getRequestHandlerList() {
+    public List<MockRequestPeeking> getRequestHandlerList() {
         return Collections.unmodifiableList(requestHandlerList);
     }
 
