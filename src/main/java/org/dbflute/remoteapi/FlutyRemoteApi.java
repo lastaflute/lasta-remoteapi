@@ -17,6 +17,8 @@ package org.dbflute.remoteapi;
 
 import java.io.IOException;
 import java.lang.reflect.Type;
+import java.util.Collections;
+import java.util.Map;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -38,6 +40,7 @@ import org.dbflute.remoteapi.exception.RemoteApiSenderOfRequestBodyNotFoundExcep
 import org.dbflute.remoteapi.receiver.ResponseBodyReceiver;
 import org.dbflute.remoteapi.sender.body.RequestBodySender;
 import org.dbflute.remoteapi.sender.query.QueryParameterSender;
+import org.lastaflute.core.util.Lato;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -89,10 +92,13 @@ public class FlutyRemoteApi {
         assertArgumentNotNull("queryForm", queryForm);
         assertArgumentNotNull("ruleLambda", ruleLambda);
         queryForm.ifPresent(form -> validateForm(beanType, urlBase, actionPath, pathVariables, form));
-        final FlutyRemoteApiRule option = createRemoteApiRule(ruleLambda);
-        final String url = buildUrl(urlBase, actionPath, pathVariables, queryForm, option);
-        logger.debug("#flow #remote ...Requesting as GET to Remote API:\n {}\n   => {}", url, beanType);
-        return doRequestGet(beanType, url, option);
+        final FlutyRemoteApiRule rule = createRemoteApiRule(ruleLambda);
+        final String url = buildUrl(urlBase, actionPath, pathVariables, queryForm, rule);
+        if (logger.isDebugEnabled()) {
+            final Map<String, String> headerMap = rule.getHeaders().orElseGet(() -> Collections.emptyMap());
+            logger.debug("#flow #remote ...Sending request as GET to Remote API:\n{}\n with headers: {}", url, headerMap);
+        }
+        return doRequestGet(beanType, url, rule);
     }
 
     protected <RESULT> RESULT doRequestGet(Type beanType, String url, FlutyRemoteApiRule rule) {
@@ -137,7 +143,12 @@ public class FlutyRemoteApi {
         validateForm(beanType, urlBase, actionPath, pathVariables, form);
         final FlutyRemoteApiRule rule = createRemoteApiRule(ruleLambda);
         final String url = buildUrl(urlBase, actionPath, pathVariables, OptionalThing.empty(), rule);
-        logger.debug("#flow #remote ...Requesting as POST to Remote API:\n {}\n with form: {}\n   => {}: ", url, form, beanType);
+        if (logger.isDebugEnabled()) {
+            final String formDisp = form.getClass().getSimpleName() + ":" + Lato.string(form); // because toString() might not be overridden
+            final Map<String, String> headerMap = rule.getHeaders().orElseGet(() -> Collections.emptyMap());
+            logger.debug("#flow #remote ...Sending request as POST to Remote API:\n{}\n with form: {}\n with headers: {}", url, formDisp,
+                    headerMap);
+        }
         return doRequestPost(beanType, url, form, rule);
     }
 
@@ -293,7 +304,7 @@ public class FlutyRemoteApi {
 
     protected <RESULT> RESULT parseResponse(Type beanType, String url, OptionalThing<Object> form, int httpStatus, String body,
             FlutyRemoteApiRule rule) {
-        logger.debug("#flow #remote ...Parsing response to Remote API:\n {}\n   => {}\n{}", url, beanType, body);
+        logger.debug("#flow #remote ...Receiving response to Remote API:\n{}\n as {}\n{}", url, beanType, body);
         if (httpStatus >= 200 && httpStatus < 300) {
             final RESULT result = toResult(beanType, url, form, httpStatus, body, rule);
             return result;
