@@ -248,12 +248,17 @@ public class FlutyRemoteApi {
         sb.append(actionPath);
         if (pathVariables.length != 0) {
             sb.append("/");
-            sb.append(Stream.of(pathVariables).map(el -> el.toString()).collect(Collectors.joining("/")));
+            sb.append(buildPathVariablesPart(pathVariables));
         }
         queryForm.ifPresent(form -> {
             buildQueryParameter(sb, form, rule);
         });
         return sb.toString();
+    }
+
+    protected String buildPathVariablesPart(Object[] pathVariables) {
+        // #hope jflute make PathVariableFilter
+        return Stream.of(pathVariables).map(el -> el.toString()).collect(Collectors.joining("/"));
     }
 
     // ===================================================================================
