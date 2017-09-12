@@ -174,7 +174,20 @@ public class FlutyRemoteApiRule {
         this.headers.put(name, value);
     }
 
-    public void setFailureResponseType(Type failureResponseType) {
+    /**
+     * Handle failure response as specified type. <br>
+     * You can get the failure response from exception.
+     * <pre>
+     * try {
+     *     ... = remoteHarborBhv.request...();
+     * } catch (RemoteApiHttpClientErrorException e) {
+     *     [your-specified-type] failureResponse = e.getFailureResponse().get();
+     *     ...
+     * }
+     * </pre>
+     * @param failureResponseType The type of failure response. (NotNull)
+     */
+    public void handleFailureResponseAs(Type failureResponseType) {
         assertArgumentNotNull("failureResponseType", failureResponseType);
         this.failureResponseType = failureResponseType;
     }
@@ -199,8 +212,8 @@ public class FlutyRemoteApiRule {
         final StringBuilder sb = new StringBuilder();
         sb.append("option:{");
         sb.append("sender:{").append(queryParameterSender);
-        sb.append("}, receiver:{").append(requestBodySender);
-        sb.append(", ").append(responseBodyReceiver);
+        sb.append(", ").append(requestBodySender);
+        sb.append(", receiver:{").append(responseBodyReceiver);
         sb.append("}, ").append(sslUntrusted);
         sb.append(", timeout:{").append(connectTimeout);
         sb.append(", ").append(connectionRequestTimeout);
