@@ -271,7 +271,7 @@ public abstract class FlutyRemoteBehavior {
     /**
      * Make array for path variables. (easy utility)
      * <pre>
-     * return doRequestPost(..., "/lido/product/list", moreUrl(7), body, rule -&gt; {});
+     * return doRequestPost(..., "/lido/product/list", <span style="color: #CC4747">moreUrl(7)</span>, body, rule -&gt; {});
      * </pre>
      * @param pathVariables The varying arguments for path variables. (NotNull)
      * @return The array of object. (NotNull)
@@ -281,6 +281,28 @@ public abstract class FlutyRemoteBehavior {
             throw new IllegalArgumentException("The argument 'pathVariables' should not be null.");
         }
         return pathVariables;
+    }
+
+    /**
+     * Get empty object array for path variables.
+     * <pre>
+     * return doRequestGet(..., "/lido/mypage", <span style="color: #CC4747">noMoreUrl()</span>, noQuery(), rule -&gt; {});
+     * </pre>
+     * @return The array of object as empty. (NotNull)
+     */
+    protected Object[] noMoreUrl() {
+        return EMPTY_OBJECTS;
+    }
+
+    /**
+     * Get empty optional for query form.
+     * <pre>
+     * return doRequestGet(..., "/lido/mypage", noMoreUrl(), <span style="color: #CC4747">noQuery()</span>, rule -&gt; {});
+     * </pre>
+     * @return The optional object as empty. (NotNull)
+     */
+    protected OptionalThing<Object> noQuery() {
+        return OptionalThing.empty();
     }
 
     // ===================================================================================
