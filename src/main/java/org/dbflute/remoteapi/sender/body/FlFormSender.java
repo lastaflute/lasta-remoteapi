@@ -15,7 +15,6 @@
  */
 package org.dbflute.remoteapi.sender.body;
 
-import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -26,6 +25,7 @@ import org.apache.http.message.BasicNameValuePair;
 import org.dbflute.helper.beans.DfBeanDesc;
 import org.dbflute.helper.beans.DfPropertyDesc;
 import org.dbflute.helper.beans.factory.DfBeanDescFactory;
+import org.dbflute.remoteapi.FlutyRemoteApiRule;
 import org.dbflute.remoteapi.mapping.FlParameterSerializer;
 import org.dbflute.remoteapi.mapping.FlRemoteMappingPolicy;
 
@@ -57,7 +57,7 @@ public class FlFormSender implements RequestBodySender {
     //                                                                             Prepare
     //                                                                             =======
     @Override
-    public void prepareBodyRequest(HttpEntityEnclosingRequest enclosingRequest, Object form) {
+    public void prepareBodyRequest(HttpEntityEnclosingRequest enclosingRequest, Object form, FlutyRemoteApiRule rule) {
         final DfBeanDesc beanDesc = DfBeanDescFactory.getBeanDesc(form.getClass());
         final List<NameValuePair> parameters = new ArrayList<>();
         beanDesc.getProppertyNameList().stream().forEach(proppertyName -> {
@@ -73,7 +73,11 @@ public class FlFormSender implements RequestBodySender {
                 parameters.add(new BasicNameValuePair(serializedParameterName, asSerializedParameterValue(plainValue)));
             }
         });
-        enclosingRequest.setEntity(new UrlEncodedFormEntity(parameters, StandardCharsets.UTF_8));
+        enclosingRequest.setEntity(createUrlEncodedFormEntity(parameters, rule));
+    }
+
+    protected UrlEncodedFormEntity createUrlEncodedFormEntity(List<NameValuePair> parameters, FlutyRemoteApiRule rule) {
+        return new UrlEncodedFormEntity(parameters, rule.getRequestBodyCharset());
     }
 
     // ===================================================================================

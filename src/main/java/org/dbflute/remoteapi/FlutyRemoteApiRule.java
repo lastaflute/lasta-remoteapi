@@ -67,6 +67,7 @@ public class FlutyRemoteApiRule {
     protected int connectionRequestTimeout = 3000;
     protected int socketTimeout = 3000;
     protected Charset queryParameterCharset = StandardCharsets.UTF_8; // not null
+    protected Charset requestBodyCharset = StandardCharsets.UTF_8; // not null
     protected Charset responseBodyCharset = StandardCharsets.UTF_8; // not null
     protected Map<String, List<String>> headers; // null allowed, not required, lazy-loaded
     protected Type failureResponseType; // null allowed, not required
@@ -159,6 +160,14 @@ public class FlutyRemoteApiRule {
     }
 
     /**
+     * @param requestBodyCharset The charset of request body. (NotNull)
+     */
+    public void encodeRequestBodyAs(Charset requestBodyCharset) {
+        assertArgumentNotNull("requestBodyCharset", requestBodyCharset);
+        this.requestBodyCharset = requestBodyCharset;
+    }
+
+    /**
      * @param responseBodyCharset The charset of response body. (NotNull)
      */
     public void encodeResponseBodyAs(Charset responseBodyCharset) {
@@ -248,6 +257,7 @@ public class FlutyRemoteApiRule {
         sb.append("}, ").append(headers);
         sb.append(", ").append(failureResponseType);
         sb.append(", charset:{").append(queryParameterCharset);
+        sb.append(", ").append(requestBodyCharset);
         sb.append(", ").append(responseBodyCharset);
         sb.append("}}");
         return sb.toString();
@@ -301,6 +311,13 @@ public class FlutyRemoteApiRule {
      */
     public Charset getQueryParameterCharset() {
         return queryParameterCharset;
+    }
+
+    /**
+     * @return The charset of request body. (NotNull)
+     */
+    public Charset getRequestBodyCharset() {
+        return requestBodyCharset;
     }
 
     /**

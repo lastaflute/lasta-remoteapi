@@ -21,6 +21,7 @@ import org.apache.http.HttpEntityEnclosingRequest;
 import org.apache.http.entity.StringEntity;
 import org.apache.http.message.BasicHeader;
 import org.apache.http.protocol.HTTP;
+import org.dbflute.remoteapi.FlutyRemoteApiRule;
 
 /**
  * @author inoue
@@ -29,9 +30,9 @@ import org.apache.http.protocol.HTTP;
 public abstract class FlJsonSender implements RequestBodySender {
 
     @Override
-    public void prepareBodyRequest(HttpEntityEnclosingRequest enclosingRequest, Object form) {
+    public void prepareBodyRequest(HttpEntityEnclosingRequest enclosingRequest, Object form, FlutyRemoteApiRule rule) {
         final String json = toJson(form);
-        final StringEntity entity = new StringEntity(json, StandardCharsets.UTF_8.name());
+        final StringEntity entity = new StringEntity(json, rule.getRequestBodyCharset().name());
         entity.setContentType(new BasicHeader(HTTP.CONTENT_TYPE, buildContentType()));
         enclosingRequest.setEntity(entity);
     }

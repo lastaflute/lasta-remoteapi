@@ -171,7 +171,7 @@ public class FlutyRemoteApi {
         final RequestBodySender converter = rule.getRequestBodySender().orElseThrow(() -> {
             return createRemoteApiSenderOfRequestBodyNotFoundException(beanType, url, form, rule);
         });
-        converter.prepareBodyRequest(httpPost, form);
+        converter.prepareBodyRequest(httpPost, form, rule);
         return httpPost;
     }
 
