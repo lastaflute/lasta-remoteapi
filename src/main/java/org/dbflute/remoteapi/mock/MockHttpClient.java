@@ -25,11 +25,11 @@ import java.nio.charset.StandardCharsets;
 import java.util.List;
 
 import org.apache.http.HttpEntity;
+import org.apache.http.HttpEntityEnclosingRequest;
 import org.apache.http.HttpHost;
 import org.apache.http.HttpRequest;
 import org.apache.http.client.ClientProtocolException;
 import org.apache.http.client.methods.CloseableHttpResponse;
-import org.apache.http.client.methods.HttpPost;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.protocol.HttpContext;
 import org.dbflute.helper.message.ExceptionMessageBuilder;
@@ -118,9 +118,9 @@ public class MockHttpClient extends CloseableHttpClient {
 
     protected String extractRequestBody(HttpRequest request, Charset charset) {
         final String body;
-        if (request instanceof HttpPost) {
-            HttpPost httpPost = (HttpPost) request;
-            HttpEntity entity = httpPost.getEntity();
+        if (request instanceof HttpEntityEnclosingRequest) {
+            final HttpEntityEnclosingRequest httpPost = (HttpEntityEnclosingRequest) request;
+            final HttpEntity entity = httpPost.getEntity();
             try (InputStream content = entity.getContent(); InputStreamReader reader = new InputStreamReader(content, charset)) {
                 body = DfResourceUtil.readText(reader);
             } catch (UnsupportedOperationException | IOException e) {
