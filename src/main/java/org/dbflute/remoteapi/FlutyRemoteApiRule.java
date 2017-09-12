@@ -23,6 +23,7 @@ import java.security.KeyStoreException;
 import java.security.NoSuchAlgorithmException;
 import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
+import java.util.List;
 import java.util.Map;
 
 import javax.net.ssl.SSLContext;
@@ -67,7 +68,7 @@ public class FlutyRemoteApiRule {
     protected int socketTimeout = 3000;
     protected Charset queryParameterCharset = StandardCharsets.UTF_8; // not null
     protected Charset responseBodyCharset = StandardCharsets.UTF_8; // not null
-    protected Map<String, String> headers; // null allowed, not required, lazy-loaded
+    protected Map<String, List<String>> headers; // null allowed, not required, lazy-loaded
     protected Type failureResponseType; // null allowed, not required
 
     // ===================================================================================
@@ -165,13 +166,39 @@ public class FlutyRemoteApiRule {
         this.responseBodyCharset = responseBodyCharset;
     }
 
+    /**
+     * Set header value by the name. <br>
+     * It overwrites the same-name header if it already exists.
+     * @param name The name of the header. (NotNull)
+     * @param value The value of the header. (NotNull)
+     */
     public void setHeader(String name, String value) {
         assertArgumentNotNull("name", name);
         assertArgumentNotNull("value", value);
         if (headers == null) {
             headers = DfCollectionUtil.newLinkedHashMap();
         }
-        this.headers.put(name, value);
+        headers.put(name, DfCollectionUtil.newArrayList(value));
+    }
+
+    /**
+     * Add header value by the name. <br>
+     * It is added as the second-or-more value if the name already exists.
+     * @param name The name of the header. (NotNull)
+     * @param value The value of the header, which may be as the second-or-more value. (NotNull)
+     */
+    public void addHeader(String name, String value) {
+        assertArgumentNotNull("name", name);
+        assertArgumentNotNull("value", value);
+        if (headers == null) {
+            headers = DfCollectionUtil.newLinkedHashMap();
+        }
+        List<String> valueList = headers.get(name);
+        if (valueList == null) {
+            valueList = DfCollectionUtil.newArrayList();
+            headers.put(name, valueList);
+        }
+        valueList.add(value);
     }
 
     /**
@@ -283,7 +310,7 @@ public class FlutyRemoteApiRule {
         return responseBodyCharset;
     }
 
-    public OptionalThing<Map<String, String>> getHeaders() {
+    public OptionalThing<Map<String, List<String>>> getHeaders() {
         return OptionalThing.ofNullable(headers, () -> {
             throw new IllegalStateException("Not found the headers in the option: " + toString());
         });

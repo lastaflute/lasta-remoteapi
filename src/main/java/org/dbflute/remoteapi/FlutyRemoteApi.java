@@ -18,6 +18,7 @@ package org.dbflute.remoteapi;
 import java.io.IOException;
 import java.lang.reflect.Type;
 import java.util.Collections;
+import java.util.List;
 import java.util.Map;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
@@ -95,7 +96,7 @@ public class FlutyRemoteApi {
         final FlutyRemoteApiRule rule = createRemoteApiRule(ruleLambda);
         final String url = buildUrl(urlBase, actionPath, pathVariables, queryForm, rule);
         if (logger.isDebugEnabled()) {
-            final Map<String, String> headerMap = rule.getHeaders().orElseGet(() -> Collections.emptyMap());
+            final Map<String, List<String>> headerMap = rule.getHeaders().orElseGet(() -> Collections.emptyMap());
             logger.debug("#flow #remote ...Sending request as GET to Remote API:\n{}\n with headers: {}", url, headerMap);
         }
         return doRequestGet(beanType, url, rule);
@@ -145,7 +146,7 @@ public class FlutyRemoteApi {
         final String url = buildUrl(urlBase, actionPath, pathVariables, OptionalThing.empty(), rule);
         if (logger.isDebugEnabled()) {
             final String formDisp = form.getClass().getSimpleName() + ":" + Lato.string(form); // because toString() might not be overridden
-            final Map<String, String> headerMap = rule.getHeaders().orElseGet(() -> Collections.emptyMap());
+            final Map<String, List<String>> headerMap = rule.getHeaders().orElseGet(() -> Collections.emptyMap());
             logger.debug("#flow #remote ...Sending request as POST to Remote API:\n{}\n with form: {}\n with headers: {}", url, formDisp,
                     headerMap);
         }
@@ -465,8 +466,10 @@ public class FlutyRemoteApi {
     //                                                                        Assist Logic
     //                                                                        ============
     protected void setupHeader(HttpMessage httpMessage, FlutyRemoteApiRule rule) {
-        rule.getHeaders().ifPresent(map -> map.forEach((name, value) -> {
-            httpMessage.addHeader(name, value);
+        rule.getHeaders().ifPresent(map -> map.forEach((name, valueList) -> {
+            valueList.forEach(value -> {
+                httpMessage.addHeader(name, value);
+            });
         }));
     }
 

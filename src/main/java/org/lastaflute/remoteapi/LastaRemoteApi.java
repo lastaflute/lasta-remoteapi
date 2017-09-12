@@ -75,7 +75,7 @@ public class LastaRemoteApi extends FlutyRemoteApi {
 
     @Override
     protected void validateResult(Type beanType, String url, OptionalThing<Object> form, int httpStatus, String body, Object result,
-            FlutyRemoteApiRule ruledRemoteApiOption) {
+            FlutyRemoteApiRule rule) {
         try {
             createTransferredBeanValidator().validate(result);
         } catch (ResponseBeanValidationErrorException | ValidationStoppedException e) {
