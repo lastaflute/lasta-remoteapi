@@ -150,12 +150,12 @@ public class FlutyRemoteApi {
      * @param urlBase The base part of URL to remote API server. e.g. http://localhost:8090/harbor (NotNull)
      * @param actionPath The path to action without URL parameter, and trailing slash is no difference. e.g. /sea/land (NotNull)
      * @param pathVariables The array of URL path variables, e.g. ["hangar", 3]. (NotNull, EmptyAllowed)
+     * @param queryForm The optional form of query (GET parameters). (NotNull, EmptyAllowed)
      * @param ruleLambda The callback for rule of remote API. (NotNull)
      * @return The JSON result of response as result, returned from the request. (NotNull)
      */
     public <RESULT> RESULT requestDelete(Type beanType, String urlBase, String actionPath, Object[] pathVariables,
-            Consumer<FlutyRemoteApiRule> ruleLambda) {
-        final OptionalThing<Object> queryForm = OptionalThing.empty();
+            OptionalThing<Object> queryForm, Consumer<FlutyRemoteApiRule> ruleLambda) {
         return doRequestEmptyBody(beanType, urlBase, actionPath, pathVariables, queryForm, ruleLambda, HttpDelete.METHOD_NAME, url -> {
             return new HttpDelete(url);
         });

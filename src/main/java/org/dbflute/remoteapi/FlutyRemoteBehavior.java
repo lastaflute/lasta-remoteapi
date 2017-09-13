@@ -339,12 +339,13 @@ public abstract class FlutyRemoteBehavior {
      * @param beanType The class type of bean to convert, should have default constructor. (NotNull)
      * @param actionPath The path to action without URL parameter. e.g. /sea/land (NotNull)
      * @param pathVariables The array of URL path variables, e.g. ["hangar", 3]. (NotNull, EmptyAllowed)
+     * @param queryForm The optional form of query (GET parameters). (NotNull, EmptyAllowed)
      * @param ruleLambda The callback for rule of remote API. (NotNull)
      * @return The JSON result of response as result, returned from the request. (NotNull)
      */
     protected <RESULT extends Object> RESULT doRequestDelete(Class<? extends Object> beanType //
-            , String actionPath, Object[] pathVariables, Consumer<FlutyRemoteApiRule> ruleLambda) {
-        return remoteApi.requestDelete(beanType, getUrlBase(), actionPath, pathVariables, ruleLambda);
+            , String actionPath, Object[] pathVariables, OptionalThing<Object> queryForm, Consumer<FlutyRemoteApiRule> ruleLambda) {
+        return remoteApi.requestDelete(beanType, getUrlBase(), actionPath, pathVariables, queryForm, ruleLambda);
     }
 
     /**
@@ -365,12 +366,13 @@ public abstract class FlutyRemoteBehavior {
      * @param beanType The parameterized type of bean to convert, should have default constructor. (NotNull)
      * @param actionPath The path to action without URL parameter. e.g. /sea/land (NotNull)
      * @param pathVariables The array of URL path variables, e.g. ["hangar", 3]. (NotNull, EmptyAllowed)
+     * @param queryForm The optional form of query (GET parameters). (NotNull, EmptyAllowed)
      * @param ruleLambda The callback for rule of remote API. (NotNull)
      * @return The JSON result of response as result, returned from the request. (NotNull)
      */
     protected <RESULT extends Object> RESULT doRequestDelete(ParameterizedType beanType //
             , String actionPath, Object[] pathVariables, OptionalThing<Object> queryForm, Consumer<FlutyRemoteApiRule> ruleLambda) {
-        return remoteApi.requestDelete(beanType, getUrlBase(), actionPath, pathVariables, ruleLambda);
+        return remoteApi.requestDelete(beanType, getUrlBase(), actionPath, pathVariables, queryForm, ruleLambda);
     }
 
     // ===================================================================================
