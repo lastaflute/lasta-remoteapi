@@ -57,13 +57,13 @@ public class FlFormSender implements RequestBodySender {
     //                                                                             Prepare
     //                                                                             =======
     @Override
-    public void prepareBodyRequest(HttpEntityEnclosingRequest enclosingRequest, Object form, FlutyRemoteApiRule rule) {
-        final DfBeanDesc beanDesc = DfBeanDescFactory.getBeanDesc(form.getClass());
+    public void prepareBodyRequest(HttpEntityEnclosingRequest enclosingRequest, Object param, FlutyRemoteApiRule rule) {
+        final DfBeanDesc beanDesc = DfBeanDescFactory.getBeanDesc(param.getClass());
         final List<NameValuePair> parameters = new ArrayList<>();
         beanDesc.getProppertyNameList().stream().forEach(proppertyName -> {
             final DfPropertyDesc propertyDesc = beanDesc.getPropertyDesc(proppertyName);
             final String serializedParameterName = asSerializedParameterName(propertyDesc);
-            final Object plainValue = beanDesc.getPropertyDesc(proppertyName).getValue(form);
+            final Object plainValue = beanDesc.getPropertyDesc(proppertyName).getValue(param);
             if (plainValue != null && Iterable.class.isAssignableFrom(plainValue.getClass())) {
                 final Iterable<?> plainValueIterable = (Iterable<?>) plainValue;
                 plainValueIterable.forEach(value -> {

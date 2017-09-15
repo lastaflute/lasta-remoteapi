@@ -174,13 +174,13 @@ public abstract class FlutyRemoteBehavior {
      * @param beanType The class type of bean to convert, should have default constructor. (NotNull)
      * @param actionPath The path to action without URL parameter. e.g. /sea/land (NotNull)
      * @param pathVariables The array of URL path variables, e.g. ["hangar", 3]. (NotNull, EmptyAllowed)
-     * @param queryForm The optional form of query (GET parameters). (NotNull, EmptyAllowed)
+     * @param param The optional parameter object of query (GET parameters). (NotNull, EmptyAllowed)
      * @param ruleLambda The callback for rule of remote API. (NotNull)
      * @return The JSON result of response as result, returned from the request. (NotNull)
      */
     protected <RESULT extends Object> RESULT doRequestGet(Class<? extends Object> beanType //
-            , String actionPath, Object[] pathVariables, OptionalThing<Object> queryForm, Consumer<FlutyRemoteApiRule> ruleLambda) {
-        return remoteApi.requestGet(beanType, getUrlBase(), actionPath, pathVariables, queryForm, ruleLambda);
+            , String actionPath, Object[] pathVariables, OptionalThing<Object> param, Consumer<FlutyRemoteApiRule> ruleLambda) {
+        return remoteApi.requestGet(beanType, getUrlBase(), actionPath, pathVariables, param, ruleLambda);
     }
 
     /**
@@ -201,13 +201,13 @@ public abstract class FlutyRemoteBehavior {
      * @param beanType The parameterized type of bean to convert, should have default constructor. (NotNull)
      * @param actionPath The path to action without URL parameter. e.g. /sea/land (NotNull)
      * @param pathVariables The array of URL path variables, e.g. ["hangar", 3]. (NotNull, EmptyAllowed)
-     * @param queryForm The optional form of query (GET parameters). (NotNull, EmptyAllowed)
+     * @param param The optional parameter object of query (GET parameters). (NotNull, EmptyAllowed)
      * @param ruleLambda The callback for rule of remote API. (NotNull)
      * @return The JSON result of response as result, returned from the request. (NotNull)
      */
     protected <RESULT extends Object> RESULT doRequestGet(ParameterizedType beanType //
-            , String actionPath, Object[] pathVariables, OptionalThing<Object> queryForm, Consumer<FlutyRemoteApiRule> ruleLambda) {
-        return remoteApi.requestGet(beanType, getUrlBase(), actionPath, pathVariables, queryForm, ruleLambda);
+            , String actionPath, Object[] pathVariables, OptionalThing<Object> param, Consumer<FlutyRemoteApiRule> ruleLambda) {
+        return remoteApi.requestGet(beanType, getUrlBase(), actionPath, pathVariables, param, ruleLambda);
     }
 
     // -----------------------------------------------------
@@ -229,13 +229,13 @@ public abstract class FlutyRemoteBehavior {
      * @param beanType The class type of bean for response body, should have default constructor. (NotNull)
      * @param actionPath The path to action without URL parameter. e.g. /sea/land (NotNull)
      * @param pathVariables The array of URL path variables, e.g. ["hangar", 3]. (NotNull, EmptyAllowed)
-     * @param form The form of POST parameters. (NotNull)
+     * @param param The parameter object of POST parameters, may be JSON body. (NotNull)
      * @param ruleLambda The callback for rule of remote API. (NotNull)
      * @return The JSON result of response as result, returned from the request. (NotNull)
      */
     protected <RESULT extends Object> RESULT doRequestPost(Class<? extends Object> beanType //
-            , String actionPath, Object[] pathVariables, Object form, Consumer<FlutyRemoteApiRule> ruleLambda) {
-        return remoteApi.requestPost(beanType, getUrlBase(), actionPath, pathVariables, form, ruleLambda);
+            , String actionPath, Object[] pathVariables, Object param, Consumer<FlutyRemoteApiRule> ruleLambda) {
+        return remoteApi.requestPost(beanType, getUrlBase(), actionPath, pathVariables, param, ruleLambda);
     }
 
     /**
@@ -256,13 +256,13 @@ public abstract class FlutyRemoteBehavior {
      * @param beanType The parameterized type of bean for response body, should have default constructor. (NotNull)
      * @param actionPath The path to action without URL parameter. e.g. /sea/land (NotNull)
      * @param pathVariables The array of URL path variables, e.g. ["hangar", 3]. (NotNull, EmptyAllowed)
-     * @param form The form of POST parameters. (NotNull)
+     * @param param The parameter object of POST parameters, may be JSON body. (NotNull)
      * @param ruleLambda The callback for rule of remote API. (NotNull)
      * @return The JSON result of response as result, returned from the request. (NotNull)
      */
     protected <RESULT extends Object> RESULT doRequestPost(ParameterizedType beanType //
-            , String actionPath, Object[] pathVariables, Object form, Consumer<FlutyRemoteApiRule> ruleLambda) {
-        return remoteApi.requestPost(beanType, getUrlBase(), actionPath, pathVariables, form, ruleLambda);
+            , String actionPath, Object[] pathVariables, Object param, Consumer<FlutyRemoteApiRule> ruleLambda) {
+        return remoteApi.requestPost(beanType, getUrlBase(), actionPath, pathVariables, param, ruleLambda);
     }
 
     // -----------------------------------------------------
@@ -284,13 +284,13 @@ public abstract class FlutyRemoteBehavior {
      * @param beanType The class type of bean for response body, should have default constructor. (NotNull)
      * @param actionPath The path to action without URL parameter. e.g. /sea/land (NotNull)
      * @param pathVariables The array of URL path variables, e.g. ["hangar", 3]. (NotNull, EmptyAllowed)
-     * @param form The form of PUT parameters. (NotNull)
+     * @param param The parameter object of PUT parameters, may be JSON body. (NotNull)
      * @param ruleLambda The callback for rule of remote API. (NotNull)
      * @return The JSON result of response as result, returned from the request. (NotNull)
      */
     protected <RESULT extends Object> RESULT doRequestPut(Class<? extends Object> beanType //
-            , String actionPath, Object[] pathVariables, Object form, Consumer<FlutyRemoteApiRule> ruleLambda) {
-        return remoteApi.requestPut(beanType, getUrlBase(), actionPath, pathVariables, form, ruleLambda);
+            , String actionPath, Object[] pathVariables, Object param, Consumer<FlutyRemoteApiRule> ruleLambda) {
+        return remoteApi.requestPut(beanType, getUrlBase(), actionPath, pathVariables, param, ruleLambda);
     }
 
     /**
@@ -311,13 +311,13 @@ public abstract class FlutyRemoteBehavior {
      * @param beanType The parameterized type of bean for response body, should have default constructor. (NotNull)
      * @param actionPath The path to action without URL parameter. e.g. /sea/land (NotNull)
      * @param pathVariables The array of URL path variables, e.g. ["hangar", 3]. (NotNull, EmptyAllowed)
-     * @param form The form of PUT parameters. (NotNull)
+     * @param param The parameter object of PUT parameters, may be JSON body. (NotNull)
      * @param ruleLambda The callback for rule of remote API. (NotNull)
      * @return The JSON result of response as result, returned from the request. (NotNull)
      */
     protected <RESULT extends Object> RESULT doRequestPut(ParameterizedType beanType //
-            , String actionPath, Object[] pathVariables, Object form, Consumer<FlutyRemoteApiRule> ruleLambda) {
-        return remoteApi.requestPut(beanType, getUrlBase(), actionPath, pathVariables, form, ruleLambda);
+            , String actionPath, Object[] pathVariables, Object param, Consumer<FlutyRemoteApiRule> ruleLambda) {
+        return remoteApi.requestPut(beanType, getUrlBase(), actionPath, pathVariables, param, ruleLambda);
     }
 
     // -----------------------------------------------------
@@ -339,13 +339,13 @@ public abstract class FlutyRemoteBehavior {
      * @param beanType The class type of bean to convert, should have default constructor. (NotNull)
      * @param actionPath The path to action without URL parameter. e.g. /sea/land (NotNull)
      * @param pathVariables The array of URL path variables, e.g. ["hangar", 3]. (NotNull, EmptyAllowed)
-     * @param queryForm The optional form of query (GET parameters). (NotNull, EmptyAllowed)
+     * @param param The optional paramter object of query (GET parameters). (NotNull, EmptyAllowed)
      * @param ruleLambda The callback for rule of remote API. (NotNull)
      * @return The JSON result of response as result, returned from the request. (NotNull)
      */
     protected <RESULT extends Object> RESULT doRequestDelete(Class<? extends Object> beanType //
-            , String actionPath, Object[] pathVariables, OptionalThing<Object> queryForm, Consumer<FlutyRemoteApiRule> ruleLambda) {
-        return remoteApi.requestDelete(beanType, getUrlBase(), actionPath, pathVariables, queryForm, ruleLambda);
+            , String actionPath, Object[] pathVariables, OptionalThing<Object> param, Consumer<FlutyRemoteApiRule> ruleLambda) {
+        return remoteApi.requestDelete(beanType, getUrlBase(), actionPath, pathVariables, param, ruleLambda);
     }
 
     /**
@@ -366,13 +366,13 @@ public abstract class FlutyRemoteBehavior {
      * @param beanType The parameterized type of bean to convert, should have default constructor. (NotNull)
      * @param actionPath The path to action without URL parameter. e.g. /sea/land (NotNull)
      * @param pathVariables The array of URL path variables, e.g. ["hangar", 3]. (NotNull, EmptyAllowed)
-     * @param queryForm The optional form of query (GET parameters). (NotNull, EmptyAllowed)
+     * @param param The optional parameter object of query (GET parameters). (NotNull, EmptyAllowed)
      * @param ruleLambda The callback for rule of remote API. (NotNull)
      * @return The JSON result of response as result, returned from the request. (NotNull)
      */
     protected <RESULT extends Object> RESULT doRequestDelete(ParameterizedType beanType //
-            , String actionPath, Object[] pathVariables, OptionalThing<Object> queryForm, Consumer<FlutyRemoteApiRule> ruleLambda) {
-        return remoteApi.requestDelete(beanType, getUrlBase(), actionPath, pathVariables, queryForm, ruleLambda);
+            , String actionPath, Object[] pathVariables, OptionalThing<Object> param, Consumer<FlutyRemoteApiRule> ruleLambda) {
+        return remoteApi.requestDelete(beanType, getUrlBase(), actionPath, pathVariables, param, ruleLambda);
     }
 
     // ===================================================================================

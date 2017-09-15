@@ -41,7 +41,7 @@ public class LaJsonSender extends FlJsonSender {
     }
 
     @Override
-    protected String toJson(Object form) {
-        return jsonEngine.toJson(form);
+    protected String toJson(Object param) {
+        return jsonEngine.toJson(param);
     }
 }

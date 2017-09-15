@@ -30,14 +30,14 @@ import org.dbflute.remoteapi.FlutyRemoteApiRule;
 public abstract class FlJsonSender implements RequestBodySender {
 
     @Override
-    public void prepareBodyRequest(HttpEntityEnclosingRequest enclosingRequest, Object form, FlutyRemoteApiRule rule) {
-        final String json = toJson(form);
+    public void prepareBodyRequest(HttpEntityEnclosingRequest enclosingRequest, Object param, FlutyRemoteApiRule rule) {
+        final String json = toJson(param);
         final StringEntity entity = new StringEntity(json, rule.getRequestBodyCharset().name());
         entity.setContentType(new BasicHeader(HTTP.CONTENT_TYPE, buildContentType()));
         enclosingRequest.setEntity(entity);
     }
 
-    protected abstract String toJson(Object form);
+    protected abstract String toJson(Object param);
 
     protected String buildContentType() {
         return "application/json; charset=" + StandardCharsets.UTF_8.name();
