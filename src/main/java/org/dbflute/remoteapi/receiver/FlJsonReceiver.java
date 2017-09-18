@@ -26,11 +26,11 @@ public abstract class FlJsonReceiver implements ResponseBodyReceiver {
 
     @SuppressWarnings("unchecked")
     @Override
-    public <RESULT extends Object> RESULT toResult(String json, Type beanType) {
+    public <RETURN> RETURN toResponseReturn(String json, Type beanType) {
         if (beanType instanceof Class<?>) {
-            return (RESULT) fromJson(json, (Class<?>) beanType);
+            return (RETURN) fromJson(json, (Class<?>) beanType);
         } else {
-            return (RESULT) fromJsonParameteried(json, (ParameterizedType) beanType);
+            return (RETURN) fromJsonParameteried(json, (ParameterizedType) beanType);
         }
     }
 
