@@ -57,8 +57,8 @@ public class RemoteHarborBhv extends LastaRemoteBehavior {
         return "http://localhost:8090/harbor";
     }
 
-    public HbSearchPagingResult<HbProductRowResult> requestProductList(HbProductSearchBody body) {
-        return doRequestPost(new ParameterizedRef<HbSearchPagingResult<HbProductRowResult>>() {
+    public HbSearchPagingResult<RemoteProductRowResult> requestProductList(RemoteProductSearchBody body) {
+        return doRequestPost(new ParameterizedRef<RemoteSearchPagingResult<RemoteProductRowResult>>() {
         }.getType(), "/lido/product/list", moreUrl(1), body, rule -> {});
     }
 }
@@ -70,7 +70,7 @@ public class RemoteHarborBhv extends LastaRemoteBehavior {
 <dependency>
     <groupId>org.lastaflute.remoteapi</groupId>
     <artifactId>lasta-remoteapi</artifactId>
-    <version>0.2.1</version>
+    <version>0.3.0</version>
 </dependency>
 ```
 

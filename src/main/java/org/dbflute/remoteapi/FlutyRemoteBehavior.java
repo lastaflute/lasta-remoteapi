@@ -22,6 +22,7 @@ import java.util.stream.Collectors;
 
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.dbflute.optional.OptionalThing;
+import org.dbflute.remoteapi.mock.MockHttpClient;
 import org.dbflute.util.DfCollectionUtil;
 
 /**
@@ -158,55 +159,55 @@ public abstract class FlutyRemoteBehavior {
     //                                                  GET
     //                                                 -----
     /**
-     * Request as POST, receiving as simple bean type.
+     * Request as GET, receiving as simple bean type.
      * <pre>
-     * e.g. if sender, receiver are already set as default: /lido/product/list/7
-     *  return doRequestGet(HbProductListResult.class, "/lido/product/list", moreUrl(7), OptionalThing.of(form), rule -&gt; {});
+     * e.g. if sender, receiver are already set as default: /lido/product/list/7?sea=mystic&amp;land=oneman
+     *  return doRequestGet(RemoteProductListReturn.class, "/lido/product/list", moreUrl(7), OptionalThing.of(form), rule -&gt; {});
      *  
-     * e.g. if sender, receiver are not set yet, so set them here: /lido/product/list/7
-     *  return doRequestGet(HbProductListResult.class, "/lido/product/list", moreUrl(7), OptionalThing.of(form), rule -&gt; {
+     * e.g. if sender, receiver are not set yet, so set them here: /lido/product/list/7?sea=mystic&amp;land=oneman
+     *  return doRequestGet(RemoteProductListReturn.class, "/lido/product/list", moreUrl(7), OptionalThing.of(form), rule -&gt; {
      *      rule.sendQueryBy(new LaQuerySender(...));
      *      rule.receiveBodyBy(new LaJsonReceiver(...));
      *  });
      * </pre>
-     * @param <RESULT> The type of request result (response).
+     * @param <RETURN> The type of response return.
      * @param beanType The class type of bean to convert, should have default constructor. (NotNull)
      * @param actionPath The path to action without URL parameter. e.g. /sea/land (NotNull)
      * @param pathVariables The array of URL path variables, e.g. ["hangar", 3]. (NotNull, EmptyAllowed)
-     * @param queryForm The optional form of query (GET parameters). (NotNull, EmptyAllowed)
+     * @param param The optional parameter object of query (GET parameters). (NotNull, EmptyAllowed)
      * @param ruleLambda The callback for rule of remote API. (NotNull)
-     * @return The JSON result of response as result, returned from the request. (NotNull)
+     * @return The analyzed return of response from the request. (NotNull)
      */
-    protected <RESULT extends Object> RESULT doRequestGet(Class<? extends Object> beanType //
-            , String actionPath, Object[] pathVariables, OptionalThing<Object> queryForm, Consumer<FlutyRemoteApiRule> ruleLambda) {
-        return remoteApi.requestGet(beanType, getUrlBase(), actionPath, pathVariables, queryForm, ruleLambda);
+    protected <RETURN> RETURN doRequestGet(Class<? extends Object> beanType //
+            , String actionPath, Object[] pathVariables, OptionalThing<Object> param, Consumer<FlutyRemoteApiRule> ruleLambda) {
+        return remoteApi.requestGet(beanType, getUrlBase(), actionPath, pathVariables, param, ruleLambda);
     }
 
     /**
-     * Request as POST, receiving as parameterized type (has nested generics).
+     * Request as GET, receiving as parameterized type (has nested generics).
      * <pre>
-     * e.g. if sender, receiver are already set as default: /lido/product/list/7
-     *  return doRequestGet(new ParameterizedRef&lt;HbSearchPagingResult&lt;HbProductRowResult&gt;&gt;() {
+     * e.g. if sender, receiver are already set as default: /lido/product/list/7?sea=mystic&amp;land=oneman
+     *  return doRequestGet(new ParameterizedRef&lt;RemoteSearchPagingReturn&lt;RemoteProductRowReturn&gt;&gt;() {
      *  }.getType(), "/lido/product/list", moreUrl(7), OptionalThing.of(form), rule -&gt; {});
      *  
-     * e.g. if sender, receiver are not set yet, so set them here: /lido/product/list/7
-     *  return doRequestGet(new ParameterizedRef&lt;HbSearchPagingResult&lt;HbProductRowResult&gt;&gt;() {
+     * e.g. if sender, receiver are not set yet, so set them here: /lido/product/list/7?sea=mystic&amp;land=oneman
+     *  return doRequestGet(new ParameterizedRef&lt;RemoteSearchPagingReturn&lt;RemoteProductRowReturn&gt;&gt;() {
      *  }.getType(), "/lido/product/list", moreUrl(7), OptionalThing.of(form), rule -&gt; {
      *      rule.sendQueryBy(new LaQuerySender(...));
      *      rule.receiveBodyBy(new LaJsonReceiver(...));
      *  });
      * </pre>
-     * @param <RESULT> The type of request result (response).
+     * @param <RETURN> The type of response return.
      * @param beanType The parameterized type of bean to convert, should have default constructor. (NotNull)
      * @param actionPath The path to action without URL parameter. e.g. /sea/land (NotNull)
      * @param pathVariables The array of URL path variables, e.g. ["hangar", 3]. (NotNull, EmptyAllowed)
-     * @param queryForm The optional form of query (GET parameters). (NotNull, EmptyAllowed)
+     * @param param The optional parameter object of query (GET parameters). (NotNull, EmptyAllowed)
      * @param ruleLambda The callback for rule of remote API. (NotNull)
-     * @return The JSON result of response as result, returned from the request. (NotNull)
+     * @return The analyzed return of response from the request. (NotNull)
      */
-    protected <RESULT extends Object> RESULT doRequestGet(ParameterizedType beanType //
-            , String actionPath, Object[] pathVariables, OptionalThing<Object> queryForm, Consumer<FlutyRemoteApiRule> ruleLambda) {
-        return remoteApi.requestGet(beanType, getUrlBase(), actionPath, pathVariables, queryForm, ruleLambda);
+    protected <RETURN> RETURN doRequestGet(ParameterizedType beanType //
+            , String actionPath, Object[] pathVariables, OptionalThing<Object> param, Consumer<FlutyRemoteApiRule> ruleLambda) {
+        return remoteApi.requestGet(beanType, getUrlBase(), actionPath, pathVariables, param, ruleLambda);
     }
 
     // -----------------------------------------------------
@@ -216,52 +217,162 @@ public abstract class FlutyRemoteBehavior {
      * Request as POST, receiving as simple bean type.
      * <pre>
      * e.g. if sender, receiver are already set as default: /lido/product/list/7
-     *  return doRequestPost(HbProductListResult.class, "/lido/product/list", moreUrl(7), body, rule -&gt; {});
+     *  return doRequestPost(RemoteProductListReturn.class, "/lido/product/list", moreUrl(7), body, rule -&gt; {});
      *  
      * e.g. if sender, receiver are not set yet, so set them here: /lido/product/list/7
-     *  return doRequestPost(HbProductListResult.class, "/lido/product/list", moreUrl(7), body, rule -&gt; {
+     *  return doRequestPost(RemoteProductListReturn.class, "/lido/product/list", moreUrl(7), body, rule -&gt; {
      *      rule.sendBodyBy(new LaJsonSender(...));
      *      rule.receiveBodyBy(new LaJsonReceiver(...));
      *  });
      * </pre>
-     * @param <RESULT> The type of request result (response).
+     * @param <RETURN> The type of response return.
      * @param beanType The class type of bean for response body, should have default constructor. (NotNull)
      * @param actionPath The path to action without URL parameter. e.g. /sea/land (NotNull)
      * @param pathVariables The array of URL path variables, e.g. ["hangar", 3]. (NotNull, EmptyAllowed)
-     * @param form The form of POST parameters. (NotNull)
+     * @param param The parameter object of POST parameters, may be JSON body. (NotNull)
      * @param ruleLambda The callback for rule of remote API. (NotNull)
-     * @return The JSON result of response as result, returned from the request. (NotNull)
+     * @return The analyzed return of response from the request. (NotNull)
      */
-    protected <RESULT extends Object> RESULT doRequestPost(Class<? extends Object> beanType //
-            , String actionPath, Object[] pathVariables, Object form, Consumer<FlutyRemoteApiRule> ruleLambda) {
-        return remoteApi.requestPost(beanType, getUrlBase(), actionPath, pathVariables, form, ruleLambda);
+    protected <RETURN> RETURN doRequestPost(Class<? extends Object> beanType //
+            , String actionPath, Object[] pathVariables, Object param, Consumer<FlutyRemoteApiRule> ruleLambda) {
+        return remoteApi.requestPost(beanType, getUrlBase(), actionPath, pathVariables, param, ruleLambda);
     }
 
     /**
      * Request as POST, receiving as parameterized type (has nested generics).
      * <pre>
      * e.g. if sender, receiver are already set as default: /lido/product/list/7
-     *  return doRequestPost(new ParameterizedRef&lt;HbSearchPagingResult&lt;HbProductRowResult&gt;&gt;() {
+     *  return doRequestPost(new ParameterizedRef&lt;RemoteSearchPagingReturn&lt;RemoteProductRowReturn&gt;&gt;() {
      *  }.getType(), "/lido/product/list", moreUrl(7), body, rule -&gt; {});
      *  
      * e.g. if sender, receiver are not set yet, so set them here: /lido/product/list/7
-     *  return doRequestPost(new ParameterizedRef&lt;HbSearchPagingResult&lt;HbProductRowResult&gt;&gt;() {
+     *  return doRequestPost(new ParameterizedRef&lt;RemoteSearchPagingReturn&lt;RemoteProductRowReturn&gt;&gt;() {
      *  }.getType(), "/lido/product/list", moreUrl(7), body, rule -&gt; {
      *      rule.sendBodyBy(new LaJsonSender(...));
      *      rule.receiveBodyBy(new LaJsonReceiver(...));
      *  });
      * </pre>
-     * @param <RESULT> The type of request result (response).
+     * @param <RETURN> The type of response return.
      * @param beanType The parameterized type of bean for response body, should have default constructor. (NotNull)
      * @param actionPath The path to action without URL parameter. e.g. /sea/land (NotNull)
      * @param pathVariables The array of URL path variables, e.g. ["hangar", 3]. (NotNull, EmptyAllowed)
-     * @param form The form of POST parameters. (NotNull)
+     * @param param The parameter object of POST parameters, may be JSON body. (NotNull)
      * @param ruleLambda The callback for rule of remote API. (NotNull)
-     * @return The JSON result of response as result, returned from the request. (NotNull)
+     * @return The analyzed return of response from the request. (NotNull)
      */
-    protected <RESULT extends Object> RESULT doRequestPost(ParameterizedType beanType //
-            , String actionPath, Object[] pathVariables, Object form, Consumer<FlutyRemoteApiRule> ruleLambda) {
-        return remoteApi.requestPost(beanType, getUrlBase(), actionPath, pathVariables, form, ruleLambda);
+    protected <RETURN> RETURN doRequestPost(ParameterizedType beanType //
+            , String actionPath, Object[] pathVariables, Object param, Consumer<FlutyRemoteApiRule> ruleLambda) {
+        return remoteApi.requestPost(beanType, getUrlBase(), actionPath, pathVariables, param, ruleLambda);
+    }
+
+    // -----------------------------------------------------
+    //                                                  Put
+    //                                                 -----
+    /**
+     * Request as PUT, receiving as simple bean type.
+     * <pre>
+     * e.g. if sender, receiver are already set as default: /lido/product/list/7
+     *  return doRequestPut(RemoteProductListReturn.class, "/lido/product/list", moreUrl(7), body, rule -&gt; {});
+     *  
+     * e.g. if sender, receiver are not set yet, so set them here: /lido/product/list/7
+     *  return doRequestPut(RemoteProductListReturn.class, "/lido/product/list", moreUrl(7), body, rule -&gt; {
+     *      rule.sendBodyBy(new LaJsonSender(...));
+     *      rule.receiveBodyBy(new LaJsonReceiver(...));
+     *  });
+     * </pre>
+     * @param <RETURN> The type of response return.
+     * @param beanType The class type of bean for response body, should have default constructor. (NotNull)
+     * @param actionPath The path to action without URL parameter. e.g. /sea/land (NotNull)
+     * @param pathVariables The array of URL path variables, e.g. ["hangar", 3]. (NotNull, EmptyAllowed)
+     * @param param The parameter object of PUT parameters, may be JSON body. (NotNull)
+     * @param ruleLambda The callback for rule of remote API. (NotNull)
+     * @return The analyzed return of response from the request. (NotNull)
+     */
+    protected <RETURN> RETURN doRequestPut(Class<? extends Object> beanType //
+            , String actionPath, Object[] pathVariables, Object param, Consumer<FlutyRemoteApiRule> ruleLambda) {
+        return remoteApi.requestPut(beanType, getUrlBase(), actionPath, pathVariables, param, ruleLambda);
+    }
+
+    /**
+     * Request as PUT, receiving as parameterized type (has nested generics).
+     * <pre>
+     * e.g. if sender, receiver are already set as default: /lido/product/list/7
+     *  return doRequestPut(new ParameterizedRef&lt;RemoteSearchPagingReturn&lt;RemoteProductRowReturn&gt;&gt;() {
+     *  }.getType(), "/lido/product/list", moreUrl(7), body, rule -&gt; {});
+     *  
+     * e.g. if sender, receiver are not set yet, so set them here: /lido/product/list/7
+     *  return doRequestPut(new ParameterizedRef&lt;RemoteSearchPagingReturn&lt;RemoteProductRowReturn&gt;&gt;() {
+     *  }.getType(), "/lido/product/list", moreUrl(7), body, rule -&gt; {
+     *      rule.sendBodyBy(new LaJsonSender(...));
+     *      rule.receiveBodyBy(new LaJsonReceiver(...));
+     *  });
+     * </pre>
+     * @param <RETURN> The type of response return.
+     * @param beanType The parameterized type of bean for response body, should have default constructor. (NotNull)
+     * @param actionPath The path to action without URL parameter. e.g. /sea/land (NotNull)
+     * @param pathVariables The array of URL path variables, e.g. ["hangar", 3]. (NotNull, EmptyAllowed)
+     * @param param The parameter object of PUT parameters, may be JSON body. (NotNull)
+     * @param ruleLambda The callback for rule of remote API. (NotNull)
+     * @return The analyzed return of response from the request. (NotNull)
+     */
+    protected <RETURN> RETURN doRequestPut(ParameterizedType beanType //
+            , String actionPath, Object[] pathVariables, Object param, Consumer<FlutyRemoteApiRule> ruleLambda) {
+        return remoteApi.requestPut(beanType, getUrlBase(), actionPath, pathVariables, param, ruleLambda);
+    }
+
+    // -----------------------------------------------------
+    //                                                DELETE
+    //                                                ------
+    /**
+     * Request as DELETE, receiving as simple bean type.
+     * <pre>
+     * e.g. if sender, receiver are already set as default: /lido/product/list/7
+     *  return doRequestDelete(RemoteProductListReturn.class, "/lido/product/list", moreUrl(7), rule -&gt; {});
+     *  
+     * e.g. if sender, receiver are not set yet, so set them here: /lido/product/list/7
+     *  return doRequestDelete(RemoteProductListReturn.class, "/lido/product/list", moreUrl(7), rule -&gt; {
+     *      rule.sendQueryBy(new LaQuerySender(...));
+     *      rule.receiveBodyBy(new LaJsonReceiver(...));
+     *  });
+     * </pre>
+     * @param <RETURN> The type of response return.
+     * @param beanType The class type of bean to convert, should have default constructor. (NotNull)
+     * @param actionPath The path to action without URL parameter. e.g. /sea/land (NotNull)
+     * @param pathVariables The array of URL path variables, e.g. ["hangar", 3]. (NotNull, EmptyAllowed)
+     * @param param The optional paramter object of query (GET parameters). (NotNull, EmptyAllowed)
+     * @param ruleLambda The callback for rule of remote API. (NotNull)
+     * @return The analyzed return of response from the request. (NotNull)
+     */
+    protected <RETURN> RETURN doRequestDelete(Class<? extends Object> beanType //
+            , String actionPath, Object[] pathVariables, OptionalThing<Object> param, Consumer<FlutyRemoteApiRule> ruleLambda) {
+        return remoteApi.requestDelete(beanType, getUrlBase(), actionPath, pathVariables, param, ruleLambda);
+    }
+
+    /**
+     * Request as POST, receiving as parameterized type (has nested generics).
+     * <pre>
+     * e.g. if sender, receiver are already set as default: /lido/product/list/7
+     *  return doRequestDelete(new ParameterizedRef&lt;RemoteSearchPagingReturn&lt;RemoteProductRowReturn&gt;&gt;() {
+     *  }.getType(), "/lido/product/list", moreUrl(7), rule -&gt; {});
+     *  
+     * e.g. if sender, receiver are not set yet, so set them here: /lido/product/list/7
+     *  return doRequestDelete(new ParameterizedRef&lt;RemoteSearchPagingReturn&lt;RemoteProductRowReturn&gt;&gt;() {
+     *  }.getType(), "/lido/product/list", moreUrl(7), rule -&gt; {
+     *      rule.sendQueryBy(new LaQuerySender(...));
+     *      rule.receiveBodyBy(new LaJsonReceiver(...));
+     *  });
+     * </pre>
+     * @param <RETURN> The type of response return.
+     * @param beanType The parameterized type of bean to convert, should have default constructor. (NotNull)
+     * @param actionPath The path to action without URL parameter. e.g. /sea/land (NotNull)
+     * @param pathVariables The array of URL path variables, e.g. ["hangar", 3]. (NotNull, EmptyAllowed)
+     * @param param The optional parameter object of query (GET parameters). (NotNull, EmptyAllowed)
+     * @param ruleLambda The callback for rule of remote API. (NotNull)
+     * @return The analyzed return of response from the request. (NotNull)
+     */
+    protected <RETURN> RETURN doRequestDelete(ParameterizedType beanType //
+            , String actionPath, Object[] pathVariables, OptionalThing<Object> param, Consumer<FlutyRemoteApiRule> ruleLambda) {
+        return remoteApi.requestDelete(beanType, getUrlBase(), actionPath, pathVariables, param, ruleLambda);
     }
 
     // ===================================================================================
@@ -270,7 +381,7 @@ public abstract class FlutyRemoteBehavior {
     /**
      * Make array for path variables. (easy utility)
      * <pre>
-     * return doRequestPost(..., "/lido/product/list", moreUrl(7), body, rule -&gt; {});
+     * return doRequestPost(..., "/lido/product/list", <span style="color: #CC4747">moreUrl(7)</span>, body, rule -&gt; {});
      * </pre>
      * @param pathVariables The varying arguments for path variables. (NotNull)
      * @return The array of object. (NotNull)
@@ -282,13 +393,40 @@ public abstract class FlutyRemoteBehavior {
         return pathVariables;
     }
 
+    /**
+     * Get empty object array for path variables.
+     * <pre>
+     * return doRequestGet(..., "/lido/mypage", <span style="color: #CC4747">noMoreUrl()</span>, noQuery(), rule -&gt; {});
+     * </pre>
+     * @return The array of object as empty. (NotNull)
+     */
+    protected Object[] noMoreUrl() {
+        return EMPTY_OBJECTS;
+    }
+
+    /**
+     * Get empty optional for query form.
+     * <pre>
+     * return doRequestGet(..., "/lido/mypage", noMoreUrl(), <span style="color: #CC4747">noQuery()</span>, rule -&gt; {});
+     * </pre>
+     * @return The optional object as empty. (NotNull)
+     */
+    protected OptionalThing<Object> noQuery() {
+        return OptionalThing.empty();
+    }
+
     // ===================================================================================
-    //                                                                         For Testing
-    //                                                                         ===========
+    //                                                                        For UnitTest
+    //                                                                        ============
+    /** The mock of HTTP client. This is only for unit test. Don't use in main code. (NullAllowed) */
     protected CloseableHttpClient __xmockHttpClient;
 
-    // #hope jflute too easy, so want to switch other way...
-    public void xregisterMockHttpClient(CloseableHttpClient mockHttpClient) {
+    /**
+     * This is only for unit test. Don't use in main code. <br>
+     * The mock can be injected in inject().
+     * @param mockHttpClient The mock of HTTP client. (NullAllowed) 
+     */
+    public void setMockHttpClient(MockHttpClient mockHttpClient) {
         this.__xmockHttpClient = mockHttpClient;
     }
 }

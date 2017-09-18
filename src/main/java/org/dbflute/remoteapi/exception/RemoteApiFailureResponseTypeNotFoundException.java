@@ -18,11 +18,15 @@ package org.dbflute.remoteapi.exception;
 /**
  * @author jflute
  */
-public class RemoteApiHttpServerErrorException extends RemoteApiHttpBasisErrorException {
+public class RemoteApiFailureResponseTypeNotFoundException extends RemoteApiBaseException {
 
     private static final long serialVersionUID = 1L;
 
-    public RemoteApiHttpServerErrorException(String msg, int httpStatus, RemoteApiFailureResponseHolder failureResponseHolder) {
-        super(msg, httpStatus, failureResponseHolder);
+    public RemoteApiFailureResponseTypeNotFoundException(String msg) {
+        super(msg);
+    }
+
+    public RemoteApiFailureResponseTypeNotFoundException(String msg, Throwable cause) {
+        super(msg, cause);
     }
 }

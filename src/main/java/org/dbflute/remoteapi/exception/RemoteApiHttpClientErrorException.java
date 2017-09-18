@@ -23,7 +23,7 @@ public class RemoteApiHttpClientErrorException extends RemoteApiHttpBasisErrorEx
 
     private static final long serialVersionUID = 1L;
 
-    public RemoteApiHttpClientErrorException(String msg, int httpStatus, Object failureResponse) {
-        super(msg, httpStatus, failureResponse);
+    public RemoteApiHttpClientErrorException(String msg, int httpStatus, RemoteApiFailureResponseHolder failureResponseHolder) {
+        super(msg, httpStatus, failureResponseHolder);
     }
 }

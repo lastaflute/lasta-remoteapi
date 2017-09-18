@@ -40,11 +40,11 @@ public class FlSplitReceiver implements ResponseBodyReceiver {
     }
 
     @Override
-    public <RESULT extends Object> RESULT toResult(String target, Type type) {
+    public <RETURN> RETURN toResponseReturn(String target, Type type) {
         if (!(type instanceof Class<?>)) {
             throw new IllegalArgumentException("type is not Class." + type);
         }
-        final Map<String, String> resultMap = DfCollectionUtil.newLinkedHashMap();
+        final Map<String, String> returnMap = DfCollectionUtil.newLinkedHashMap();
         Arrays.stream(target.split(delimiter)).forEach(keyValue -> {
             String[] keyValueArray = keyValue.split(delimiterByKeyValue);
             if (keyValueArray.length != 2) {
@@ -52,20 +52,20 @@ public class FlSplitReceiver implements ResponseBodyReceiver {
             }
             final String key = keyValueArray[0];
             final String value = keyValueArray[1];
-            resultMap.put(key, value);
+            returnMap.put(key, value);
         });
         final DfBeanDesc beanDesc = DfBeanDescFactory.getBeanDesc((Class<?>) type);
         @SuppressWarnings("unchecked")
-        final RESULT result = (RESULT) DfReflectionUtil.newInstance((Class<?>) type);
+        final RETURN ret = (RETURN) DfReflectionUtil.newInstance((Class<?>) type);
         beanDesc.getProppertyNameList().stream().forEach(proppertyName -> {
             final DfPropertyDesc propertyDesc = beanDesc.getPropertyDesc(proppertyName);
             final String deserializeDParameterName = asDeserializedParameterName(propertyDesc);
-            if (resultMap.containsKey(deserializeDParameterName)) {
-                final String value = resultMap.get(deserializeDParameterName);
-                propertyDesc.setValue(result, value);
+            if (returnMap.containsKey(deserializeDParameterName)) {
+                final String value = returnMap.get(deserializeDParameterName);
+                propertyDesc.setValue(ret, value);
             }
         });
-        return result;
+        return ret;
     }
 
     protected String asDeserializedParameterName(DfPropertyDesc propertyDesc) {
@@ -73,9 +73,6 @@ public class FlSplitReceiver implements ResponseBodyReceiver {
     }
 
     protected Object asDeserializedParameterValue(String value) {
-        if (value == null) {
-            return null;
-        }
         return value;
     }
 }

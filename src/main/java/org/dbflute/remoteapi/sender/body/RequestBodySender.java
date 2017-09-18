@@ -16,6 +16,7 @@
 package org.dbflute.remoteapi.sender.body;
 
 import org.apache.http.HttpEntityEnclosingRequest;
+import org.dbflute.remoteapi.FlutyRemoteApiRule;
 
 /**
  * The sender of request body.
@@ -26,7 +27,8 @@ public interface RequestBodySender {
 
     /**
      * @param enclosingRequest The HTTP request as entity enclosing, e.g. POST/PUT/PATCH. (NotNull)
-     * @param form The form data for body part. (NotNull)
+     * @param param The parmeater object for body part. (NotNull)
+     * @param rule The rule of remote API. (NotNull)
      */
-    void prepareBodyRequest(HttpEntityEnclosingRequest enclosingRequest, Object form);
+    void prepareBodyRequest(HttpEntityEnclosingRequest enclosingRequest, Object param, FlutyRemoteApiRule rule);
 }

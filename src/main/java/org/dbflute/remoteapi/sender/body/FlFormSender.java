@@ -15,7 +15,6 @@
  */
 package org.dbflute.remoteapi.sender.body;
 
-import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -26,6 +25,7 @@ import org.apache.http.message.BasicNameValuePair;
 import org.dbflute.helper.beans.DfBeanDesc;
 import org.dbflute.helper.beans.DfPropertyDesc;
 import org.dbflute.helper.beans.factory.DfBeanDescFactory;
+import org.dbflute.remoteapi.FlutyRemoteApiRule;
 import org.dbflute.remoteapi.mapping.FlParameterSerializer;
 import org.dbflute.remoteapi.mapping.FlRemoteMappingPolicy;
 
@@ -57,13 +57,13 @@ public class FlFormSender implements RequestBodySender {
     //                                                                             Prepare
     //                                                                             =======
     @Override
-    public void prepareBodyRequest(HttpEntityEnclosingRequest enclosingRequest, Object form) {
-        final DfBeanDesc beanDesc = DfBeanDescFactory.getBeanDesc(form.getClass());
+    public void prepareBodyRequest(HttpEntityEnclosingRequest enclosingRequest, Object param, FlutyRemoteApiRule rule) {
+        final DfBeanDesc beanDesc = DfBeanDescFactory.getBeanDesc(param.getClass());
         final List<NameValuePair> parameters = new ArrayList<>();
         beanDesc.getProppertyNameList().stream().forEach(proppertyName -> {
             final DfPropertyDesc propertyDesc = beanDesc.getPropertyDesc(proppertyName);
             final String serializedParameterName = asSerializedParameterName(propertyDesc);
-            final Object plainValue = beanDesc.getPropertyDesc(proppertyName).getValue(form);
+            final Object plainValue = beanDesc.getPropertyDesc(proppertyName).getValue(param);
             if (plainValue != null && Iterable.class.isAssignableFrom(plainValue.getClass())) {
                 final Iterable<?> plainValueIterable = (Iterable<?>) plainValue;
                 plainValueIterable.forEach(value -> {
@@ -73,7 +73,11 @@ public class FlFormSender implements RequestBodySender {
                 parameters.add(new BasicNameValuePair(serializedParameterName, asSerializedParameterValue(plainValue)));
             }
         });
-        enclosingRequest.setEntity(new UrlEncodedFormEntity(parameters, StandardCharsets.UTF_8));
+        enclosingRequest.setEntity(createUrlEncodedFormEntity(parameters, rule));
+    }
+
+    protected UrlEncodedFormEntity createUrlEncodedFormEntity(List<NameValuePair> parameters, FlutyRemoteApiRule rule) {
+        return new UrlEncodedFormEntity(parameters, rule.getRequestBodyCharset());
     }
 
     // ===================================================================================

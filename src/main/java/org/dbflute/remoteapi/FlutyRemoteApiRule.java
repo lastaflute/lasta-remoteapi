@@ -23,6 +23,7 @@ import java.security.KeyStoreException;
 import java.security.NoSuchAlgorithmException;
 import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
+import java.util.List;
 import java.util.Map;
 
 import javax.net.ssl.SSLContext;
@@ -66,9 +67,15 @@ public class FlutyRemoteApiRule {
     protected int connectionRequestTimeout = 3000;
     protected int socketTimeout = 3000;
     protected Charset queryParameterCharset = StandardCharsets.UTF_8; // not null
+    protected Charset requestBodyCharset = StandardCharsets.UTF_8; // not null
     protected Charset responseBodyCharset = StandardCharsets.UTF_8; // not null
-    protected Map<String, String> headers; // null allowed, not required, lazy-loaded
+    protected Map<String, List<String>> headers; // null allowed, not required, lazy-loaded
     protected Type failureResponseType; // null allowed, not required
+
+    // #hope jflute can accept response header, interface? mapping? (2017/09/13)
+    // #hope jflute validation on/off/warning option (2017/09/13)
+    // #hope jflute request trace ID option (2017/09/13)
+    // #hope jflute improve tracebility like DBFlute (2017/09/13)
 
     // ===================================================================================
     //                                                                         Http Client
@@ -158,6 +165,14 @@ public class FlutyRemoteApiRule {
     }
 
     /**
+     * @param requestBodyCharset The charset of request body. (NotNull)
+     */
+    public void encodeRequestBodyAs(Charset requestBodyCharset) {
+        assertArgumentNotNull("requestBodyCharset", requestBodyCharset);
+        this.requestBodyCharset = requestBodyCharset;
+    }
+
+    /**
      * @param responseBodyCharset The charset of response body. (NotNull)
      */
     public void encodeResponseBodyAs(Charset responseBodyCharset) {
@@ -165,16 +180,55 @@ public class FlutyRemoteApiRule {
         this.responseBodyCharset = responseBodyCharset;
     }
 
+    /**
+     * Set header value by the name. <br>
+     * It overwrites the same-name header if it already exists.
+     * @param name The name of the header. (NotNull)
+     * @param value The value of the header. (NotNull)
+     */
     public void setHeader(String name, String value) {
         assertArgumentNotNull("name", name);
         assertArgumentNotNull("value", value);
         if (headers == null) {
             headers = DfCollectionUtil.newLinkedHashMap();
         }
-        this.headers.put(name, value);
+        headers.put(name, DfCollectionUtil.newArrayList(value));
     }
 
-    public void setFailureResponseType(Type failureResponseType) {
+    /**
+     * Add header value by the name. <br>
+     * It is added as the second-or-more value if the name already exists.
+     * @param name The name of the header. (NotNull)
+     * @param value The value of the header, which may be as the second-or-more value. (NotNull)
+     */
+    public void addHeader(String name, String value) {
+        assertArgumentNotNull("name", name);
+        assertArgumentNotNull("value", value);
+        if (headers == null) {
+            headers = DfCollectionUtil.newLinkedHashMap();
+        }
+        List<String> valueList = headers.get(name);
+        if (valueList == null) {
+            valueList = DfCollectionUtil.newArrayList();
+            headers.put(name, valueList);
+        }
+        valueList.add(value);
+    }
+
+    /**
+     * Handle failure response as specified type. <br>
+     * You can get the failure response from exception.
+     * <pre>
+     * try {
+     *     ... = remoteHarborBhv.request...();
+     * } catch (RemoteApiHttpClientErrorException e) {
+     *     [your-specified-type] failureResponse = e.getFailureResponse().get();
+     *     ...
+     * }
+     * </pre>
+     * @param failureResponseType The type of failure response. (NotNull)
+     */
+    public void handleFailureResponseAs(Type failureResponseType) {
         assertArgumentNotNull("failureResponseType", failureResponseType);
         this.failureResponseType = failureResponseType;
     }
@@ -199,8 +253,8 @@ public class FlutyRemoteApiRule {
         final StringBuilder sb = new StringBuilder();
         sb.append("option:{");
         sb.append("sender:{").append(queryParameterSender);
-        sb.append("}, receiver:{").append(requestBodySender);
-        sb.append(", ").append(responseBodyReceiver);
+        sb.append(", ").append(requestBodySender);
+        sb.append(", receiver:{").append(responseBodyReceiver);
         sb.append("}, ").append(sslUntrusted);
         sb.append(", timeout:{").append(connectTimeout);
         sb.append(", ").append(connectionRequestTimeout);
@@ -208,6 +262,7 @@ public class FlutyRemoteApiRule {
         sb.append("}, ").append(headers);
         sb.append(", ").append(failureResponseType);
         sb.append(", charset:{").append(queryParameterCharset);
+        sb.append(", ").append(requestBodyCharset);
         sb.append(", ").append(responseBodyCharset);
         sb.append("}}");
         return sb.toString();
@@ -264,13 +319,20 @@ public class FlutyRemoteApiRule {
     }
 
     /**
+     * @return The charset of request body. (NotNull)
+     */
+    public Charset getRequestBodyCharset() {
+        return requestBodyCharset;
+    }
+
+    /**
      * @return The charset of response body. (NotNull)
      */
     public Charset getResponseBodyCharset() {
         return responseBodyCharset;
     }
 
-    public OptionalThing<Map<String, String>> getHeaders() {
+    public OptionalThing<Map<String, List<String>>> getHeaders() {
         return OptionalThing.ofNullable(headers, () -> {
             throw new IllegalStateException("Not found the headers in the option: " + toString());
         });
@@ -285,7 +347,7 @@ public class FlutyRemoteApiRule {
     // ===================================================================================
     //                                                                         For Testing
     //                                                                         ===========
-    private CloseableHttpClient __xmockHttpClient;
+    protected CloseableHttpClient __xmockHttpClient;
 
     public void xregisterMockHttpClient(CloseableHttpClient mockHttpClient) {
         this.__xmockHttpClient = mockHttpClient;

@@ -25,11 +25,11 @@ import java.lang.reflect.Type;
 public interface ResponseBodyReceiver {
 
     /**
-     * Convert response body to result.
-     * @param <RESULT> the type of result.
+     * Convert response body to return object.
+     * @param <RETURN> the type of response return.
      * @param body The body string of response. (NotNull)
-     * @param beanType The specified bean type as result. (NotNull)
-     * @return The converted result. (NotNull)
+     * @param beanType The specified bean type as return object. (NotNull)
+     * @return The converted return object from the response body. (NotNull)
      */
-    <RESULT extends Object> RESULT toResult(String body, Type beanType);
+    <RETURN> RETURN toResponseReturn(String body, Type beanType);
 }

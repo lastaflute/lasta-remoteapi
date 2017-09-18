@@ -27,7 +27,7 @@ import javax.xml.bind.JAXB;
 public class FlXmlReceiver implements ResponseBodyReceiver {
 
     @SuppressWarnings("unchecked")
-    public <RESULT extends Object> RESULT toResult(String target, Type type) {
-        return (RESULT) JAXB.unmarshal(new StringReader(target), (Class<?>) type);
+    public <RETURN> RETURN toResponseReturn(String target, Type type) {
+        return (RETURN) JAXB.unmarshal(new StringReader(target), (Class<?>) type);
     }
 }
