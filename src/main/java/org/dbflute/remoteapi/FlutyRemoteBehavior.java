@@ -410,6 +410,7 @@ public abstract class FlutyRemoteBehavior {
      * return doRequestGet(..., "/lido/mypage", noMoreUrl(), <span style="color: #CC4747">query(param)</span>, rule -&gt; {});
      * </pre>
      * @param <PARAM> The type of query parrameter.
+     * @param param The parameter object for query parameter. (NotNull)
      * @return The optional object as present. (NotNull)
      */
     protected <PARAM> OptionalThing<PARAM> query(PARAM param) {

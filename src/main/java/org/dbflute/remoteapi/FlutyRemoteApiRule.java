@@ -66,6 +66,7 @@ public class FlutyRemoteApiRule {
     protected int connectTimeout = 3000;
     protected int connectionRequestTimeout = 3000;
     protected int socketTimeout = 3000;
+    protected Charset pathVariableCharset = StandardCharsets.UTF_8; // not null
     protected Charset queryParameterCharset = StandardCharsets.UTF_8; // not null
     protected Charset requestBodyCharset = StandardCharsets.UTF_8; // not null
     protected Charset responseBodyCharset = StandardCharsets.UTF_8; // not null
@@ -154,6 +155,14 @@ public class FlutyRemoteApiRule {
 
     public void setSocketTimeout(int socketTimeout) {
         this.socketTimeout = socketTimeout;
+    }
+
+    /**
+     * @param pathVariableCharset The charset of request path variable. (NotNull)
+     */
+    public void encodeRequestPathVariableAs(Charset pathVariableCharset) {
+        assertArgumentNotNull("pathVariableCharset", pathVariableCharset);
+        this.pathVariableCharset = pathVariableCharset;
     }
 
     /**
@@ -309,6 +318,13 @@ public class FlutyRemoteApiRule {
 
     public int getSocketTimeout() {
         return socketTimeout;
+    }
+
+    /**
+     * @return The charset of request path variable. (NotNull)
+     */
+    public Charset getPathVariableCharset() {
+        return pathVariableCharset;
     }
 
     /**

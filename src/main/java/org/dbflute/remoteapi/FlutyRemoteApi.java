@@ -16,7 +16,9 @@
 package org.dbflute.remoteapi;
 
 import java.io.IOException;
+import java.io.UnsupportedEncodingException;
 import java.lang.reflect.Type;
+import java.net.URLEncoder;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -37,12 +39,14 @@ import org.apache.http.client.methods.HttpUriRequest;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.util.EntityUtils;
 import org.dbflute.helper.message.ExceptionMessageBuilder;
+import org.dbflute.jdbc.Classification;
 import org.dbflute.optional.OptionalThing;
 import org.dbflute.remoteapi.exception.RemoteApiFailureResponseTypeNotFoundException;
 import org.dbflute.remoteapi.exception.RemoteApiHttpBasisErrorException.RemoteApiFailureResponseHolder;
 import org.dbflute.remoteapi.exception.RemoteApiHttpClientErrorException;
 import org.dbflute.remoteapi.exception.RemoteApiHttpServerErrorException;
 import org.dbflute.remoteapi.exception.RemoteApiIOException;
+import org.dbflute.remoteapi.exception.RemoteApiPathVariableNullElementException;
 import org.dbflute.remoteapi.exception.RemoteApiReceiverOfResponseBodyNotFoundException;
 import org.dbflute.remoteapi.exception.RemoteApiResponseParseFailureException;
 import org.dbflute.remoteapi.exception.RemoteApiSenderOfQueryParameterNotFoundException;
@@ -299,7 +303,7 @@ public class FlutyRemoteApi {
         sb.append(actionPath);
         if (pathVariables.length > 0) {
             sb.append("/");
-            sb.append(buildPathVariablesPart(pathVariables));
+            sb.append(buildPathVariablePart(beanType, urlBase, actionPath, pathVariables, queryForm, rule));
         }
         queryForm.ifPresent(form -> {
             buildQueryParameter(sb, beanType, form, rule);
@@ -307,9 +311,30 @@ public class FlutyRemoteApi {
         return sb.toString();
     }
 
-    protected String buildPathVariablesPart(Object[] pathVariables) {
-        // #hope jflute make PathVariableFilter
-        return Stream.of(pathVariables).map(el -> el.toString()).collect(Collectors.joining("/"));
+    protected String buildPathVariablePart(Type beanType, String urlBase, String actionPath, Object[] pathVariables,
+            OptionalThing<? extends Object> queryForm, FlutyRemoteApiRule rule) {
+        final String encoding = rule.getPathVariableCharset().name();
+        return Stream.of(pathVariables).map(el -> {
+            if (el == null) {
+                throwRemoteApiPathVariableNullElementException(beanType, urlBase, actionPath, pathVariables, queryForm, rule);
+            }
+            try {
+                return URLEncoder.encode(convertPathVariableToString(el, rule), encoding);
+            } catch (UnsupportedEncodingException e) { // basically no way
+                throw new IllegalStateException("Unknown encoding: " + encoding, e);
+            }
+        }).collect(Collectors.joining("/"));
+    }
+
+    protected String convertPathVariableToString(Object el, FlutyRemoteApiRule rule) {
+        // #hope jflute needs PathVariableFilter?
+        if (el instanceof String) {
+            return (String) el;
+        } else if (el instanceof Classification) {
+            return ((Classification) el).code();
+        } else {
+            return el.toString();
+        }
     }
 
     // ===================================================================================
@@ -356,7 +381,7 @@ public class FlutyRemoteApi {
     protected RemoteApiFailureResponseHolder holdFailureResponse(Type beanType, String url, OptionalThing<Object> form, int httpStatus,
             String body, FlutyRemoteApiRule rule) {
         Object failureResponse = null;
-        Supplier<RuntimeException> emptyResponseCause = null;
+        Supplier<RuntimeException> emptyResponseCause = null; // null allowed
         try {
             failureResponse = parseFailureResponse(url, form, httpStatus, body, rule);
             if (failureResponse == null) { // when no rule
@@ -391,7 +416,27 @@ public class FlutyRemoteApi {
     }
 
     // ===================================================================================
-    //                                                                      Error Handling
+    //                                                                       Request Error
+    //                                                                       =============
+    protected void throwRemoteApiPathVariableNullElementException(Type beanType, String urlBase, String actionPath, Object[] pathVariables,
+            OptionalThing<? extends Object> queryForm, FlutyRemoteApiRule rule) {
+        final ExceptionMessageBuilder br = new ExceptionMessageBuilder();
+        br.addNotice("Cannot set null element in your rule.");
+        br.addItem("Advice");
+        br.addElement("Make sure your path variable values.");
+        br.addElement("  (x):");
+        br.addElement("    moreUrl(1, null, 3)");
+        br.addElement("  (o):");
+        br.addElement("    moreUrl(1, 2, 3)");
+        setupRequestInfo(br, beanType, urlBase + actionPath, queryForm);
+        setupYourRule(br, rule);
+        setupCallerExpression(br);
+        final String msg = br.buildExceptionMessage();
+        throw new RemoteApiPathVariableNullElementException(msg);
+    }
+
+    // ===================================================================================
+    //                                                                      Response Error
     //                                                                      ==============
     // -----------------------------------------------------
     //                                           HTTP Status
@@ -446,9 +491,9 @@ public class FlutyRemoteApi {
         throw new RemoteApiResponseParseFailureException(msg, e);
     }
 
-    // -----------------------------------------------------
-    //                                        Rule Not Found
-    //                                        --------------
+    // ===================================================================================
+    //                                                                          Rule Error
+    //                                                                          ==========
     protected RuntimeException createRemoteApiSenderOfQueryParameterNotFoundException(StringBuilder sb, Type beanType, Object form,
             FlutyRemoteApiRule rule) {
         final String url = sb.toString(); // just it
@@ -533,9 +578,9 @@ public class FlutyRemoteApi {
         return new RemoteApiFailureResponseTypeNotFoundException(msg);
     }
 
-    // -----------------------------------------------------
-    //                                        Message Helper
-    //                                        --------------
+    // ===================================================================================
+    //                                                                      Message Helper
+    //                                                                      ==============
     protected void setupRequestInfo(ExceptionMessageBuilder br, Type beanType, String url, Object optOrParam) {
         setupBeanAndRemoteApi(br, beanType, url);
         if (optOrParam instanceof OptionalThing<?>) {
