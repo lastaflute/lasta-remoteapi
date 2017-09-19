@@ -19,6 +19,7 @@ import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.lang.reflect.Type;
 import java.net.URLEncoder;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -428,6 +429,8 @@ public class FlutyRemoteApi {
         br.addElement("    moreUrl(1, null, 3)");
         br.addElement("  (o):");
         br.addElement("    moreUrl(1, 2, 3)");
+        br.addItem("Path Variables");
+        br.addElement(Arrays.asList(pathVariables));
         setupRequestInfo(br, beanType, urlBase + actionPath, queryForm);
         setupYourRule(br, rule);
         setupCallerExpression(br);
