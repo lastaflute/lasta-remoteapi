@@ -71,6 +71,7 @@ public class FlutyRemoteApi {
     //                                                                          Definition
     //                                                                          ==========
     private static final Logger logger = LoggerFactory.getLogger(FlutyRemoteApi.class);
+    protected static final Object VOID_OBJ = new Object();
 
     // ===================================================================================
     //                                                                           Attribute
@@ -405,6 +406,11 @@ public class FlutyRemoteApi {
     //                                     -----------------
     protected <RETURN> RETURN toResponseReturn(Type beanType, String url, OptionalThing<Object> form, int httpStatus, String body,
             FlutyRemoteApiRule rule) {
+        if (isVoid(beanType)) { // e.g. doRequestPost(void.class, ...);
+            @SuppressWarnings("unchecked")
+            final RETURN ret = (RETURN) VOID_OBJ;
+            return ret;
+        }
         final ResponseBodyReceiver receiver = rule.getResponseBodyReceiver().orElseThrow(() -> {
             return createRemoteApiReceiverOfResponseBodyNotFoundException(beanType, url, form, httpStatus, body, rule);
         });
@@ -414,6 +420,10 @@ public class FlutyRemoteApi {
             throwRemoteApiResponseParseFailureException(beanType, url, form, httpStatus, body, receiver, e);
             return null; // unreachable
         }
+    }
+
+    protected boolean isVoid(Type beanType) {
+        return Void.class.equals(beanType) || void.class.equals(beanType);
     }
 
     // ===================================================================================
