@@ -94,8 +94,8 @@ public class FlutyRemoteApi {
      * @param ruleLambda The callback for rule of remote API. (NotNull)
      * @return The analyzed return of response from the request. (NotNull)
      */
-    public <RETURN> RETURN requestGet(Type beanType, String urlBase, String actionPath, Object[] pathVariables, OptionalThing<Object> param,
-            Consumer<FlutyRemoteApiRule> ruleLambda) {
+    public <RETURN> RETURN requestGet(Type beanType, String urlBase, String actionPath, Object[] pathVariables,
+            OptionalThing<? extends Object> param, Consumer<FlutyRemoteApiRule> ruleLambda) {
         return doRequestEmptyBody(beanType, urlBase, actionPath, pathVariables, param, ruleLambda, HttpGet.METHOD_NAME, url -> {
             return new HttpGet(url);
         });
@@ -155,7 +155,7 @@ public class FlutyRemoteApi {
      * @return The analyzed return of response from the request. (NotNull)
      */
     public <RETURN> RETURN requestDelete(Type beanType, String urlBase, String actionPath, Object[] pathVariables,
-            OptionalThing<Object> param, Consumer<FlutyRemoteApiRule> ruleLambda) {
+            OptionalThing<? extends Object> param, Consumer<FlutyRemoteApiRule> ruleLambda) {
         return doRequestEmptyBody(beanType, urlBase, actionPath, pathVariables, param, ruleLambda, HttpDelete.METHOD_NAME, url -> {
             return new HttpDelete(url);
         });
@@ -165,7 +165,7 @@ public class FlutyRemoteApi {
     //                                                                   Request EmptyBody
     //                                                                   =================
     protected <RETURN> RETURN doRequestEmptyBody(Type beanType, String urlBase, String actionPath, Object[] pathVariables,
-            OptionalThing<Object> optParam, Consumer<FlutyRemoteApiRule> ruleLambda, String httpMethod,
+            OptionalThing<? extends Object> optParam, Consumer<FlutyRemoteApiRule> ruleLambda, String httpMethod,
             Function<String, HttpUriRequest> emptyBodyFactory) {
         assertArgumentNotNull("beanType", beanType);
         assertArgumentNotNull("urlBase", urlBase);
@@ -286,8 +286,8 @@ public class FlutyRemoteApi {
     // ===================================================================================
     //                                                                        URL Building
     //                                                                        ============
-    protected String buildUrl(Type beanType, String urlBase, String actionPath, Object[] pathVariables, OptionalThing<Object> queryForm,
-            FlutyRemoteApiRule rule) {
+    protected String buildUrl(Type beanType, String urlBase, String actionPath, Object[] pathVariables,
+            OptionalThing<? extends Object> queryForm, FlutyRemoteApiRule rule) {
         assertArgumentNotNull("beanType", beanType);
         assertArgumentNotNull("urlBase", urlBase);
         assertArgumentNotNull("actionPath", actionPath);

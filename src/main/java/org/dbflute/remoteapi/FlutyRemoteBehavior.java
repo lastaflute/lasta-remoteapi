@@ -179,7 +179,7 @@ public abstract class FlutyRemoteBehavior {
      * @return The analyzed return of response from the request. (NotNull)
      */
     protected <RETURN> RETURN doRequestGet(Class<? extends Object> beanType //
-            , String actionPath, Object[] pathVariables, OptionalThing<Object> param, Consumer<FlutyRemoteApiRule> ruleLambda) {
+            , String actionPath, Object[] pathVariables, OptionalThing<? extends Object> param, Consumer<FlutyRemoteApiRule> ruleLambda) {
         return remoteApi.requestGet(beanType, getUrlBase(), actionPath, pathVariables, param, ruleLambda);
     }
 
@@ -206,7 +206,7 @@ public abstract class FlutyRemoteBehavior {
      * @return The analyzed return of response from the request. (NotNull)
      */
     protected <RETURN> RETURN doRequestGet(ParameterizedType beanType //
-            , String actionPath, Object[] pathVariables, OptionalThing<Object> param, Consumer<FlutyRemoteApiRule> ruleLambda) {
+            , String actionPath, Object[] pathVariables, OptionalThing<? extends Object> param, Consumer<FlutyRemoteApiRule> ruleLambda) {
         return remoteApi.requestGet(beanType, getUrlBase(), actionPath, pathVariables, param, ruleLambda);
     }
 
@@ -344,7 +344,7 @@ public abstract class FlutyRemoteBehavior {
      * @return The analyzed return of response from the request. (NotNull)
      */
     protected <RETURN> RETURN doRequestDelete(Class<? extends Object> beanType //
-            , String actionPath, Object[] pathVariables, OptionalThing<Object> param, Consumer<FlutyRemoteApiRule> ruleLambda) {
+            , String actionPath, Object[] pathVariables, OptionalThing<? extends Object> param, Consumer<FlutyRemoteApiRule> ruleLambda) {
         return remoteApi.requestDelete(beanType, getUrlBase(), actionPath, pathVariables, param, ruleLambda);
     }
 
@@ -371,7 +371,7 @@ public abstract class FlutyRemoteBehavior {
      * @return The analyzed return of response from the request. (NotNull)
      */
     protected <RETURN> RETURN doRequestDelete(ParameterizedType beanType //
-            , String actionPath, Object[] pathVariables, OptionalThing<Object> param, Consumer<FlutyRemoteApiRule> ruleLambda) {
+            , String actionPath, Object[] pathVariables, OptionalThing<? extends Object> param, Consumer<FlutyRemoteApiRule> ruleLambda) {
         return remoteApi.requestDelete(beanType, getUrlBase(), actionPath, pathVariables, param, ruleLambda);
     }
 
@@ -402,6 +402,21 @@ public abstract class FlutyRemoteBehavior {
      */
     protected Object[] noMoreUrl() {
         return EMPTY_OBJECTS;
+    }
+
+    /**
+     * Get present optional for query form.
+     * <pre>
+     * return doRequestGet(..., "/lido/mypage", noMoreUrl(), <span style="color: #CC4747">query(param)</span>, rule -&gt; {});
+     * </pre>
+     * @param <PARAM> The type of query parrameter.
+     * @return The optional object as present. (NotNull)
+     */
+    protected <PARAM> OptionalThing<PARAM> query(PARAM param) {
+        if (param == null) {
+            throw new IllegalArgumentException("The argument 'param' should not be null.");
+        }
+        return OptionalThing.of(param);
     }
 
     /**
