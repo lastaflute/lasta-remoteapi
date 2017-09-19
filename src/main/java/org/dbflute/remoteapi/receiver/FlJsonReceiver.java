@@ -24,14 +24,23 @@ import java.lang.reflect.Type;
  */
 public abstract class FlJsonReceiver implements ResponseBodyReceiver {
 
+    protected static final Object VOID_OBJ = new Object();
+
     @SuppressWarnings("unchecked")
     @Override
     public <RETURN> RETURN toResponseReturn(String json, Type beanType) {
+        if (isVoid(beanType)) { // e.g. doRequestPost(void.class, ...);
+            return (RETURN) VOID_OBJ;
+        }
         if (beanType instanceof Class<?>) {
             return (RETURN) fromJson(json, (Class<?>) beanType);
         } else {
             return (RETURN) fromJsonParameteried(json, (ParameterizedType) beanType);
         }
+    }
+
+    protected boolean isVoid(Type beanType) {
+        return Void.class.equals(beanType) || void.class.equals(beanType);
     }
 
     protected abstract <BEAN> BEAN fromJson(String json, Class<BEAN> beanType);
