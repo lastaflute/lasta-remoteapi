@@ -43,6 +43,7 @@ import org.dbflute.helper.message.ExceptionMessageBuilder;
 import org.dbflute.jdbc.Classification;
 import org.dbflute.optional.OptionalThing;
 import org.dbflute.remoteapi.exception.RemoteApiFailureResponseTypeNotFoundException;
+import org.dbflute.remoteapi.exception.RemoteApiHttpBasisErrorException;
 import org.dbflute.remoteapi.exception.RemoteApiHttpBasisErrorException.RemoteApiFailureResponseHolder;
 import org.dbflute.remoteapi.exception.RemoteApiHttpClientErrorException;
 import org.dbflute.remoteapi.exception.RemoteApiHttpServerErrorException;
@@ -52,11 +53,14 @@ import org.dbflute.remoteapi.exception.RemoteApiReceiverOfResponseBodyNotFoundEx
 import org.dbflute.remoteapi.exception.RemoteApiResponseParseFailureException;
 import org.dbflute.remoteapi.exception.RemoteApiSenderOfQueryParameterNotFoundException;
 import org.dbflute.remoteapi.exception.RemoteApiSenderOfRequestBodyNotFoundException;
+import org.dbflute.remoteapi.exception.translator.RemoteApiClientErrorResource;
 import org.dbflute.remoteapi.receiver.ResponseBodyReceiver;
 import org.dbflute.remoteapi.sender.body.RequestBodySender;
 import org.dbflute.remoteapi.sender.query.QueryParameterSender;
 import org.dbflute.util.Srl;
+import org.lastaflute.core.magic.ThreadCacheContext;
 import org.lastaflute.core.util.Lato;
+import org.lastaflute.web.validation.VaErrorHook;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -356,9 +360,36 @@ public class FlutyRemoteApi {
             FlutyRemoteApiRule rule) throws IOException {
         final int httpStatus = response.getStatusLine().getStatusCode();
         final String body = extractResponseBody(response, rule);
-        final RETURN ret = parseResponse(beanType, url, form, httpStatus, body, rule);
-        validateReturn(beanType, url, form, httpStatus, body, ret, rule);
-        return ret;
+        try {
+            final RETURN ret = parseResponse(beanType, url, form, httpStatus, body, rule);
+            validateReturn(beanType, url, form, httpStatus, body, ret, rule);
+            return ret;
+        } catch (RemoteApiHttpBasisErrorException cause) {
+            cause.getFailureResponse().ifPresent(failureResponse -> { // don't forget it
+                validateReturn(beanType, url, form, httpStatus, body, failureResponse, rule);
+            });
+            if (cause instanceof RemoteApiHttpClientErrorException) {
+                throwTranslatedClientErrorIfNeeds(beanType, url, rule, (RemoteApiHttpClientErrorException) cause);
+            }
+            throw cause;
+        }
+    }
+
+    protected void throwTranslatedClientErrorIfNeeds(Type beanType, String url, FlutyRemoteApiRule rule,
+            RemoteApiHttpClientErrorException cause) {
+        rule.getClientErrorTranslator().ifPresent(translator -> {
+            final RemoteApiClientErrorResource resource = createRemoteApiClientErrorResource(beanType, url, cause);
+            final RuntimeException translated = translator.translate(resource);
+            if (translated != null) {
+                throw translated;
+            }
+        });
+    }
+
+    protected RemoteApiClientErrorResource createRemoteApiClientErrorResource(Type beanType, String url,
+            RemoteApiHttpClientErrorException cause) {
+        final VaErrorHook errorHook = ThreadCacheContext.findValidatorErrorHook();
+        return new RemoteApiClientErrorResource(beanType, url, errorHook, cause);
     }
 
     protected <RETURN> RETURN parseResponse(Type beanType, String url, OptionalThing<Object> form, int httpStatus, String body,

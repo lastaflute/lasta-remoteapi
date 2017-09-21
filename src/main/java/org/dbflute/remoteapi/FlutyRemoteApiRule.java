@@ -36,6 +36,7 @@ import org.apache.http.impl.client.HttpClients;
 import org.apache.http.ssl.SSLContexts;
 import org.apache.http.ssl.TrustStrategy;
 import org.dbflute.optional.OptionalThing;
+import org.dbflute.remoteapi.exception.translator.RemoteApiClientErrorTranslator;
 import org.dbflute.remoteapi.receiver.ResponseBodyReceiver;
 import org.dbflute.remoteapi.sender.body.RequestBodySender;
 import org.dbflute.remoteapi.sender.query.QueryParameterSender;
@@ -72,6 +73,7 @@ public class FlutyRemoteApiRule {
     protected Charset responseBodyCharset = StandardCharsets.UTF_8; // not null
     protected Map<String, List<String>> headers; // null allowed, not required, lazy-loaded
     protected Type failureResponseType; // null allowed, not required
+    protected RemoteApiClientErrorTranslator clientErrorTranslator; // null allowed, not required
 
     // #hope jflute can accept response header, interface? mapping? (2017/09/13)
     // #hope jflute validation on/off/warning option (2017/09/13)
@@ -242,6 +244,16 @@ public class FlutyRemoteApiRule {
         this.failureResponseType = failureResponseType;
     }
 
+    /**
+     * @param resourceLambda The callback for translation of client error. (NotNull)
+     */
+    public void translateClientError(RemoteApiClientErrorTranslator resourceLambda) {
+        if (resourceLambda == null) {
+            throw new IllegalArgumentException("The argument 'resourceLambda' should not be null.");
+        }
+        this.clientErrorTranslator = resourceLambda;
+    }
+
     // ===================================================================================
     //                                                                        Small Helper
     //                                                                        ============
@@ -357,6 +369,12 @@ public class FlutyRemoteApiRule {
     public OptionalThing<Type> getFailureResponseType() {
         return OptionalThing.ofNullable(failureResponseType, () -> {
             throw new IllegalStateException("Not found the failureResponseType in the option: " + toString());
+        });
+    }
+
+    public OptionalThing<RemoteApiClientErrorTranslator> getClientErrorTranslator() {
+        return OptionalThing.ofNullable(clientErrorTranslator, () -> {
+            throw new IllegalStateException("Not found the client error translator: " + toString());
         });
     }
 
