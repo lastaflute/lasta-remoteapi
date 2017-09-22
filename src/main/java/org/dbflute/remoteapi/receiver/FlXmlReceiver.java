@@ -34,7 +34,7 @@ public class FlXmlReceiver implements ResponseBodyReceiver {
             throw new IllegalArgumentException("The specified type is not Class: type=" + type);
         }
         final String target = body.orElseThrow(() -> { // translated with rich message so simple here
-            throw new IllegalStateException("Not found the response body as XML.");
+            return new IllegalStateException("Not found the response body as XML.");
         });
         return (RETURN) JAXB.unmarshal(new StringReader(target), (Class<?>) type);
     }

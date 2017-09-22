@@ -30,7 +30,7 @@ public abstract class FlJsonReceiver implements ResponseBodyReceiver {
     @Override
     public <RETURN> RETURN toResponseReturn(OptionalThing<String> body, Type beanType) {
         final String json = body.orElseThrow(() -> { // translated with rich message so simple here
-            throw new IllegalStateException("Not found the response body as JSON.");
+            return new IllegalStateException("Not found the response body as JSON.");
         });
         if (beanType instanceof Class<?>) {
             return (RETURN) fromJson(json, (Class<?>) beanType);

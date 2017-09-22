@@ -46,7 +46,7 @@ public class FlSplitReceiver implements ResponseBodyReceiver {
             throw new IllegalArgumentException("The specified type is not Class: type=" + type);
         }
         final String target = body.orElseThrow(() -> { // translated with rich message so simple here
-            throw new IllegalStateException("Not found the response body as SPLIT.");
+            return new IllegalStateException("Not found the response body as SPLIT.");
         });
         final Map<String, String> returnMap = DfCollectionUtil.newLinkedHashMap();
         Arrays.stream(target.split(delimiter)).forEach(keyValue -> {
