@@ -29,6 +29,7 @@ import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import org.apache.http.HttpEntity;
 import org.apache.http.HttpMessage;
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpDelete;
@@ -268,8 +269,8 @@ public class FlutyRemoteApi {
         // you can override
     }
 
-    protected void validateReturn(Type beanType, String url, OptionalThing<Object> form, int httpStatus, String body, Object ret,
-            FlutyRemoteApiRule ruledRemoteApiOption) {
+    protected void validateReturn(Type beanType, String url, OptionalThing<Object> form, int httpStatus, OptionalThing<String> body,
+            Object ret, FlutyRemoteApiRule ruledRemoteApiOption) {
         // you can override
     }
 
@@ -360,7 +361,7 @@ public class FlutyRemoteApi {
     protected <RETURN> RETURN handleResponse(Type beanType, String url, OptionalThing<Object> param, CloseableHttpResponse response,
             FlutyRemoteApiRule rule) throws IOException {
         final int httpStatus = response.getStatusLine().getStatusCode();
-        final String body = extractResponseBody(response, rule);
+        final OptionalThing<String> body = extractResponseBody(response, rule);
         try {
             final RETURN ret = parseResponse(beanType, url, param, httpStatus, body, rule);
             validateReturn(beanType, url, param, httpStatus, body, ret, rule);
@@ -377,7 +378,7 @@ public class FlutyRemoteApi {
     }
 
     protected void throwTranslatedClientErrorIfNeeds(Type beanType, String url, OptionalThing<Object> param, FlutyRemoteApiRule rule,
-            int httpStatus, String body, RemoteApiHttpClientErrorException cause) {
+            int httpStatus, OptionalThing<String> body, RemoteApiHttpClientErrorException cause) {
         rule.getClientErrorTranslator().ifPresent(translator -> {
             final RemoteApiClientErrorResource resource = createRemoteApiClientErrorResource(beanType, url, cause);
             RuntimeException translated = null;
@@ -398,8 +399,8 @@ public class FlutyRemoteApi {
         return new RemoteApiClientErrorResource(beanType, url, errorHook, cause);
     }
 
-    protected <RETURN> RETURN parseResponse(Type beanType, String url, OptionalThing<Object> form, int httpStatus, String body,
-            FlutyRemoteApiRule rule) {
+    protected <RETURN> RETURN parseResponse(Type beanType, String url, OptionalThing<Object> form, int httpStatus,
+            OptionalThing<String> body, FlutyRemoteApiRule rule) {
         logger.debug("#flow #remote ...Receiving response to Remote API:\n{}\n as {}\n{}", url, beanType, body);
         if (httpStatus >= 200 && httpStatus < 300) {
             final RETURN ret = toResponseReturn(beanType, url, form, httpStatus, body, rule);
@@ -418,7 +419,7 @@ public class FlutyRemoteApi {
     //                                      Failure Response
     //                                      ----------------
     protected RemoteApiFailureResponseHolder holdFailureResponse(Type beanType, String url, OptionalThing<Object> form, int httpStatus,
-            String body, FlutyRemoteApiRule rule) {
+            OptionalThing<String> body, FlutyRemoteApiRule rule) {
         Object failureResponse = null;
         Supplier<RuntimeException> emptyResponseCause = null; // null allowed
         try {
@@ -432,7 +433,8 @@ public class FlutyRemoteApi {
         return new RemoteApiFailureResponseHolder(failureResponse, emptyResponseCause);
     }
 
-    protected Object parseFailureResponse(String url, OptionalThing<Object> form, int httpStatus, String body, FlutyRemoteApiRule rule) {
+    protected Object parseFailureResponse(String url, OptionalThing<Object> form, int httpStatus, OptionalThing<String> body,
+            FlutyRemoteApiRule rule) {
         return rule.getFailureResponseType().map(failureResponseType -> {
             return toResponseReturn(failureResponseType, url, form, httpStatus, body, rule);
         }).orElse(null); // when no rule
@@ -441,12 +443,12 @@ public class FlutyRemoteApi {
     // -----------------------------------------------------
     //                                     Convert to Return
     //                                     -----------------
-    protected <RETURN> RETURN toResponseReturn(Type beanType, String url, OptionalThing<Object> form, int httpStatus, String body,
-            FlutyRemoteApiRule rule) {
+    protected <RETURN> RETURN toResponseReturn(Type beanType, String url, OptionalThing<Object> form, int httpStatus,
+            OptionalThing<String> body, FlutyRemoteApiRule rule) {
         if (isVoid(beanType)) { // e.g. doRequestPost(void.class, ...);
             @SuppressWarnings("unchecked")
             final RETURN ret = (RETURN) VOID_OBJ;
-            return ret;
+            return ret; // no look body here
         }
         final ResponseBodyReceiver receiver = rule.getResponseBodyReceiver().orElseThrow(() -> {
             return createRemoteApiReceiverOfResponseBodyNotFoundException(beanType, url, form, httpStatus, body, rule);
@@ -492,7 +494,7 @@ public class FlutyRemoteApi {
     //                                           HTTP Status
     //                                           -----------
     protected void throwRemoteApiHttpClientErrorException(Type beanType, String url, OptionalThing<Object> form, int httpStatus,
-            String body, RemoteApiFailureResponseHolder failureResponseHolder) {
+            OptionalThing<String> body, RemoteApiFailureResponseHolder failureResponseHolder) {
         final ExceptionMessageBuilder br = new ExceptionMessageBuilder();
         br.addNotice("Client Error as HTTP status from the remote API.");
         setupRequestInfo(br, beanType, url, form);
@@ -503,7 +505,7 @@ public class FlutyRemoteApi {
     }
 
     protected void throwRemoteApiHttpServerErrorException(Type beanType, String url, OptionalThing<Object> form, int httpStatus,
-            String body, RemoteApiFailureResponseHolder failureResponseHolder) {
+            OptionalThing<String> body, RemoteApiFailureResponseHolder failureResponseHolder) {
         final ExceptionMessageBuilder br = new ExceptionMessageBuilder();
         br.addNotice("Server Error as HTTP status from the remote API.");
         setupRequestInfo(br, beanType, url, form);
@@ -529,9 +531,9 @@ public class FlutyRemoteApi {
     //                                          Cannot Parse
     //                                          ------------
     protected void throwRemoteApiResponseParseFailureException(Type type, String url, OptionalThing<Object> form, int httpStatus,
-            String body, ResponseBodyReceiver receiver, RuntimeException e) {
+            OptionalThing<String> body, ResponseBodyReceiver receiver, RuntimeException e) {
         final ExceptionMessageBuilder br = new ExceptionMessageBuilder();
-        br.addNotice("Failed to parse the response from remote API.");
+        br.addNotice("Failed to parse the response body from remote API.");
         setupRequestInfo(br, type, url, form);
         setupResponseInfo(br, httpStatus, body);
         br.addItem("Receiver");
@@ -545,7 +547,7 @@ public class FlutyRemoteApi {
     //                                   Translation Failure
     //                                   -------------------
     protected void throwRemoteApiErrorTranslationFailureException(Type beanType, String url, OptionalThing<Object> param,
-            FlutyRemoteApiRule rule, int httpStatus, String body, RemoteApiHttpClientErrorException clientError,
+            FlutyRemoteApiRule rule, int httpStatus, OptionalThing<String> body, RemoteApiHttpClientErrorException clientError,
             RuntimeException translationEx) {
         final ExceptionMessageBuilder br = new ExceptionMessageBuilder();
         br.addNotice("Failed to translate client error.");
@@ -611,7 +613,7 @@ public class FlutyRemoteApi {
     }
 
     protected RuntimeException createRemoteApiReceiverOfResponseBodyNotFoundException(Type beanType, String url, OptionalThing<Object> form,
-            int httpStatus, String body, FlutyRemoteApiRule rule) {
+            int httpStatus, OptionalThing<String> body, FlutyRemoteApiRule rule) {
         final ExceptionMessageBuilder br = new ExceptionMessageBuilder();
         br.addNotice("Not found the receiver for response body in your rule.");
         br.addItem("Advice");
@@ -632,7 +634,7 @@ public class FlutyRemoteApi {
     }
 
     protected RuntimeException createRemoteApiFailureResponseTypeNotFoundException(Type beanType, String url, OptionalThing<Object> form,
-            int httpStatus, String body, FlutyRemoteApiRule rule) {
+            int httpStatus, OptionalThing<String> body, FlutyRemoteApiRule rule) {
         final ExceptionMessageBuilder br = new ExceptionMessageBuilder();
         br.addNotice("Not found the failure response type in your rule.");
         br.addItem("Adivce");
@@ -677,11 +679,11 @@ public class FlutyRemoteApi {
         return param.toString(); // as default
     }
 
-    protected void setupResponseInfo(ExceptionMessageBuilder br, int httpStatus, String body) {
+    protected void setupResponseInfo(ExceptionMessageBuilder br, int httpStatus, OptionalThing<String> body) {
         br.addItem("Response HTTP Status");
         br.addElement(httpStatus);
         br.addItem("Response Body");
-        br.addElement(body);
+        br.addElement(body.orElse("(no body)"));
     }
 
     protected <RET> void setupReturnInfo(ExceptionMessageBuilder br, RET ret) {
@@ -710,8 +712,12 @@ public class FlutyRemoteApi {
         }));
     }
 
-    protected String extractResponseBody(CloseableHttpResponse response, FlutyRemoteApiRule rule) throws IOException {
-        return EntityUtils.toString(response.getEntity(), rule.getResponseBodyCharset());
+    protected OptionalThing<String> extractResponseBody(CloseableHttpResponse response, FlutyRemoteApiRule rule) throws IOException {
+        final HttpEntity entity = response.getEntity(); // null allowed
+        final String body = entity != null ? EntityUtils.toString(entity, rule.getResponseBodyCharset()) : null;
+        return OptionalThing.ofNullable(body, () -> {
+            throw new IllegalStateException("Not found the response body.");
+        });
     }
 
     // ===================================================================================
