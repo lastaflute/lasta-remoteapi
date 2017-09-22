@@ -150,7 +150,7 @@ public class LastaRemoteApi extends FlutyRemoteApi {
     //                                                                      Error Handling
     //                                                                      ==============
     @Override
-    protected String convertFormToDebugString(Object form) {
-        return Lato.string(form); // because its toString() may not be overridden
+    protected String convertBeanToDebugString(Object bean) {
+        return Lato.string(bean); // because its toString() may not be overridden
     }
 }

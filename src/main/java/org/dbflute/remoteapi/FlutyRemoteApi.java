@@ -42,6 +42,7 @@ import org.apache.http.util.EntityUtils;
 import org.dbflute.helper.message.ExceptionMessageBuilder;
 import org.dbflute.jdbc.Classification;
 import org.dbflute.optional.OptionalThing;
+import org.dbflute.remoteapi.exception.RemoteApiErrorTranslationFailureException;
 import org.dbflute.remoteapi.exception.RemoteApiFailureResponseTypeNotFoundException;
 import org.dbflute.remoteapi.exception.RemoteApiHttpBasisErrorException;
 import org.dbflute.remoteapi.exception.RemoteApiHttpBasisErrorException.RemoteApiFailureResponseHolder;
@@ -198,10 +199,10 @@ public class FlutyRemoteApi {
         try (CloseableHttpClient httpClient = buildHttpClient(rule)) {
             final HttpUriRequest httpEmptyBody = prepareHttpEmptyBody(url, rule, httpMethod, emptyBodyFactory);
             try (CloseableHttpResponse response = httpClient.execute(httpEmptyBody)) {
-                return handleResponse(beanType, url, /*form*/OptionalThing.empty(), response, rule);
+                return handleResponse(beanType, url, /*param*/OptionalThing.empty(), response, rule);
             }
         } catch (IOException e) {
-            handleRemoteApiIOException(beanType, url, /*form*/OptionalThing.empty(), e);
+            handleRemoteApiIOException(beanType, url, /*param*/OptionalThing.empty(), e);
             return null; // unreachable
         }
     }
@@ -356,30 +357,35 @@ public class FlutyRemoteApi {
     // ===================================================================================
     //                                                                   Response Handling
     //                                                                   =================
-    protected <RETURN> RETURN handleResponse(Type beanType, String url, OptionalThing<Object> form, CloseableHttpResponse response,
+    protected <RETURN> RETURN handleResponse(Type beanType, String url, OptionalThing<Object> param, CloseableHttpResponse response,
             FlutyRemoteApiRule rule) throws IOException {
         final int httpStatus = response.getStatusLine().getStatusCode();
         final String body = extractResponseBody(response, rule);
         try {
-            final RETURN ret = parseResponse(beanType, url, form, httpStatus, body, rule);
-            validateReturn(beanType, url, form, httpStatus, body, ret, rule);
+            final RETURN ret = parseResponse(beanType, url, param, httpStatus, body, rule);
+            validateReturn(beanType, url, param, httpStatus, body, ret, rule);
             return ret;
         } catch (RemoteApiHttpBasisErrorException cause) {
             cause.getFailureResponse().ifPresent(failureResponse -> { // don't forget it
-                validateReturn(beanType, url, form, httpStatus, body, failureResponse, rule);
+                validateReturn(beanType, url, param, httpStatus, body, failureResponse, rule);
             });
             if (cause instanceof RemoteApiHttpClientErrorException) {
-                throwTranslatedClientErrorIfNeeds(beanType, url, rule, (RemoteApiHttpClientErrorException) cause);
+                throwTranslatedClientErrorIfNeeds(beanType, url, param, rule, httpStatus, body, (RemoteApiHttpClientErrorException) cause);
             }
             throw cause;
         }
     }
 
-    protected void throwTranslatedClientErrorIfNeeds(Type beanType, String url, FlutyRemoteApiRule rule,
-            RemoteApiHttpClientErrorException cause) {
+    protected void throwTranslatedClientErrorIfNeeds(Type beanType, String url, OptionalThing<Object> param, FlutyRemoteApiRule rule,
+            int httpStatus, String body, RemoteApiHttpClientErrorException cause) {
         rule.getClientErrorTranslator().ifPresent(translator -> {
             final RemoteApiClientErrorResource resource = createRemoteApiClientErrorResource(beanType, url, cause);
-            final RuntimeException translated = translator.translate(resource);
+            RuntimeException translated = null;
+            try {
+                translated = translator.translate(resource);
+            } catch (RuntimeException e) {
+                throwRemoteApiErrorTranslationFailureException(beanType, url, param, rule, httpStatus, body, cause, e);
+            }
             if (translated != null) {
                 throw translated;
             }
@@ -388,7 +394,7 @@ public class FlutyRemoteApi {
 
     protected RemoteApiClientErrorResource createRemoteApiClientErrorResource(Type beanType, String url,
             RemoteApiHttpClientErrorException cause) {
-        final VaErrorHook errorHook = ThreadCacheContext.findValidatorErrorHook();
+        final VaErrorHook errorHook = ThreadCacheContext.findValidatorErrorHook(); // null allowed
         return new RemoteApiClientErrorResource(beanType, url, errorHook, cause);
     }
 
@@ -535,6 +541,28 @@ public class FlutyRemoteApi {
         throw new RemoteApiResponseParseFailureException(msg, e);
     }
 
+    // -----------------------------------------------------
+    //                                   Translation Failure
+    //                                   -------------------
+    protected void throwRemoteApiErrorTranslationFailureException(Type beanType, String url, OptionalThing<Object> param,
+            FlutyRemoteApiRule rule, int httpStatus, String body, RemoteApiHttpClientErrorException clientError,
+            RuntimeException translationEx) {
+        final ExceptionMessageBuilder br = new ExceptionMessageBuilder();
+        br.addNotice("Failed to translate client error.");
+        br.addItem("Advice");
+        br.addElement("Confirm your logic of rule.translateClientError().");
+        setupRequestInfo(br, beanType, url, param);
+        setupResponseInfo(br, httpStatus, body);
+        setupYourRule(br, rule);
+        setupCallerExpression(br);
+        clientError.getFailureResponse().ifPresent(failureResponse -> {
+            br.addItem("Failure Response");
+            br.addElement(convertBeanToDebugString(failureResponse));
+        }); // client error's data are already set up
+        final String msg = br.buildExceptionMessage();
+        throw new RemoteApiErrorTranslationFailureException(msg, translationEx);
+    }
+
     // ===================================================================================
     //                                                                          Rule Error
     //                                                                          ==========
@@ -630,11 +658,11 @@ public class FlutyRemoteApi {
         if (optOrParam instanceof OptionalThing<?>) {
             ((OptionalThing<?>) optOrParam).ifPresent(param -> {
                 br.addItem("Request Parameter");
-                br.addElement(convertFormToDebugString(param));
+                br.addElement(convertBeanToDebugString(param));
             });
         } else {
             br.addItem("Request Parameter");
-            br.addElement(convertFormToDebugString(optOrParam));
+            br.addElement(convertBeanToDebugString(optOrParam));
         }
     }
 
@@ -645,7 +673,7 @@ public class FlutyRemoteApi {
         br.addElement(url);
     }
 
-    protected String convertFormToDebugString(Object param) {
+    protected String convertBeanToDebugString(Object param) {
         return param.toString(); // as default
     }
 

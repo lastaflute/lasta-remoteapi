@@ -63,7 +63,7 @@ public class RemoteApiClientErrorResource {
         if (messages == null) {
             throw new IllegalArgumentException("The argument 'messages' should not be null.");
         }
-        if (validationErrorHook == null) { // #hope jflute rich message, call validate() in action
+        if (validationErrorHook == null) {
             throwRemoteApiValidationErrorHookNotFoundException(messages);
         }
         final Class<?>[] runtimeGroups = new Class<?>[] { Default.class }; // not supported in remote-api so default
