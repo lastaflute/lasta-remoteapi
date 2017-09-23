@@ -39,17 +39,17 @@ public class ClientErrorTranslatingResource {
     protected final Type beanType; // not null
     protected final String url; // not null
     protected final VaErrorHook validationErrorHook; // null allowed
-    protected final RemoteApiHttpClientErrorException cause; // not null
+    protected final RemoteApiHttpClientErrorException clientError; // not null
 
     // ===================================================================================
     //                                                                         Constructor
     //                                                                         ===========
     public ClientErrorTranslatingResource(Type beanType, String url, VaErrorHook validationErrorHook,
-            RemoteApiHttpClientErrorException cause) {
+            RemoteApiHttpClientErrorException clientError) {
         this.beanType = beanType;
         this.url = url;
         this.validationErrorHook = validationErrorHook;
-        this.cause = cause;
+        this.clientError = clientError;
     }
 
     // ===================================================================================
@@ -67,7 +67,7 @@ public class ClientErrorTranslatingResource {
             throwRemoteApiValidationErrorHookNotFoundException(messages);
         }
         final Class<?>[] runtimeGroups = new Class<?>[] { Default.class }; // not supported in remote-api so default
-        return new ValidationErrorException(runtimeGroups, messages, validationErrorHook, cause);
+        return new ValidationErrorException(runtimeGroups, messages, validationErrorHook, clientError);
     }
 
     protected void throwRemoteApiValidationErrorHookNotFoundException(UserMessages messages) {
@@ -98,7 +98,7 @@ public class ClientErrorTranslatingResource {
         br.addItem("Messages");
         br.addElement(messages);
         final String msg = br.buildExceptionMessage();
-        throw new RemoteApiValidationErrorHookNotFoundException(msg, cause);
+        throw new RemoteApiValidationErrorHookNotFoundException(msg, clientError);
     }
 
     // ===================================================================================
@@ -118,7 +118,12 @@ public class ClientErrorTranslatingResource {
         });
     }
 
-    public RemoteApiHttpClientErrorException getCause() {
-        return cause;
+    @Deprecated
+    public RemoteApiHttpClientErrorException getCause() { // use getClientError()
+        return clientError;
+    }
+
+    public RemoteApiHttpClientErrorException getClientError() {
+        return clientError;
     }
 }
