@@ -53,9 +53,13 @@ import org.dbflute.remoteapi.exception.RemoteApiIOException;
 import org.dbflute.remoteapi.exception.RemoteApiPathVariableNullElementException;
 import org.dbflute.remoteapi.exception.RemoteApiReceiverOfResponseBodyNotFoundException;
 import org.dbflute.remoteapi.exception.RemoteApiResponseParseFailureException;
+import org.dbflute.remoteapi.exception.RemoteApiRetryReadyFailureException;
 import org.dbflute.remoteapi.exception.RemoteApiSenderOfQueryParameterNotFoundException;
 import org.dbflute.remoteapi.exception.RemoteApiSenderOfRequestBodyNotFoundException;
-import org.dbflute.remoteapi.exception.translator.RemoteApiClientErrorResource;
+import org.dbflute.remoteapi.exception.retry.ClientErrorRetryDeterminer;
+import org.dbflute.remoteapi.exception.retry.ClientErrorRetryResource;
+import org.dbflute.remoteapi.exception.translation.ClientErrorTranslatingResource;
+import org.dbflute.remoteapi.http.SupportedHttpMethod;
 import org.dbflute.remoteapi.receiver.ResponseBodyReceiver;
 import org.dbflute.remoteapi.sender.body.RequestBodySender;
 import org.dbflute.remoteapi.sender.query.QueryParameterSender;
@@ -108,7 +112,7 @@ public class FlutyRemoteApi {
      */
     public <RETURN> RETURN requestGet(Type beanType, String urlBase, String actionPath, Object[] pathVariables,
             OptionalThing<? extends Object> param, Consumer<FlutyRemoteApiRule> ruleLambda) {
-        return doRequestEmptyBody(beanType, urlBase, actionPath, pathVariables, param, ruleLambda, HttpGet.METHOD_NAME, url -> {
+        return doRequestEmptyBody(beanType, urlBase, actionPath, pathVariables, param, ruleLambda, SupportedHttpMethod.GET, url -> {
             return new HttpGet(url);
         });
     }
@@ -128,7 +132,7 @@ public class FlutyRemoteApi {
      */
     public <RETURN> RETURN requestPost(Type beanType, String urlBase, String actionPath, Object[] pathVariables, Object param,
             Consumer<FlutyRemoteApiRule> ruleLambda) {
-        return doRequestEnclosing(beanType, urlBase, actionPath, pathVariables, param, ruleLambda, HttpPost.METHOD_NAME, url -> {
+        return doRequestEnclosing(beanType, urlBase, actionPath, pathVariables, param, ruleLambda, SupportedHttpMethod.POST, url -> {
             return new HttpPost(url);
         });
     }
@@ -148,7 +152,7 @@ public class FlutyRemoteApi {
      */
     public <RETURN> RETURN requestPut(Type beanType, String urlBase, String actionPath, Object[] pathVariables, Object param,
             Consumer<FlutyRemoteApiRule> ruleLambda) {
-        return doRequestEnclosing(beanType, urlBase, actionPath, pathVariables, param, ruleLambda, HttpPut.METHOD_NAME, url -> {
+        return doRequestEnclosing(beanType, urlBase, actionPath, pathVariables, param, ruleLambda, SupportedHttpMethod.PUT, url -> {
             return new HttpPut(url);
         });
     }
@@ -168,7 +172,7 @@ public class FlutyRemoteApi {
      */
     public <RETURN> RETURN requestDelete(Type beanType, String urlBase, String actionPath, Object[] pathVariables,
             OptionalThing<? extends Object> param, Consumer<FlutyRemoteApiRule> ruleLambda) {
-        return doRequestEmptyBody(beanType, urlBase, actionPath, pathVariables, param, ruleLambda, HttpDelete.METHOD_NAME, url -> {
+        return doRequestEmptyBody(beanType, urlBase, actionPath, pathVariables, param, ruleLambda, SupportedHttpMethod.DELETE, url -> {
             return new HttpDelete(url);
         });
     }
@@ -177,7 +181,7 @@ public class FlutyRemoteApi {
     //                                                                   Request EmptyBody
     //                                                                   =================
     protected <RETURN> RETURN doRequestEmptyBody(Type beanType, String urlBase, String actionPath, Object[] pathVariables,
-            OptionalThing<? extends Object> optParam, Consumer<FlutyRemoteApiRule> ruleLambda, String httpMethod,
+            OptionalThing<? extends Object> optParam, Consumer<FlutyRemoteApiRule> ruleLambda, SupportedHttpMethod httpMethod,
             Function<String, HttpUriRequest> emptyBodyFactory) {
         assertArgumentNotNull("beanType", beanType);
         assertArgumentNotNull("urlBase", urlBase);
@@ -185,8 +189,20 @@ public class FlutyRemoteApi {
         assertArgumentNotNull("pathVariables", pathVariables);
         assertArgumentNotNull("param", optParam); // variable name is for facade method
         assertArgumentNotNull("ruleLambda", ruleLambda);
-        optParam.ifPresent(param -> validateParam(beanType, urlBase, actionPath, pathVariables, param));
+        assertArgumentNotNull("httpMethod", httpMethod);
+        assertArgumentNotNull("emptyBodyFactory", emptyBodyFactory);
         final FlutyRemoteApiRule rule = createRemoteApiRule(ruleLambda);
+        return retryableRequest(beanType, urlBase, actionPath, pathVariables, optParam, rule, () -> {
+            return actuallyRequestEmptyBody(beanType, urlBase, actionPath, pathVariables, optParam, rule, httpMethod, emptyBodyFactory);
+        }, clientError -> {
+            return createClientErrorRetryResource(beanType, urlBase, actionPath, pathVariables, optParam, httpMethod, clientError);
+        });
+    }
+
+    protected <RETURN> RETURN actuallyRequestEmptyBody(Type beanType, String urlBase, String actionPath, Object[] pathVariables,
+            OptionalThing<? extends Object> optParam, FlutyRemoteApiRule rule, SupportedHttpMethod httpMethod,
+            Function<String, HttpUriRequest> emptyBodyFactory) {
+        optParam.ifPresent(param -> validateParam(beanType, urlBase, actionPath, pathVariables, param));
         final String url = buildUrl(beanType, urlBase, actionPath, pathVariables, optParam, rule);
         if (logger.isDebugEnabled()) {
             final Map<String, List<String>> headerMap = rule.getHeaders().orElseGet(() -> Collections.emptyMap());
@@ -195,7 +211,7 @@ public class FlutyRemoteApi {
         return executeEmptyBody(beanType, url, rule, httpMethod, emptyBodyFactory);
     }
 
-    protected <RETURN> RETURN executeEmptyBody(Type beanType, String url, FlutyRemoteApiRule rule, String httpMethod,
+    protected <RETURN> RETURN executeEmptyBody(Type beanType, String url, FlutyRemoteApiRule rule, SupportedHttpMethod httpMethod,
             Function<String, HttpUriRequest> emptyBodyFactory) {
         try (CloseableHttpClient httpClient = buildHttpClient(rule)) {
             final HttpUriRequest httpEmptyBody = prepareHttpEmptyBody(url, rule, httpMethod, emptyBodyFactory);
@@ -208,7 +224,7 @@ public class FlutyRemoteApi {
         }
     }
 
-    protected HttpUriRequest prepareHttpEmptyBody(String url, FlutyRemoteApiRule rule, String httpMethod,
+    protected HttpUriRequest prepareHttpEmptyBody(String url, FlutyRemoteApiRule rule, SupportedHttpMethod httpMethod,
             Function<String, HttpUriRequest> emptyBodyFactory) {
         final HttpUriRequest httpEmptyBody = emptyBodyFactory.apply(url);
         setupHeader(httpEmptyBody, rule);
@@ -219,27 +235,41 @@ public class FlutyRemoteApi {
     //                                                                   Request Enclosing
     //                                                                   =================
     protected <RETURN> RETURN doRequestEnclosing(Type beanType, String urlBase, String actionPath, Object[] pathVariables, Object param,
-            Consumer<FlutyRemoteApiRule> ruleLambda, String httpMethod, Function<String, HttpEntityEnclosingRequestBase> enclosingFactory) {
+            Consumer<FlutyRemoteApiRule> ruleLambda, SupportedHttpMethod httpMethod,
+            Function<String, HttpEntityEnclosingRequestBase> enclosingFactory) {
         assertArgumentNotNull("beanType", beanType);
         assertArgumentNotNull("urlBase", urlBase);
         assertArgumentNotNull("actionPath", actionPath);
         assertArgumentNotNull("pathVariables", pathVariables);
         assertArgumentNotNull("param", param);
         assertArgumentNotNull("ruleLambda", ruleLambda);
-        validateParam(beanType, urlBase, actionPath, pathVariables, param);
+        assertArgumentNotNull("httpMethod", httpMethod);
+        assertArgumentNotNull("enclosingFactory", enclosingFactory);
         final FlutyRemoteApiRule rule = createRemoteApiRule(ruleLambda);
+        return retryableRequest(beanType, urlBase, actionPath, pathVariables, param, rule, () -> {
+            return actuallyRequestEnclosing(beanType, urlBase, actionPath, pathVariables, param, rule, httpMethod, enclosingFactory);
+        }, clientError -> {
+            final OptionalThing<Object> optParam = OptionalThing.of(param);
+            return createClientErrorRetryResource(beanType, urlBase, actionPath, pathVariables, optParam, httpMethod, clientError);
+        });
+    }
+
+    protected <RETURN> RETURN actuallyRequestEnclosing(Type beanType, String urlBase, String actionPath, Object[] pathVariables,
+            Object param, FlutyRemoteApiRule rule, SupportedHttpMethod httpMethod,
+            Function<String, HttpEntityEnclosingRequestBase> enclosingFactory) {
+        validateParam(beanType, urlBase, actionPath, pathVariables, param);
         final String url = buildUrl(beanType, urlBase, actionPath, pathVariables, /*queryForm*/OptionalThing.empty(), rule);
         if (logger.isDebugEnabled()) {
-            final String formDisp = param.getClass().getSimpleName() + ":" + Lato.string(param); // because toString() might not be overridden
+            final String paramDisp = param.getClass().getSimpleName() + ":" + Lato.string(param); // because toString() might not be overridden
             final Map<String, List<String>> headerMap = rule.getHeaders().orElseGet(() -> Collections.emptyMap());
-            logger.debug("#flow #remote ...Sending request as {} to Remote API:\n{}\n with form: {}\n with headers: {}", httpMethod, url,
-                    formDisp, headerMap);
+            logger.debug("#flow #remote ...Sending request as {} to Remote API:\n{}\n with param: {}\n with headers: {}", httpMethod, url,
+                    paramDisp, headerMap);
         }
         return executeEnclosing(beanType, url, param, rule, httpMethod, enclosingFactory);
     }
 
-    protected <RETURN> RETURN executeEnclosing(Type beanType, String url, Object param, FlutyRemoteApiRule rule, String httpMethod,
-            Function<String, HttpEntityEnclosingRequestBase> enclosingFactory) {
+    protected <RETURN> RETURN executeEnclosing(Type beanType, String url, Object param, FlutyRemoteApiRule rule,
+            SupportedHttpMethod httpMethod, Function<String, HttpEntityEnclosingRequestBase> enclosingFactory) {
         try (CloseableHttpClient httpClient = buildHttpClient(rule)) {
             final HttpUriRequest httpEnclosing = prepareHttpEnclosing(beanType, url, param, rule, httpMethod, enclosingFactory);
             try (CloseableHttpResponse response = httpClient.execute(httpEnclosing)) {
@@ -252,7 +282,7 @@ public class FlutyRemoteApi {
     }
 
     protected HttpEntityEnclosingRequestBase prepareHttpEnclosing(Type beanType, String url, Object param, FlutyRemoteApiRule rule,
-            String httpMethod, Function<String, HttpEntityEnclosingRequestBase> enclosingFactory) {
+            SupportedHttpMethod httpMethod, Function<String, HttpEntityEnclosingRequestBase> enclosingFactory) {
         final HttpEntityEnclosingRequestBase httpPut = enclosingFactory.apply(url);
         setupHeader(httpPut, rule);
         final RequestBodySender converter = rule.getRequestBodySender().orElseThrow(() -> {
@@ -260,6 +290,43 @@ public class FlutyRemoteApi {
         });
         converter.prepareBodyRequest(httpPut, param, rule);
         return httpPut;
+    }
+
+    // ===================================================================================
+    //                                                                           Retryable
+    //                                                                           =========
+    protected <RETURN> RETURN retryableRequest(Type beanType, String urlBase, String actionPath, Object[] pathVariables, Object optOrParam,
+            FlutyRemoteApiRule rule, Supplier<RETURN> actuallyRequester,
+            Function<RemoteApiHttpClientErrorException, ClientErrorRetryResource> retryResourceProvider) {
+        try {
+            return actuallyRequester.get();
+        } catch (RemoteApiHttpClientErrorException clientError) {
+            final OptionalThing<ClientErrorRetryDeterminer> determiner = rule.getClientErrorRetryDeterminer();
+            if (determiner.isPresent()) {
+                final ClientErrorRetryDeterminer retryDeterminer = determiner.get();
+                final ClientErrorRetryResource retryResource = retryResourceProvider.apply(clientError);
+                final boolean ready;
+                try {
+                    ready = retryDeterminer.ready(retryResource);
+                } catch (RuntimeException e) {
+                    throwRemoteApiRetryReadyFailureException(clientError, e);
+                    return null; // unreachable
+                }
+                if (ready) {
+                    if (logger.isDebugEnabled()) { // debug log of receiving exists so simple here
+                        logger.debug("#flow #remote ...Retrying request by client error: HTTP status={}", clientError.getHttpStatus());
+                    }
+                    return actuallyRequester.get();
+                }
+            }
+            throw clientError;
+        }
+    }
+
+    protected ClientErrorRetryResource createClientErrorRetryResource(Type beanType, String urlBase, String actionPath,
+            Object[] pathVariables, OptionalThing<? extends Object> optParam, SupportedHttpMethod httpMethod,
+            RemoteApiHttpClientErrorException clientError) {
+        return new ClientErrorRetryResource(beanType, urlBase, actionPath, pathVariables, optParam, httpMethod, clientError);
     }
 
     // ===================================================================================
@@ -380,7 +447,7 @@ public class FlutyRemoteApi {
     protected void throwTranslatedClientErrorIfNeeds(Type beanType, String url, OptionalThing<Object> param, FlutyRemoteApiRule rule,
             int httpStatus, OptionalThing<String> body, RemoteApiHttpClientErrorException cause) {
         rule.getClientErrorTranslator().ifPresent(translator -> {
-            final RemoteApiClientErrorResource resource = createRemoteApiClientErrorResource(beanType, url, cause);
+            final ClientErrorTranslatingResource resource = createRemoteApiClientErrorResource(beanType, url, cause);
             RuntimeException translated = null;
             try {
                 translated = translator.translate(resource);
@@ -393,10 +460,10 @@ public class FlutyRemoteApi {
         });
     }
 
-    protected RemoteApiClientErrorResource createRemoteApiClientErrorResource(Type beanType, String url,
+    protected ClientErrorTranslatingResource createRemoteApiClientErrorResource(Type beanType, String url,
             RemoteApiHttpClientErrorException cause) {
         final VaErrorHook errorHook = ThreadCacheContext.findValidatorErrorHook(); // null allowed
-        return new RemoteApiClientErrorResource(beanType, url, errorHook, cause);
+        return new ClientErrorTranslatingResource(beanType, url, errorHook, cause);
     }
 
     protected <RETURN> RETURN parseResponse(Type beanType, String url, OptionalThing<Object> form, int httpStatus,
@@ -468,6 +535,9 @@ public class FlutyRemoteApi {
     // ===================================================================================
     //                                                                       Request Error
     //                                                                       =============
+    // -----------------------------------------------------
+    //                                 Path Variable Failure
+    //                                 ---------------------
     protected void throwRemoteApiPathVariableNullElementException(Type beanType, String urlBase, String actionPath, Object[] pathVariables,
             OptionalThing<? extends Object> queryForm, FlutyRemoteApiRule rule) {
         final ExceptionMessageBuilder br = new ExceptionMessageBuilder();
@@ -485,6 +555,23 @@ public class FlutyRemoteApi {
         setupCallerExpression(br);
         final String msg = br.buildExceptionMessage();
         throw new RemoteApiPathVariableNullElementException(msg);
+    }
+
+    // -----------------------------------------------------
+    //                                         Retry Failure
+    //                                         -------------
+    protected void throwRemoteApiRetryReadyFailureException(RemoteApiHttpClientErrorException clientError, RuntimeException cause) {
+        final ExceptionMessageBuilder br = new ExceptionMessageBuilder();
+        br.addNotice("Failed to ready the retry of request for client error.");
+        br.addItem("Advice");
+        br.addElement("Confirm your rule.retryIfClientError() callback.");
+        // clientError has rich message of requset and response information
+        //setupRequestInfo(br, beanType, url, optOrParam);
+        br.addItem("Client Error");
+        br.addElement(clientError.getMessage());
+        setupCallerExpression(br);
+        final String msg = br.buildExceptionMessage();
+        throw new RemoteApiRetryReadyFailureException(msg, cause);
     }
 
     // ===================================================================================
@@ -590,8 +677,8 @@ public class FlutyRemoteApi {
     }
 
     protected RuntimeException createRemoteApiSenderOfRequestBodyNotFoundException(Type beanType, String url, Object param,
-            FlutyRemoteApiRule rule, String httpMethod) {
-        final String camelMethod = Srl.camelize(httpMethod.toLowerCase());
+            FlutyRemoteApiRule rule, SupportedHttpMethod httpMethod) {
+        final String camelMethod = Srl.camelize(httpMethod.name().toLowerCase());
         final ExceptionMessageBuilder br = new ExceptionMessageBuilder();
         br.addNotice("Not found the sender for request body in your rule.");
         br.addItem("Advice");

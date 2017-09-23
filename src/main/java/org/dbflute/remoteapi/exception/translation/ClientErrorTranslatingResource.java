@@ -13,7 +13,7 @@
  * either express or implied. See the License for the specific language
  * governing permissions and limitations under the License.
  */
-package org.dbflute.remoteapi.exception.translator;
+package org.dbflute.remoteapi.exception.translation;
 
 import java.lang.reflect.Type;
 
@@ -31,7 +31,7 @@ import org.lastaflute.web.validation.exception.ValidationErrorException;
  * @author jflute
  * @since 0.3.3 (2017/09/21 Thursday)
  */
-public class RemoteApiClientErrorResource {
+public class ClientErrorTranslatingResource {
 
     // ===================================================================================
     //                                                                           Attribute
@@ -44,7 +44,7 @@ public class RemoteApiClientErrorResource {
     // ===================================================================================
     //                                                                         Constructor
     //                                                                         ===========
-    public RemoteApiClientErrorResource(Type beanType, String url, VaErrorHook validationErrorHook,
+    public ClientErrorTranslatingResource(Type beanType, String url, VaErrorHook validationErrorHook,
             RemoteApiHttpClientErrorException cause) {
         this.beanType = beanType;
         this.url = url;

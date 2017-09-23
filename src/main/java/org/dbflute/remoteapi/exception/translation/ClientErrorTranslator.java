@@ -13,17 +13,17 @@
  * either express or implied. See the License for the specific language
  * governing permissions and limitations under the License.
  */
-package org.dbflute.remoteapi.exception.translator;
+package org.dbflute.remoteapi.exception.translation;
 
 /**
  * @author jflute
  * @since 0.3.3 (2017/09/21 Thursday)
  */
-public interface RemoteApiClientErrorTranslator {
+public interface ClientErrorTranslator {
 
     /**
      * @param resource The resource of translating that has thrown client error exception. (NotNull)
      * @return The translated exception which should have thrown exception. (NullAllowed: no translation)
      */
-    RuntimeException translate(RemoteApiClientErrorResource resource);
+    RuntimeException translate(ClientErrorTranslatingResource resource);
 }
