@@ -247,22 +247,29 @@ public class FlutyRemoteApiRule {
     }
 
     /**
+     * Translate client error exception.
+     * <pre>
+     * rule.translateClientError(resource -&gt; {
+     *     return new ...YourBusinessException(); // can be null, then no translation
+     * });
      * @param resourceLambda The callback for translation of client error. (NotNull)
      */
     public void translateClientError(ClientErrorTranslator resourceLambda) {
-        if (resourceLambda == null) {
-            throw new IllegalArgumentException("The argument 'resourceLambda' should not be null.");
-        }
+        assertArgumentNotNull("resourceLambda", resourceLambda);
         this.clientErrorTranslator = resourceLambda;
     }
 
     /**
+     * Retry request if response is client error.
+     * <pre>
+     * rule.retryIfClientError(resource -&gt; {
+     *     return ...; // true or false
+     * });
+     * </pre>
      * @param resourceLambda The callback for retry determination of client error. (NotNull)
      */
     public void retryIfClientError(ClientErrorRetryDeterminer resourceLambda) {
-        if (resourceLambda == null) {
-            throw new IllegalArgumentException("The argument 'resourceLambda' should not be null.");
-        }
+        assertArgumentNotNull("resourceLambda", resourceLambda);
         this.clientErrorRetryDeterminer = resourceLambda;
     }
 
