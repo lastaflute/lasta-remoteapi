@@ -252,6 +252,7 @@ public class FlutyRemoteApiRule {
      * rule.translateClientError(resource -&gt; {
      *     return new ...YourBusinessException(); // can be null, then no translation
      * });
+     * </pre>
      * @param resourceLambda The callback for translation of client error. (NotNull)
      */
     public void translateClientError(ClientErrorTranslator resourceLambda) {
