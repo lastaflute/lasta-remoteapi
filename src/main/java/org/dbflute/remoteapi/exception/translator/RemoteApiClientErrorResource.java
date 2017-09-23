@@ -67,7 +67,7 @@ public class RemoteApiClientErrorResource {
             throwRemoteApiValidationErrorHookNotFoundException(messages);
         }
         final Class<?>[] runtimeGroups = new Class<?>[] { Default.class }; // not supported in remote-api so default
-        return new ValidationErrorException(runtimeGroups, messages, validationErrorHook);
+        return new ValidationErrorException(runtimeGroups, messages, validationErrorHook, cause);
     }
 
     protected void throwRemoteApiValidationErrorHookNotFoundException(UserMessages messages) {
