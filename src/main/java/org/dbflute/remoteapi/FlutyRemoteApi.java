@@ -468,7 +468,8 @@ public class FlutyRemoteApi {
 
     protected <RETURN> RETURN parseResponse(Type beanType, String url, OptionalThing<Object> form, int httpStatus,
             OptionalThing<String> body, FlutyRemoteApiRule rule) {
-        logger.debug("#flow #remote ...Receiving response to Remote API:\n{}\n as {}\n{}", url, beanType, body.orElse("(no body)"));
+        logger.debug("#flow #remote ...Receiving response as {} from Remote API:\n{}\n as {}\n{}", httpStatus, url, beanType,
+                body.orElse("(no body)"));
         if (httpStatus >= 200 && httpStatus < 300) {
             final RETURN ret = toResponseReturn(beanType, url, form, httpStatus, body, rule);
             return ret;
