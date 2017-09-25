@@ -109,6 +109,7 @@ public class MockFreedomResponse {
      * @param requestLambda The callback for peeking request. (NotNull)
      */
     public void peekRequest(MockRequestPeeking requestLambda) {
+        assertArgumentNotNull("requestLambda", requestLambda);
         requestPeekingList.add(requestLambda);
     }
 
@@ -141,6 +142,8 @@ public class MockFreedomResponse {
      * @return The resource to create mock HTTP response. (NotNull)
      */
     public MockHttpResponseResource asJson(InputStream responseStream, MockRequestDeterminer requestLambda) {
+        assertArgumentNotNull("responseStream", responseStream);
+        assertArgumentNotNull("requestLambda", requestLambda);
         return registerProvider(request -> {
             return requestLambda.determine(request) ? responseJson(responseStream) : null;
         });
@@ -160,6 +163,8 @@ public class MockFreedomResponse {
      * @return The resource to create mock HTTP response. (NotNull)
      */
     public MockHttpResponseResource asJson(String responseFilePath, MockRequestDeterminer requestLambda) {
+        assertArgumentNotNull("responseFilePath", responseFilePath);
+        assertArgumentNotNull("requestLambda", requestLambda);
         return registerProvider(request -> {
             return requestLambda.determine(request) ? responseJson(responseFilePath) : null;
         });
@@ -174,13 +179,34 @@ public class MockFreedomResponse {
      * e.g. returns response as the json at all requests
      *  response.asJsonDirectly("{sea = mystic, land = oneman}", request -&gt; true);
      * </pre>
-     * @param json The string of JSON for mock response. (NotNull)
+     * @param json The string of JSON for mock response. (NotNull, EmptyAllowed)
      * @param requestLambda The callback for determination of corresponding request. (NotNull)
      * @return The resource to create mock HTTP response. (NotNull)
      */
     public MockHttpResponseResource asJsonDirectly(String json, MockRequestDeterminer requestLambda) {
+        assertArgumentNotNull("json", json);
+        assertArgumentNotNull("requestLambda", requestLambda);
         return registerProvider(request -> {
             return requestLambda.determine(request) ? responseJsonDirectly(json) : null;
+        });
+    }
+
+    /**
+     * Return response as JSON no content if the request is ...
+     * <pre>
+     * e.g. returns response as the json if the request is /harbor/
+     *  response.asJsonNoContent(request -&gt; request.getUrl().contains("/harbor/"));
+     * 
+     * e.g. returns response as the json at all requests
+     *  response.asJsonNoContent(request -&gt; true);
+     * </pre>
+     * @param requestLambda The callback for determination of corresponding request. (NotNull)
+     * @return The resource to create mock HTTP response. (NotNull)
+     */
+    public MockHttpResponseResource asJsonNoContent(MockRequestDeterminer requestLambda) {
+        assertArgumentNotNull("requestLambda", requestLambda);
+        return registerProvider(request -> {
+            return requestLambda.determine(request) ? responseJsonNoContent() : null;
         });
     }
 
@@ -203,6 +229,10 @@ public class MockFreedomResponse {
         } catch (UnsupportedEncodingException e) {
             throw new IllegalStateException("Not found the encoding: " + encoding, e);
         }
+    }
+
+    protected MockHttpResponse responseJsonNoContent() {
+        return new MockHttpResponse(null);
     }
 
     protected ContentType prepareContentTypeJson() {
@@ -247,6 +277,18 @@ public class MockFreedomResponse {
         final MockHttpResponseResource resource = new MockHttpResponseResource(provider);
         responseResourceList.add(resource);
         return resource;
+    }
+
+    // ===================================================================================
+    //                                                                        Small Helper
+    //                                                                        ============
+    protected void assertArgumentNotNull(String variableName, Object value) {
+        if (variableName == null) {
+            throw new IllegalArgumentException("The variableName should not be null.");
+        }
+        if (value == null) {
+            throw new IllegalArgumentException("The argument '" + variableName + "' should not be null.");
+        }
     }
 
     // ===================================================================================
