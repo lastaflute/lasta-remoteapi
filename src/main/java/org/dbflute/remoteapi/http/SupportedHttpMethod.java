@@ -13,25 +13,13 @@
  * either express or implied. See the License for the specific language
  * governing permissions and limitations under the License.
  */
-package org.dbflute.remoteapi.receiver;
-
-import java.lang.reflect.Type;
-
-import org.dbflute.optional.OptionalThing;
+package org.dbflute.remoteapi.http;
 
 /**
- * The receiver of response body.
- * @author inoue
  * @author jflute
+ * @since 0.3.4 (2017/09/23 Sutarday)
  */
-public interface ResponseBodyReceiver {
+public enum SupportedHttpMethod {
 
-    /**
-     * Convert response body to return object.
-     * @param <RETURN> the type of response return.
-     * @param body The optional body string of response. (NotNull, EmptyAllowed: when no body)
-     * @param beanType The specified bean type as return object. (NotNull)
-     * @return The converted return object from the response body. (NotNull)
-     */
-    <RETURN> RETURN toResponseReturn(OptionalThing<String> body, Type beanType);
+    GET, POST, PUT, DELETE
 }

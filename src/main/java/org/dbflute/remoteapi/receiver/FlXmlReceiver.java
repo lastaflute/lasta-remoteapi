@@ -20,6 +20,8 @@ import java.lang.reflect.Type;
 
 import javax.xml.bind.JAXB;
 
+import org.dbflute.optional.OptionalThing;
+
 /**
  * @author inoue
  * @author jflute
@@ -27,7 +29,13 @@ import javax.xml.bind.JAXB;
 public class FlXmlReceiver implements ResponseBodyReceiver {
 
     @SuppressWarnings("unchecked")
-    public <RETURN> RETURN toResponseReturn(String target, Type type) {
+    public <RETURN> RETURN toResponseReturn(OptionalThing<String> body, Type type) {
+        if (!(type instanceof Class<?>)) {
+            throw new IllegalArgumentException("The specified type is not Class: type=" + type);
+        }
+        final String target = body.orElseThrow(() -> { // translated with rich message so simple here
+            return new IllegalStateException("Not found the response body as XML.");
+        });
         return (RETURN) JAXB.unmarshal(new StringReader(target), (Class<?>) type);
     }
 }

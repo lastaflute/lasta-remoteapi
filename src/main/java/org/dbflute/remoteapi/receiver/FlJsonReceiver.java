@@ -18,6 +18,8 @@ package org.dbflute.remoteapi.receiver;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
 
+import org.dbflute.optional.OptionalThing;
+
 /**
  * @author inoue
  * @author jflute
@@ -26,7 +28,10 @@ public abstract class FlJsonReceiver implements ResponseBodyReceiver {
 
     @SuppressWarnings("unchecked")
     @Override
-    public <RETURN> RETURN toResponseReturn(String json, Type beanType) {
+    public <RETURN> RETURN toResponseReturn(OptionalThing<String> body, Type beanType) {
+        final String json = body.orElseThrow(() -> { // translated with rich message so simple here
+            return new IllegalStateException("Not found the response body as JSON.");
+        });
         if (beanType instanceof Class<?>) {
             return (RETURN) fromJson(json, (Class<?>) beanType);
         } else {

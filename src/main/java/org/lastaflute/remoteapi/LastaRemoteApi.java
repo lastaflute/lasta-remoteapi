@@ -74,8 +74,8 @@ public class LastaRemoteApi extends FlutyRemoteApi {
     }
 
     @Override
-    protected void validateReturn(Type beanType, String url, OptionalThing<Object> form, int httpStatus, String body, Object ret,
-            FlutyRemoteApiRule rule) {
+    protected void validateReturn(Type beanType, String url, OptionalThing<Object> form, int httpStatus, OptionalThing<String> body,
+            Object ret, FlutyRemoteApiRule rule) {
         try {
             createTransferredBeanValidator().validate(ret);
         } catch (ResponseBeanValidationErrorException | ValidationStoppedException e) {
@@ -128,7 +128,7 @@ public class LastaRemoteApi extends FlutyRemoteApi {
     }
 
     protected void throwRemoteApiResponseValidationErrorException(Type beanType, String url, OptionalThing<Object> param, int httpStatus,
-            String body, Object ret, RuntimeException e) {
+            OptionalThing<String> body, Object ret, RuntimeException e) {
         final ExceptionMessageBuilder br = new ExceptionMessageBuilder();
         br.addNotice("Validation Error as HTTP Response from the remote API.");
         setupRequestInfo(br, beanType, url, param);
@@ -150,7 +150,7 @@ public class LastaRemoteApi extends FlutyRemoteApi {
     //                                                                      Error Handling
     //                                                                      ==============
     @Override
-    protected String convertFormToDebugString(Object form) {
-        return Lato.string(form); // because its toString() may not be overridden
+    protected String convertBeanToDebugString(Object bean) {
+        return Lato.string(bean); // because its toString() may not be overridden
     }
 }

@@ -22,6 +22,7 @@ import java.util.Map;
 import org.dbflute.helper.beans.DfBeanDesc;
 import org.dbflute.helper.beans.DfPropertyDesc;
 import org.dbflute.helper.beans.factory.DfBeanDescFactory;
+import org.dbflute.optional.OptionalThing;
 import org.dbflute.util.DfCollectionUtil;
 import org.dbflute.util.DfReflectionUtil;
 
@@ -40,10 +41,13 @@ public class FlSplitReceiver implements ResponseBodyReceiver {
     }
 
     @Override
-    public <RETURN> RETURN toResponseReturn(String target, Type type) {
+    public <RETURN> RETURN toResponseReturn(OptionalThing<String> body, Type type) {
         if (!(type instanceof Class<?>)) {
-            throw new IllegalArgumentException("type is not Class." + type);
+            throw new IllegalArgumentException("The specified type is not Class: type=" + type);
         }
+        final String target = body.orElseThrow(() -> { // translated with rich message so simple here
+            return new IllegalStateException("Not found the response body as SPLIT.");
+        });
         final Map<String, String> returnMap = DfCollectionUtil.newLinkedHashMap();
         Arrays.stream(target.split(delimiter)).forEach(keyValue -> {
             String[] keyValueArray = keyValue.split(delimiterByKeyValue);
@@ -54,9 +58,9 @@ public class FlSplitReceiver implements ResponseBodyReceiver {
             final String value = keyValueArray[1];
             returnMap.put(key, value);
         });
-        final DfBeanDesc beanDesc = DfBeanDescFactory.getBeanDesc((Class<?>) type);
         @SuppressWarnings("unchecked")
         final RETURN ret = (RETURN) DfReflectionUtil.newInstance((Class<?>) type);
+        final DfBeanDesc beanDesc = DfBeanDescFactory.getBeanDesc((Class<?>) type);
         beanDesc.getProppertyNameList().stream().forEach(proppertyName -> {
             final DfPropertyDesc propertyDesc = beanDesc.getPropertyDesc(proppertyName);
             final String deserializeDParameterName = asDeserializedParameterName(propertyDesc);

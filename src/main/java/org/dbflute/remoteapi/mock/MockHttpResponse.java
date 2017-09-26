@@ -35,7 +35,7 @@ import org.apache.http.params.HttpParams;
 @SuppressWarnings("all")
 public class MockHttpResponse implements CloseableHttpResponse {
 
-    protected final HttpEntity httpEntity;
+    protected final HttpEntity httpEntity; // null allowed if no content
 
     protected Integer httpStatus;
 
@@ -101,7 +101,7 @@ public class MockHttpResponse implements CloseableHttpResponse {
     }
 
     @Override
-    public HttpEntity getEntity() {
+    public HttpEntity getEntity() { // null allowed
         return this.httpEntity;
     }
 

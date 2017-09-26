@@ -70,7 +70,7 @@ public class RemoteHarborBhv extends LastaRemoteBehavior {
 <dependency>
     <groupId>org.lastaflute.remoteapi</groupId>
     <artifactId>lasta-remoteapi</artifactId>
-    <version>0.3.0</version>
+    <version>0.3.5</version>
 </dependency>
 ```
 

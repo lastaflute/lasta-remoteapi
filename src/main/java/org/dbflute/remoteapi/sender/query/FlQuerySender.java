@@ -73,7 +73,7 @@ public class FlQuerySender implements QueryParameterSender {
                         try {
                             sb.append(URLEncoder.encode(asSerializedParameterValue(value), encoding));
                         } catch (UnsupportedEncodingException e) {
-                            throw new IllegalStateException("Unknown encoding: " + encoding);
+                            throw new IllegalStateException("Unknown encoding: " + encoding, e);
                         }
                     });
                 } else {
@@ -82,7 +82,7 @@ public class FlQuerySender implements QueryParameterSender {
                     try {
                         sb.append(URLEncoder.encode(asSerializedParameterValue(plainValue), encoding));
                     } catch (UnsupportedEncodingException e) {
-                        throw new IllegalStateException("Unknown encoding: " + encoding);
+                        throw new IllegalStateException("Unknown encoding: " + encoding, e);
                     }
                 }
                 paramIndex.setValue(paramIndex.getValue() + 1);

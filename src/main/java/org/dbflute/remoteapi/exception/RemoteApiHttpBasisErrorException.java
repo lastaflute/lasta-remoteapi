@@ -59,7 +59,11 @@ public class RemoteApiHttpBasisErrorException extends RemoteApiBaseException {
     public RemoteApiHttpBasisErrorException(String msg, int httpStatus, RemoteApiFailureResponseHolder failureResponseHolder) {
         super(msg);
         this.httpStatus = httpStatus;
-        this.failureResponseHolder = failureResponseHolder;
+        if (failureResponseHolder != null) {
+            this.failureResponseHolder = failureResponseHolder;
+        } else { // for outer framework
+            this.failureResponseHolder = new RemoteApiFailureResponseHolder(null, null);
+        }
     }
 
     // botsu: to keep simple by jflute (2017/09/13)

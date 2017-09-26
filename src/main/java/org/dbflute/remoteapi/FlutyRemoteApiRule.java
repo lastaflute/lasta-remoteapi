@@ -36,6 +36,8 @@ import org.apache.http.impl.client.HttpClients;
 import org.apache.http.ssl.SSLContexts;
 import org.apache.http.ssl.TrustStrategy;
 import org.dbflute.optional.OptionalThing;
+import org.dbflute.remoteapi.exception.retry.ClientErrorRetryDeterminer;
+import org.dbflute.remoteapi.exception.translation.ClientErrorTranslator;
 import org.dbflute.remoteapi.receiver.ResponseBodyReceiver;
 import org.dbflute.remoteapi.sender.body.RequestBodySender;
 import org.dbflute.remoteapi.sender.query.QueryParameterSender;
@@ -66,11 +68,14 @@ public class FlutyRemoteApiRule {
     protected int connectTimeout = 3000;
     protected int connectionRequestTimeout = 3000;
     protected int socketTimeout = 3000;
+    protected Charset pathVariableCharset = StandardCharsets.UTF_8; // not null
     protected Charset queryParameterCharset = StandardCharsets.UTF_8; // not null
     protected Charset requestBodyCharset = StandardCharsets.UTF_8; // not null
     protected Charset responseBodyCharset = StandardCharsets.UTF_8; // not null
     protected Map<String, List<String>> headers; // null allowed, not required, lazy-loaded
     protected Type failureResponseType; // null allowed, not required
+    protected ClientErrorTranslator clientErrorTranslator; // null allowed, not required
+    protected ClientErrorRetryDeterminer clientErrorRetryDeterminer; // null allowed, not required
 
     // #hope jflute can accept response header, interface? mapping? (2017/09/13)
     // #hope jflute validation on/off/warning option (2017/09/13)
@@ -157,6 +162,14 @@ public class FlutyRemoteApiRule {
     }
 
     /**
+     * @param pathVariableCharset The charset of request path variable. (NotNull)
+     */
+    public void encodeRequestPathVariableAs(Charset pathVariableCharset) {
+        assertArgumentNotNull("pathVariableCharset", pathVariableCharset);
+        this.pathVariableCharset = pathVariableCharset;
+    }
+
+    /**
      * @param requestQueryCharset The charset of request query parameter. (NotNull)
      */
     public void encodeRequestQueryAs(Charset requestQueryCharset) {
@@ -231,6 +244,34 @@ public class FlutyRemoteApiRule {
     public void handleFailureResponseAs(Type failureResponseType) {
         assertArgumentNotNull("failureResponseType", failureResponseType);
         this.failureResponseType = failureResponseType;
+    }
+
+    /**
+     * Translate client error exception.
+     * <pre>
+     * rule.translateClientError(resource -&gt; {
+     *     return new ...YourBusinessException(); // can be null, then no translation
+     * });
+     * </pre>
+     * @param resourceLambda The callback for translation of client error. (NotNull)
+     */
+    public void translateClientError(ClientErrorTranslator resourceLambda) {
+        assertArgumentNotNull("resourceLambda", resourceLambda);
+        this.clientErrorTranslator = resourceLambda;
+    }
+
+    /**
+     * Retry request if response is client error.
+     * <pre>
+     * rule.retryIfClientError(resource -&gt; {
+     *     return ...; // true or false
+     * });
+     * </pre>
+     * @param resourceLambda The callback for retry determination of client error. (NotNull)
+     */
+    public void retryIfClientError(ClientErrorRetryDeterminer resourceLambda) {
+        assertArgumentNotNull("resourceLambda", resourceLambda);
+        this.clientErrorRetryDeterminer = resourceLambda;
     }
 
     // ===================================================================================
@@ -312,6 +353,13 @@ public class FlutyRemoteApiRule {
     }
 
     /**
+     * @return The charset of request path variable. (NotNull)
+     */
+    public Charset getPathVariableCharset() {
+        return pathVariableCharset;
+    }
+
+    /**
      * @return The charset of request query parameter. (NotNull)
      */
     public Charset getQueryParameterCharset() {
@@ -341,6 +389,18 @@ public class FlutyRemoteApiRule {
     public OptionalThing<Type> getFailureResponseType() {
         return OptionalThing.ofNullable(failureResponseType, () -> {
             throw new IllegalStateException("Not found the failureResponseType in the option: " + toString());
+        });
+    }
+
+    public OptionalThing<ClientErrorTranslator> getClientErrorTranslator() {
+        return OptionalThing.ofNullable(clientErrorTranslator, () -> {
+            throw new IllegalStateException("Not found the client error translator: " + toString());
+        });
+    }
+
+    public OptionalThing<ClientErrorRetryDeterminer> getClientErrorRetryDeterminer() {
+        return OptionalThing.ofNullable(clientErrorRetryDeterminer, () -> {
+            throw new IllegalStateException("Not found the client error retry determiner: " + toString());
         });
     }
 
