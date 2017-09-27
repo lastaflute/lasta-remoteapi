@@ -202,7 +202,7 @@ public class FlutyRemoteApi {
     protected <RETURN> RETURN actuallyRequestEmptyBody(Type beanType, String urlBase, String actionPath, Object[] pathVariables,
             OptionalThing<? extends Object> optParam, FlutyRemoteApiRule rule, SupportedHttpMethod httpMethod,
             Function<String, HttpUriRequest> emptyBodyFactory) {
-        optParam.ifPresent(param -> validateParam(beanType, urlBase, actionPath, pathVariables, param));
+        optParam.ifPresent(param -> validateParam(beanType, urlBase, actionPath, pathVariables, param, rule));
         final String url = buildUrl(beanType, urlBase, actionPath, pathVariables, optParam, rule);
         if (logger.isDebugEnabled()) {
             final Map<String, List<String>> headerMap = rule.getHeaders().orElseGet(() -> Collections.emptyMap());
@@ -257,7 +257,7 @@ public class FlutyRemoteApi {
     protected <RETURN> RETURN actuallyRequestEnclosing(Type beanType, String urlBase, String actionPath, Object[] pathVariables,
             Object param, FlutyRemoteApiRule rule, SupportedHttpMethod httpMethod,
             Function<String, HttpEntityEnclosingRequestBase> enclosingFactory) {
-        validateParam(beanType, urlBase, actionPath, pathVariables, param);
+        validateParam(beanType, urlBase, actionPath, pathVariables, param, rule);
         final String url = buildUrl(beanType, urlBase, actionPath, pathVariables, /*queryForm*/OptionalThing.empty(), rule);
         if (logger.isDebugEnabled()) {
             final String paramDisp = param.getClass().getSimpleName() + ":" + Lato.string(param); // because toString() might not be overridden
@@ -332,12 +332,13 @@ public class FlutyRemoteApi {
     // ===================================================================================
     //                                                                          Validation
     //                                                                          ==========
-    protected void validateParam(Type beanType, String urlBase, String actionPath, Object[] pathVariables, Object param) {
+    protected void validateParam(Type beanType, String urlBase, String actionPath, Object[] pathVariables, Object param,
+            FlutyRemoteApiRule rule) {
         // you can override
     }
 
     protected void validateReturn(Type beanType, String url, OptionalThing<Object> form, int httpStatus, OptionalThing<String> body,
-            Object ret, FlutyRemoteApiRule ruledRemoteApiOption) {
+            Object ret, FlutyRemoteApiRule rule) {
         // you can override
     }
 

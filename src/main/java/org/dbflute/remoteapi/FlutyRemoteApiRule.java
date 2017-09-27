@@ -85,6 +85,7 @@ public class FlutyRemoteApiRule {
     // ===================================================================================
     //                                                                         Http Client
     //                                                                         ===========
+    // #hope jflute move it to factory (2017/09/27)
     public CloseableHttpClient prepareHttpClient() { // not null
         if (__xmockHttpClient != null) {
             return __xmockHttpClient;
