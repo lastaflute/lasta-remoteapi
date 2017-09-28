@@ -195,7 +195,7 @@ public class FlutyRemoteApi {
         return retryableRequest(beanType, urlBase, actionPath, pathVariables, optParam, rule, () -> {
             return actuallyRequestEmptyBody(beanType, urlBase, actionPath, pathVariables, optParam, rule, httpMethod, emptyBodyFactory);
         }, clientError -> {
-            return createClientErrorRetryResource(beanType, urlBase, actionPath, pathVariables, optParam, httpMethod, clientError);
+            return createClientErrorRetryResource(beanType, urlBase, actionPath, pathVariables, optParam, rule, httpMethod, clientError);
         });
     }
 
@@ -250,7 +250,7 @@ public class FlutyRemoteApi {
             return actuallyRequestEnclosing(beanType, urlBase, actionPath, pathVariables, param, rule, httpMethod, enclosingFactory);
         }, clientError -> {
             final OptionalThing<Object> optParam = OptionalThing.of(param);
-            return createClientErrorRetryResource(beanType, urlBase, actionPath, pathVariables, optParam, httpMethod, clientError);
+            return createClientErrorRetryResource(beanType, urlBase, actionPath, pathVariables, optParam, rule, httpMethod, clientError);
         });
     }
 
@@ -324,9 +324,9 @@ public class FlutyRemoteApi {
     }
 
     protected ClientErrorRetryResource createClientErrorRetryResource(Type beanType, String urlBase, String actionPath,
-            Object[] pathVariables, OptionalThing<? extends Object> optParam, SupportedHttpMethod httpMethod,
+            Object[] pathVariables, OptionalThing<? extends Object> optParam, FlutyRemoteApiRule rule, SupportedHttpMethod httpMethod,
             RemoteApiHttpClientErrorException clientError) {
-        return new ClientErrorRetryResource(beanType, urlBase, actionPath, pathVariables, optParam, httpMethod, clientError);
+        return new ClientErrorRetryResource(beanType, urlBase, actionPath, pathVariables, optParam, rule, httpMethod, clientError);
     }
 
     // ===================================================================================
