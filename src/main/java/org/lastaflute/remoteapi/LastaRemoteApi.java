@@ -140,7 +140,7 @@ public class LastaRemoteApi extends FlutyRemoteApi {
         setupYourRule(br, rule);
         final String msg = br.buildExceptionMessage();
         if (rule.getValidatorOption().isHandleAsWarnParam()) {
-            logger.warn(msg);
+            logger.warn(msg, e);
         } else {
             throw new RemoteApiRequestValidationErrorException(msg, e);
         }
@@ -156,7 +156,7 @@ public class LastaRemoteApi extends FlutyRemoteApi {
         setupYourRule(br, rule);
         final String msg = br.buildExceptionMessage();
         if (rule.getValidatorOption().isHandleAsWarnReturn()) {
-            logger.warn(msg);
+            logger.warn(msg, e);
         } else {
             throw new RemoteApiResponseValidationErrorException(msg, e);
         }
