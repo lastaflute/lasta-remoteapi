@@ -316,7 +316,7 @@ public class FlutyRemoteApiRule {
     @Override
     public String toString() {
         final StringBuilder sb = new StringBuilder();
-        sb.append("option:{");
+        sb.append("rule:{");
         sb.append("sender:{").append(queryParameterSender);
         sb.append(", ").append(requestBodySender);
         sb.append(", receiver:{").append(responseBodyReceiver);
@@ -329,6 +329,9 @@ public class FlutyRemoteApiRule {
         sb.append(", charset:{").append(queryParameterCharset);
         sb.append(", ").append(requestBodyCharset);
         sb.append(", ").append(responseBodyCharset);
+        sb.append(", various:{").append(clientErrorTranslator);
+        sb.append(", ").append(clientErrorRetryDeterminer);
+        sb.append(", ").append(validatorOption);
         sb.append("}}");
         return sb.toString();
     }
