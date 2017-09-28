@@ -25,6 +25,7 @@ import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Consumer;
 
 import javax.net.ssl.SSLContext;
 
@@ -41,6 +42,7 @@ import org.dbflute.remoteapi.exception.translation.ClientErrorTranslator;
 import org.dbflute.remoteapi.receiver.ResponseBodyReceiver;
 import org.dbflute.remoteapi.sender.body.RequestBodySender;
 import org.dbflute.remoteapi.sender.query.QueryParameterSender;
+import org.dbflute.remoteapi.validation.FlRemoteValidatorOption;
 import org.dbflute.util.DfCollectionUtil;
 
 /**
@@ -76,15 +78,16 @@ public class FlutyRemoteApiRule {
     protected Type failureResponseType; // null allowed, not required
     protected ClientErrorTranslator clientErrorTranslator; // null allowed, not required
     protected ClientErrorRetryDeterminer clientErrorRetryDeterminer; // null allowed, not required
+    protected FlRemoteValidatorOption validatorOption = newValidatorOption(); // not null, as default
 
     // #hope jflute can accept response header, interface? mapping? (2017/09/13)
-    // #hope jflute validation on/off/warning option (2017/09/13)
     // #hope jflute request trace ID option (2017/09/13)
     // #hope jflute improve tracebility like DBFlute (2017/09/13)
 
     // ===================================================================================
     //                                                                         Http Client
     //                                                                         ===========
+    // #hope jflute move it to factory (2017/09/27)
     public CloseableHttpClient prepareHttpClient() { // not null
         if (__xmockHttpClient != null) {
             return __xmockHttpClient;
@@ -274,6 +277,26 @@ public class FlutyRemoteApiRule {
         this.clientErrorRetryDeterminer = resourceLambda;
     }
 
+    /**
+     * Validate param and return object as your option.
+     * @param opLambda The callback for setting of validator option. (NotNull)
+     */
+    public void validateAs(Consumer<FlRemoteValidatorOption> opLambda) {
+        assertArgumentNotNull("opLambda", opLambda);
+        final FlRemoteValidatorOption option = createValidatorOption(opLambda);
+        this.validatorOption = option;
+    }
+
+    protected FlRemoteValidatorOption createValidatorOption(Consumer<FlRemoteValidatorOption> opLambda) {
+        final FlRemoteValidatorOption option = newValidatorOption();
+        opLambda.accept(option);
+        return option;
+    }
+
+    protected FlRemoteValidatorOption newValidatorOption() {
+        return new FlRemoteValidatorOption();
+    }
+
     // ===================================================================================
     //                                                                        Small Helper
     //                                                                        ============
@@ -292,19 +315,22 @@ public class FlutyRemoteApiRule {
     @Override
     public String toString() {
         final StringBuilder sb = new StringBuilder();
-        sb.append("option:{");
+        sb.append("rule:{");
         sb.append("sender:{").append(queryParameterSender);
         sb.append(", ").append(requestBodySender);
         sb.append(", receiver:{").append(responseBodyReceiver);
-        sb.append("}, ").append(sslUntrusted);
-        sb.append(", timeout:{").append(connectTimeout);
-        sb.append(", ").append(connectionRequestTimeout);
-        sb.append(", ").append(socketTimeout);
-        sb.append("}, ").append(headers);
-        sb.append(", ").append(failureResponseType);
-        sb.append(", charset:{").append(queryParameterCharset);
-        sb.append(", ").append(requestBodyCharset);
-        sb.append(", ").append(responseBodyCharset);
+        sb.append("}, sslUntrusted=").append(sslUntrusted);
+        sb.append(", timeout:{connect=").append(connectTimeout);
+        sb.append(", connectionRequest=").append(connectionRequestTimeout);
+        sb.append(", socket=").append(socketTimeout);
+        sb.append("}, headers=").append(headers);
+        sb.append(", failureResponse=").append(failureResponseType);
+        sb.append(", charset:{query=").append(queryParameterCharset);
+        sb.append(", requestBody=").append(requestBodyCharset);
+        sb.append(", responseBody=").append(responseBodyCharset);
+        sb.append(", various:{").append(clientErrorTranslator);
+        sb.append(", ").append(clientErrorRetryDeterminer);
+        sb.append(", ").append(validatorOption);
         sb.append("}}");
         return sb.toString();
     }
@@ -402,6 +428,13 @@ public class FlutyRemoteApiRule {
         return OptionalThing.ofNullable(clientErrorRetryDeterminer, () -> {
             throw new IllegalStateException("Not found the client error retry determiner: " + toString());
         });
+    }
+
+    /**
+     * @return The option of validator. (NotNull)
+     */
+    public FlRemoteValidatorOption getValidatorOption() {
+        return validatorOption;
     }
 
     // ===================================================================================

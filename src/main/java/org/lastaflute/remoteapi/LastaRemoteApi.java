@@ -37,6 +37,8 @@ import org.lastaflute.web.ruts.process.validatebean.ResponseSimpleBeanValidator;
 import org.lastaflute.web.servlet.request.RequestManager;
 import org.lastaflute.web.validation.ActionValidator;
 import org.lastaflute.web.validation.exception.ValidationStoppedException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * @author jflute
@@ -44,6 +46,11 @@ import org.lastaflute.web.validation.exception.ValidationStoppedException;
  * @author inoue
  */
 public class LastaRemoteApi extends FlutyRemoteApi {
+
+    // ===================================================================================
+    //                                                                          Definition
+    //                                                                          ==========
+    private static final Logger logger = LoggerFactory.getLogger(LastaRemoteApi.class);
 
     // ===================================================================================
     //                                                                           Attribute
@@ -65,21 +72,28 @@ public class LastaRemoteApi extends FlutyRemoteApi {
     //                                                                          Validation
     //                                                                          ==========
     @Override
-    protected void validateParam(Type beanType, String urlBase, String actionPath, Object[] pathVariables, Object param) {
+    protected void validateParam(Type beanType, String urlBase, String actionPath, Object[] pathVariables, Object param,
+            FlutyRemoteApiRule rule) {
+        if (rule.getValidatorOption().isSuppressParam()) {
+            return;
+        }
         try {
             createTransferredBeanValidator().validate(param);
         } catch (ResponseBeanValidationErrorException e) {
-            throwRemoteApiRequestValidationErrorException(beanType, urlBase, actionPath, pathVariables, param, e);
+            handleRemoteApiRequestValidationError(beanType, urlBase, actionPath, pathVariables, param, rule, e);
         }
     }
 
     @Override
     protected void validateReturn(Type beanType, String url, OptionalThing<Object> form, int httpStatus, OptionalThing<String> body,
             Object ret, FlutyRemoteApiRule rule) {
+        if (rule.getValidatorOption().isSuppressReturn()) {
+            return;
+        }
         try {
             createTransferredBeanValidator().validate(ret);
         } catch (ResponseBeanValidationErrorException | ValidationStoppedException e) {
-            throwRemoteApiResponseValidationErrorException(beanType, url, form, httpStatus, body, ret, e);
+            handleRemoteApiResponseValidationError(beanType, url, form, httpStatus, body, ret, rule, e);
         }
     }
 
@@ -112,10 +126,10 @@ public class LastaRemoteApi extends FlutyRemoteApi {
         };
     }
 
-    protected void throwRemoteApiRequestValidationErrorException(Type beanType, String urlBase, String actionPath, Object[] pathVariables,
-            Object param, ResponseBeanValidationErrorException e) {
+    protected void handleRemoteApiRequestValidationError(Type beanType, String urlBase, String actionPath, Object[] pathVariables,
+            Object param, FlutyRemoteApiRule rule, ResponseBeanValidationErrorException e) {
         final ExceptionMessageBuilder br = new ExceptionMessageBuilder();
-        br.addNotice("Validation Error as HTTP Request from the remote API.");
+        br.addNotice("Validation Error as Param object for the remote API.");
         final StringBuilder sb = new StringBuilder();
         sb.append(urlBase).append(actionPath).append(actionPath.endsWith("/") ? "" : "/");
         if (pathVariables != null && pathVariables.length > 0) {
@@ -123,19 +137,29 @@ public class LastaRemoteApi extends FlutyRemoteApi {
         }
         final String url = sb.toString();
         setupRequestInfo(br, beanType, url, OptionalThing.of(param));
+        setupYourRule(br, rule);
         final String msg = br.buildExceptionMessage();
-        throw new RemoteApiRequestValidationErrorException(msg, e);
+        if (rule.getValidatorOption().isHandleAsWarnParam()) {
+            logger.warn(msg, e);
+        } else {
+            throw new RemoteApiRequestValidationErrorException(msg, e);
+        }
     }
 
-    protected void throwRemoteApiResponseValidationErrorException(Type beanType, String url, OptionalThing<Object> param, int httpStatus,
-            OptionalThing<String> body, Object ret, RuntimeException e) {
+    protected void handleRemoteApiResponseValidationError(Type beanType, String url, OptionalThing<Object> param, int httpStatus,
+            OptionalThing<String> body, Object ret, FlutyRemoteApiRule rule, RuntimeException e) {
         final ExceptionMessageBuilder br = new ExceptionMessageBuilder();
-        br.addNotice("Validation Error as HTTP Response from the remote API.");
+        br.addNotice("Validation Error as Return object for the remote API.");
         setupRequestInfo(br, beanType, url, param);
         setupResponseInfo(br, httpStatus, body);
         setupReturnInfo(br, ret);
+        setupYourRule(br, rule);
         final String msg = br.buildExceptionMessage();
-        throw new RemoteApiResponseValidationErrorException(msg, e);
+        if (rule.getValidatorOption().isHandleAsWarnReturn()) {
+            logger.warn(msg, e);
+        } else {
+            throw new RemoteApiResponseValidationErrorException(msg, e);
+        }
     }
 
     // ===================================================================================
