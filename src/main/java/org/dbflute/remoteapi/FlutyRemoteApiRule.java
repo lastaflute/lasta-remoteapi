@@ -81,7 +81,6 @@ public class FlutyRemoteApiRule {
     protected FlRemoteValidatorOption validatorOption = newValidatorOption(); // not null, as default
 
     // #hope jflute can accept response header, interface? mapping? (2017/09/13)
-    // #hope jflute validation on/off/warning option (2017/09/13)
     // #hope jflute request trace ID option (2017/09/13)
     // #hope jflute improve tracebility like DBFlute (2017/09/13)
 
