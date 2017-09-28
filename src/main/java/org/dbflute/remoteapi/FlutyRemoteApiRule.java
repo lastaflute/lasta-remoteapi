@@ -25,6 +25,7 @@ import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Consumer;
 
 import javax.net.ssl.SSLContext;
 
@@ -41,6 +42,7 @@ import org.dbflute.remoteapi.exception.translation.ClientErrorTranslator;
 import org.dbflute.remoteapi.receiver.ResponseBodyReceiver;
 import org.dbflute.remoteapi.sender.body.RequestBodySender;
 import org.dbflute.remoteapi.sender.query.QueryParameterSender;
+import org.dbflute.remoteapi.validation.FlRemoteValidatorOption;
 import org.dbflute.util.DfCollectionUtil;
 
 /**
@@ -76,6 +78,7 @@ public class FlutyRemoteApiRule {
     protected Type failureResponseType; // null allowed, not required
     protected ClientErrorTranslator clientErrorTranslator; // null allowed, not required
     protected ClientErrorRetryDeterminer clientErrorRetryDeterminer; // null allowed, not required
+    protected FlRemoteValidatorOption validatorOption = newValidatorOption(); // not null, as default
 
     // #hope jflute can accept response header, interface? mapping? (2017/09/13)
     // #hope jflute validation on/off/warning option (2017/09/13)
@@ -275,6 +278,26 @@ public class FlutyRemoteApiRule {
         this.clientErrorRetryDeterminer = resourceLambda;
     }
 
+    /**
+     * Validate param and return object as your option.
+     * @param opLambda The callback for setting of validator option. (NotNull)
+     */
+    public void validateAs(Consumer<FlRemoteValidatorOption> opLambda) {
+        assertArgumentNotNull("opLambda", opLambda);
+        final FlRemoteValidatorOption option = createValidatorOption(opLambda);
+        this.validatorOption = option;
+    }
+
+    protected FlRemoteValidatorOption createValidatorOption(Consumer<FlRemoteValidatorOption> opLambda) {
+        final FlRemoteValidatorOption option = newValidatorOption();
+        opLambda.accept(option);
+        return option;
+    }
+
+    protected FlRemoteValidatorOption newValidatorOption() {
+        return new FlRemoteValidatorOption();
+    }
+
     // ===================================================================================
     //                                                                        Small Helper
     //                                                                        ============
@@ -403,6 +426,13 @@ public class FlutyRemoteApiRule {
         return OptionalThing.ofNullable(clientErrorRetryDeterminer, () -> {
             throw new IllegalStateException("Not found the client error retry determiner: " + toString());
         });
+    }
+
+    /**
+     * @return The option of validator. (NotNull)
+     */
+    public FlRemoteValidatorOption getValidatorOption() {
+        return validatorOption;
     }
 
     // ===================================================================================
