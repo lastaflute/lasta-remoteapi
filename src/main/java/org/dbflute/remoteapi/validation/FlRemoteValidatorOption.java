@@ -57,7 +57,14 @@ public class FlRemoteValidatorOption {
     //                                                                      ==============
     @Override
     public String toString() {
-        return "validator:{" + handleAsWarnParam + ", " + handleAsWarnReturn + ", " + suppressParam + ", " + suppressReturn + "}";
+        final StringBuilder sb = new StringBuilder();
+        sb.append("validator:{");
+        sb.append("warn:{").append(handleAsWarnParam);
+        sb.append(", ").append(handleAsWarnReturn);
+        sb.append("}, suppress:{").append(suppressParam);
+        sb.append(", ").append(suppressReturn);
+        sb.append("}}");
+        return sb.toString();
     }
 
     // ===================================================================================
