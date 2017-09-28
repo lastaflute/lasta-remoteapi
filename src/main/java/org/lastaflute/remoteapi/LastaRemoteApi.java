@@ -129,7 +129,7 @@ public class LastaRemoteApi extends FlutyRemoteApi {
     protected void handleRemoteApiRequestValidationError(Type beanType, String urlBase, String actionPath, Object[] pathVariables,
             Object param, FlutyRemoteApiRule rule, ResponseBeanValidationErrorException e) {
         final ExceptionMessageBuilder br = new ExceptionMessageBuilder();
-        br.addNotice("Validation Error as HTTP Request from the remote API.");
+        br.addNotice("Validation Error as Param object for the remote API.");
         final StringBuilder sb = new StringBuilder();
         sb.append(urlBase).append(actionPath).append(actionPath.endsWith("/") ? "" : "/");
         if (pathVariables != null && pathVariables.length > 0) {
@@ -149,7 +149,7 @@ public class LastaRemoteApi extends FlutyRemoteApi {
     protected void handleRemoteApiResponseValidationError(Type beanType, String url, OptionalThing<Object> param, int httpStatus,
             OptionalThing<String> body, Object ret, FlutyRemoteApiRule rule, RuntimeException e) {
         final ExceptionMessageBuilder br = new ExceptionMessageBuilder();
-        br.addNotice("Validation Error as HTTP Response from the remote API.");
+        br.addNotice("Validation Error as Return object for the remote API.");
         setupRequestInfo(br, beanType, url, param);
         setupResponseInfo(br, httpStatus, body);
         setupReturnInfo(br, ret);
