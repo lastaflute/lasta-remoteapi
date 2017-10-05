@@ -17,7 +17,6 @@ package org.dbflute.remoteapi.mapping;
 
 /**
  * @author jflute
- * @author mito
  */
 public class FlVacantRemoteMappingPolicy implements FlRemoteMappingPolicy { // state-less
 }
