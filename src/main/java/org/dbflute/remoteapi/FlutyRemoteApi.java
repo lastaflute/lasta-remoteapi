@@ -394,7 +394,7 @@ public class FlutyRemoteApi {
             OptionalThing<? extends Object> queryForm, FlutyRemoteApiRule rule) {
         final String newActionPath;
         final Object[] newPathVariables;
-        if (Srl.containsAll(actionPath, "{", "}")) { // e.g. /sea/{show}/land
+        if (Srl.containsAll(actionPath, "{", "}")) { // e.g. /sea/{hangar}/land/{showbase}, {"mystic", "onamna"}
             final List<String> pathElementList = Srl.splitList(actionPath, "/");
             final List<Object> resolvedElementList = new ArrayList<Object>();
             int pathVariableUsedIndex = 0;
@@ -415,9 +415,9 @@ public class FlutyRemoteApi {
                 resolvedElementList.add(newToken);
             }
             newActionPath = resolvedElementList.stream().map(token -> token.toString()).collect(Collectors.joining("/"));
-            if (pathVariables.length > 0) {
+            if (pathVariables.length > 0) { // basically here
                 newPathVariables = Arrays.asList(pathVariables).subList(pathVariableUsedIndex, pathVariables.length).toArray();
-            } else { // empty first
+            } else { // no way, already checked but just in case (or may be broken variable expression...!?)
                 newPathVariables = pathVariables;
             }
         } else { // e.g. sea/land
