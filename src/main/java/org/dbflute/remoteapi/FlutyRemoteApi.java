@@ -19,6 +19,7 @@ import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.lang.reflect.Type;
 import java.net.URLEncoder;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -51,6 +52,7 @@ import org.dbflute.remoteapi.exception.RemoteApiHttpClientErrorException;
 import org.dbflute.remoteapi.exception.RemoteApiHttpServerErrorException;
 import org.dbflute.remoteapi.exception.RemoteApiIOException;
 import org.dbflute.remoteapi.exception.RemoteApiPathVariableNullElementException;
+import org.dbflute.remoteapi.exception.RemoteApiPathVariableShortElementException;
 import org.dbflute.remoteapi.exception.RemoteApiReceiverOfResponseBodyNotFoundException;
 import org.dbflute.remoteapi.exception.RemoteApiResponseParseFailureException;
 import org.dbflute.remoteapi.exception.RemoteApiRetryReadyFailureException;
@@ -376,15 +378,76 @@ public class FlutyRemoteApi {
         assertArgumentNotNull("rule", rule);
         final StringBuilder sb = new StringBuilder();
         sb.append(urlBase);
-        sb.append(actionPath);
-        if (pathVariables.length > 0) {
+        final ActionPathNew pathNew = prepareActionPathVariableNew(beanType, urlBase, actionPath, pathVariables, queryForm, rule);
+        sb.append(pathNew.getActionPath());
+        if (pathNew.hasPathVariables()) {
             sb.append("/");
-            sb.append(buildPathVariablePart(beanType, urlBase, actionPath, pathVariables, queryForm, rule));
+            sb.append(buildPathVariablePart(beanType, urlBase, actionPath, pathNew.getPathVariables(), queryForm, rule));
         }
         queryForm.ifPresent(form -> {
             buildQueryParameter(sb, beanType, form, rule);
         });
         return sb.toString();
+    }
+
+    protected ActionPathNew prepareActionPathVariableNew(Type beanType, String urlBase, String actionPath, Object[] pathVariables,
+            OptionalThing<? extends Object> queryForm, FlutyRemoteApiRule rule) {
+        final String newActionPath;
+        final Object[] newPathVariables;
+        if (Srl.containsAll(actionPath, "{", "}")) { // e.g. /sea/{show}/land
+            final List<String> pathElementList = Srl.splitList(actionPath, "/");
+            final List<Object> resolvedElementList = new ArrayList<Object>();
+            int pathVariableUsedIndex = 0;
+            for (String token : pathElementList) {
+                final Object newToken;
+                if (Srl.isQuotedAnything(token, "{", "}")) {
+                    if (pathVariables.length <= pathVariableUsedIndex) {
+                        throwRemoteApiPathVariableShortElementException(beanType, urlBase, actionPath, pathVariables, queryForm, rule);
+                    }
+                    newToken = pathVariables[pathVariableUsedIndex];
+                    if (newToken == null) {
+                        throwRemoteApiPathVariableNullElementException(beanType, urlBase, actionPath, pathVariables, queryForm, rule);
+                    }
+                    ++pathVariableUsedIndex;
+                } else {
+                    newToken = token;
+                }
+                resolvedElementList.add(newToken);
+            }
+            newActionPath = resolvedElementList.stream().map(token -> token.toString()).collect(Collectors.joining("/"));
+            if (pathVariables.length > 0) {
+                newPathVariables = Arrays.asList(pathVariables).subList(pathVariableUsedIndex, pathVariables.length).toArray();
+            } else { // empty first
+                newPathVariables = pathVariables;
+            }
+        } else { // e.g. sea/land
+            newActionPath = actionPath;
+            newPathVariables = pathVariables;
+        }
+        return new ActionPathNew(newActionPath, newPathVariables);
+    }
+
+    protected static class ActionPathNew {
+
+        protected final String actionPath;
+        protected final Object[] pathVariables;
+
+        public ActionPathNew(String actionPath, Object[] pathVariables) {
+            this.actionPath = actionPath;
+            this.pathVariables = pathVariables;
+        }
+
+        public boolean hasPathVariables() {
+            return pathVariables.length > 0;
+        }
+
+        public String getActionPath() {
+            return actionPath;
+        }
+
+        public Object[] getPathVariables() {
+            return pathVariables;
+        }
     }
 
     protected String buildPathVariablePart(Type beanType, String urlBase, String actionPath, Object[] pathVariables,
@@ -540,6 +603,25 @@ public class FlutyRemoteApi {
     // -----------------------------------------------------
     //                                 Path Variable Failure
     //                                 ---------------------
+    protected void throwRemoteApiPathVariableShortElementException(Type beanType, String urlBase, String actionPath, Object[] pathVariables,
+            OptionalThing<? extends Object> queryForm, FlutyRemoteApiRule rule) {
+        final ExceptionMessageBuilder br = new ExceptionMessageBuilder();
+        br.addNotice("Short element of embedded path variable in action path.");
+        br.addItem("Advice");
+        br.addElement("Make sure your path variable values.");
+        br.addElement("  (x):");
+        br.addElement("    \"/sea/{hangar}/land/{showbase}\", moreUrl(\"mystic\")");
+        br.addElement("  (o):");
+        br.addElement("    \"/sea/{hangar}/land/{showbase}\", moreUrl(\"mystic\", \"oneman\")");
+        br.addItem("Path Variables");
+        br.addElement(Arrays.asList(pathVariables));
+        setupRequestInfo(br, beanType, urlBase + actionPath, queryForm);
+        setupYourRule(br, rule);
+        setupCallerExpression(br);
+        final String msg = br.buildExceptionMessage();
+        throw new RemoteApiPathVariableShortElementException(msg);
+    }
+
     protected void throwRemoteApiPathVariableNullElementException(Type beanType, String urlBase, String actionPath, Object[] pathVariables,
             OptionalThing<? extends Object> queryForm, FlutyRemoteApiRule rule) {
         final ExceptionMessageBuilder br = new ExceptionMessageBuilder();

@@ -17,6 +17,7 @@ package org.dbflute.remoteapi;
 
 import org.dbflute.optional.OptionalThing;
 import org.dbflute.remoteapi.exception.RemoteApiPathVariableNullElementException;
+import org.dbflute.remoteapi.exception.RemoteApiPathVariableShortElementException;
 import org.dbflute.remoteapi.mock.MockCDef;
 import org.dbflute.utflute.core.PlainTestCase;
 
@@ -26,6 +27,38 @@ import org.dbflute.utflute.core.PlainTestCase;
  */
 public class FlutyRemoteApiTest extends PlainTestCase {
 
+    // ===================================================================================
+    //                                                                          buildUrl()
+    //                                                                          ==========
+    public void test_buildUrl_actionPathVariables() {
+        assertEquals("8080/sea/land", buildUrl_withPath("/sea/land"));
+        assertEquals("8080/sea/land/mystic/2", buildUrl_withPath("/sea/land", "mystic", 2));
+        assertEquals("8080/sea/mystic/land/2", buildUrl_withPath("/sea/{hangar}/land", "mystic", 2));
+        assertEquals("8080/sea/land/oneman/2", buildUrl_withPath("/sea/land/{showbase}", "oneman", 2));
+        assertEquals("8080/sea/land/mystic/oneman", buildUrl_withPath("/sea/land/{hangar}/{showbase}", "mystic", "oneman"));
+        assertEquals("8080/sea/land/mystic/oneman/", buildUrl_withPath("/sea/land/{show1}/{show2}/", "mystic", "oneman"));
+        assertEquals("8080/sea/land/mystic/oneman", buildUrl_withPath("/sea/land/{}/{show2}", "mystic", "oneman"));
+        assertEquals("8080sea/land/mystic/oneman", buildUrl_withPath("sea/land/{}/{show2}", "mystic", "oneman"));
+        assertEquals("8080/sea/land/mystic/oneman", buildUrl_withPath("/sea/land", "mystic", "oneman"));
+        assertException(RemoteApiPathVariableNullElementException.class,
+                () -> buildUrl_withPath("/sea/land/{show1}/{show2}", "mystic", null, "oneman"));
+        assertException(RemoteApiPathVariableShortElementException.class, () -> buildUrl_withPath("/sea/land/{show1}}"));
+        assertException(RemoteApiPathVariableShortElementException.class, () -> buildUrl_withPath("/sea/land/{show1}/{show2}", "mystic"));
+    }
+
+    private String buildUrl_withPath(String actionPath, Object... pathVariables) {
+        FlutyRemoteApi remoteApi = new FlutyRemoteApi(rule -> {}, this);
+        Class<Object> beanType = Object.class;
+        OptionalThing<Object> noQuery = OptionalThing.empty();
+        FlutyRemoteApiRule rule = new FlutyRemoteApiRule();
+        String url = remoteApi.buildUrl(beanType, "8080", actionPath, pathVariables, noQuery, rule);
+        log(url);
+        return url;
+    }
+
+    // ===================================================================================
+    //                                                             buildPathVariablePart()
+    //                                                             =======================
     public void test_buildPathVariablePart_classification() {
         // ## Arrange ##
         FlutyRemoteApi remoteApi = new FlutyRemoteApi(rule -> {}, this);
