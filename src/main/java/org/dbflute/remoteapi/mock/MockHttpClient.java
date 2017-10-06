@@ -22,8 +22,14 @@ import java.io.UnsupportedEncodingException;
 import java.net.URLDecoder;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
 
+import org.apache.http.Header;
 import org.apache.http.HttpEntity;
 import org.apache.http.HttpEntityEnclosingRequest;
 import org.apache.http.HttpHost;
@@ -83,9 +89,10 @@ public class MockHttpClient extends CloseableHttpClient {
         final Charset charset = StandardCharsets.UTF_8;
         final String url = extractRequestUrl(httpRequest); // e.g. http://localhost:8090/harbor/lido/product/list/1
         final String body = extractRequestBody(httpRequest, charset);
+        final Map<String, List<String>> headerMap = extractHeaderMap(httpRequest);
         final String hostName = httpHost.getHostName();
         final Integer port = httpHost.getPort() >= 0 ? httpHost.getPort() : null;
-        final MockSupposedRequest supposedRequest = new MockSupposedRequest(url, body, hostName, port);
+        final MockSupposedRequest supposedRequest = new MockSupposedRequest(url, body, hostName, port, headerMap);
         final List<MockRequestPeeking> requestHandlerList = freedomResponse.getRequestPeekingList();
         for (MockRequestPeeking requestHandler : requestHandlerList) {
             requestHandler.peek(supposedRequest);
@@ -130,6 +137,26 @@ public class MockHttpClient extends CloseableHttpClient {
             body = null;
         }
         return body;
+    }
+
+    protected Map<String, List<String>> extractHeaderMap(HttpRequest httpRequest) {
+        final Header[] allHeaders = httpRequest.getAllHeaders();
+        final Map<String, List<String>> headerMap = new LinkedHashMap<String, List<String>>();
+        if (allHeaders != null) { // just in case
+            for (Header header : allHeaders) {
+                final String name = header.getName();
+                List<String> elementList = headerMap.get(name);
+                if (elementList == null) {
+                    elementList = new ArrayList<String>();
+                    headerMap.put(name, elementList);
+                }
+                elementList.add(header.getValue());
+            }
+            for (Entry<String, List<String>> entry : headerMap.entrySet()) {
+                headerMap.put(entry.getKey(), Collections.unmodifiableList(entry.getValue()));
+            }
+        }
+        return Collections.unmodifiableMap(headerMap);
     }
 
     protected void throwMockHttpResponseNotFoundException(MockSupposedRequest supposedRequest,
