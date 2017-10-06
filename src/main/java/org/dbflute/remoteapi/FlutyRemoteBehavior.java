@@ -178,7 +178,7 @@ public abstract class FlutyRemoteBehavior {
      * @param ruleLambda The callback for rule of remote API. (NotNull)
      * @return The analyzed return of response from the request. (NotNull)
      */
-    protected <RETURN> RETURN doRequestGet(Class<? extends Object> returnType //
+    protected <RETURN> RETURN doRequestGet(Class<? extends RETURN> returnType //
             , String actionPath, Object[] pathVariables, OptionalThing<? extends Object> param, Consumer<FlutyRemoteApiRule> ruleLambda) {
         return remoteApi.requestGet(returnType, getUrlBase(), actionPath, pathVariables, param, ruleLambda);
     }
@@ -233,7 +233,7 @@ public abstract class FlutyRemoteBehavior {
      * @param ruleLambda The callback for rule of remote API. (NotNull)
      * @return The analyzed return of response from the request. (NotNull)
      */
-    protected <RETURN> RETURN doRequestPost(Class<? extends Object> returnType //
+    protected <RETURN> RETURN doRequestPost(Class<? extends RETURN> returnType //
             , String actionPath, Object[] pathVariables, Object param, Consumer<FlutyRemoteApiRule> ruleLambda) {
         return remoteApi.requestPost(returnType, getUrlBase(), actionPath, pathVariables, param, ruleLambda);
     }
@@ -288,7 +288,7 @@ public abstract class FlutyRemoteBehavior {
      * @param ruleLambda The callback for rule of remote API. (NotNull)
      * @return The analyzed return of response from the request. (NotNull)
      */
-    protected <RETURN> RETURN doRequestPut(Class<? extends Object> returnType //
+    protected <RETURN> RETURN doRequestPut(Class<? extends RETURN> returnType //
             , String actionPath, Object[] pathVariables, Object param, Consumer<FlutyRemoteApiRule> ruleLambda) {
         return remoteApi.requestPut(returnType, getUrlBase(), actionPath, pathVariables, param, ruleLambda);
     }
@@ -343,7 +343,7 @@ public abstract class FlutyRemoteBehavior {
      * @param ruleLambda The callback for rule of remote API. (NotNull)
      * @return The analyzed return of response from the request. (NotNull)
      */
-    protected <RETURN> RETURN doRequestDelete(Class<? extends Object> returnType //
+    protected <RETURN> RETURN doRequestDelete(Class<? extends RETURN> returnType //
             , String actionPath, Object[] pathVariables, OptionalThing<? extends Object> param, Consumer<FlutyRemoteApiRule> ruleLambda) {
         return remoteApi.requestDelete(returnType, getUrlBase(), actionPath, pathVariables, param, ruleLambda);
     }
