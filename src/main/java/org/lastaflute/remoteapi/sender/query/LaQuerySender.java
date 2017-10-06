@@ -15,11 +15,10 @@
  */
 package org.lastaflute.remoteapi.sender.query;
 
-import org.dbflute.helper.beans.DfPropertyDesc;
+import org.dbflute.remoteapi.mapping.FlParameterSerializer;
 import org.dbflute.remoteapi.mapping.FlRemoteMappingPolicy;
 import org.dbflute.remoteapi.sender.query.FlQuerySender;
-
-import com.google.gson.annotations.SerializedName;
+import org.lastaflute.remoteapi.mapping.LaParameterSerializer;
 
 /**
  * @author jflute
@@ -33,15 +32,8 @@ public class LaQuerySender extends FlQuerySender {
         super(mappingPolicy);
     }
 
-    // ===================================================================================
-    //                                                                  Parameter Handling
-    //                                                                  ==================
     @Override
-    protected String asSerializedParameterName(DfPropertyDesc propertyDesc) {
-        final SerializedName serializedName = propertyDesc.getField().getAnnotation(SerializedName.class);
-        if (serializedName != null) {
-            return serializedName.value();
-        }
-        return propertyDesc.getPropertyName();
+    protected FlParameterSerializer createParameterSerializer() {
+        return new LaParameterSerializer(); // for e.g. field naming
     }
 }

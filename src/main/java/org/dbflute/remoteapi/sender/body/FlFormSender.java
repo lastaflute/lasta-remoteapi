@@ -84,7 +84,7 @@ public class FlFormSender implements RequestBodySender {
     //                                                                  Parameter Handling
     //                                                                  ==================
     protected String asSerializedParameterName(DfPropertyDesc propertyDesc) { // may be overridden
-        return propertyDesc.getPropertyName();
+        return parameterSerializer.asSerializedParameterName(propertyDesc, mappingPolicy);
     }
 
     protected String asSerializedParameterValue(Object value) {

@@ -44,7 +44,7 @@ public class FlQuerySender implements QueryParameterSender {
         this.parameterSerializer = createParameterSerializer();
     }
 
-    protected FlParameterSerializer createParameterSerializer() {
+    protected FlParameterSerializer createParameterSerializer() { // may be overridden
         return new FlParameterSerializer();
     }
 
@@ -95,7 +95,7 @@ public class FlQuerySender implements QueryParameterSender {
     //                                                                  Parameter Handling
     //                                                                  ==================
     protected String asSerializedParameterName(DfPropertyDesc propertyDesc) { // may be overridden
-        return propertyDesc.getPropertyName();
+        return parameterSerializer.asSerializedParameterName(propertyDesc, mappingPolicy);
     }
 
     protected String asSerializedParameterValue(Object value) {

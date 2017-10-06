@@ -48,6 +48,10 @@ public interface FlRemoteMappingPolicy {
      * @return The string for the boolean. (NullAllowed: if argument is null)
      */
     default String serializeBoolean(Boolean boo) {
+        return booleanToString(boo);
+    }
+
+    static String booleanToString(Boolean boo) { // for overriding method use
         return boo != null ? boo.toString() : null; // e.g. "true", "false"
     }
 
@@ -56,6 +60,10 @@ public interface FlRemoteMappingPolicy {
      * @return The boolean for the expression. (NullAllowed: if argument is null)
      */
     default Boolean deserializeBoolean(Object exp) {
+        return booleanValueOf(exp);
+    }
+
+    static Boolean booleanValueOf(Object exp) { // for overriding method use
         return exp != null ? Boolean.valueOf(exp.toString()) : null; // expects "true" or not
     }
 
