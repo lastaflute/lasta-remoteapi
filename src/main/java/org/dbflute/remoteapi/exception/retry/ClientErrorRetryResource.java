@@ -31,7 +31,7 @@ public class ClientErrorRetryResource {
     // ===================================================================================
     //                                                                           Attribute
     //                                                                           =========
-    protected final Type beanType;
+    protected final Type returnType;
     protected final String urlBase;
     protected final String actionPath;
     protected final Object[] pathVariables;
@@ -43,11 +43,11 @@ public class ClientErrorRetryResource {
     // ===================================================================================
     //                                                                         Constructor
     //                                                                         ===========
-    public ClientErrorRetryResource(Type beanType, String urlBase, String actionPath, Object[] pathVariables,
+    public ClientErrorRetryResource(Type returnType, String urlBase, String actionPath, Object[] pathVariables,
             OptionalThing<? extends Object> param, FlutyRemoteApiRule rule, SupportedHttpMethod httpMethod,
             RemoteApiHttpClientErrorException clientError) {
         super();
-        this.beanType = beanType;
+        this.returnType = returnType;
         this.urlBase = urlBase;
         this.actionPath = actionPath;
         this.pathVariables = pathVariables;
@@ -99,8 +99,8 @@ public class ClientErrorRetryResource {
     // ===================================================================================
     //                                                                            Accessor
     //                                                                            ========
-    public Type getBeanType() {
-        return beanType;
+    public Type getReturnType() {
+        return returnType;
     }
 
     public String getUrlBase() {
