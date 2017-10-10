@@ -37,6 +37,7 @@ public abstract class FlutyRemoteBehavior {
     // ===================================================================================
     //                                                                          Definition
     //                                                                          ==========
+    protected static final Object EMPTY_BODY_OBJ = new Object();
     protected static final Object[] EMPTY_OBJECTS = new Object[] {};
 
     // ===================================================================================
@@ -429,6 +430,17 @@ public abstract class FlutyRemoteBehavior {
      */
     protected OptionalThing<Object> noQuery() {
         return OptionalThing.empty();
+    }
+
+    /**
+     * Get empty object for form.
+     * <pre>
+     * return doRequestPost(..., "/lido/mypage", noMoreUrl(), <span style="color: #CC4747">noBody()</span>, rule -&gt; {});
+     * </pre>
+     * @return The object as empty. (NotNull)
+     */
+    protected Object noBody() {
+        return EMPTY_BODY_OBJ;
     }
 
     // ===================================================================================
