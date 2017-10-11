@@ -287,11 +287,17 @@ public class FlutyRemoteApi {
             SupportedHttpMethod httpMethod, Function<String, HttpEntityEnclosingRequestBase> enclosingFactory) {
         final HttpEntityEnclosingRequestBase httpPut = enclosingFactory.apply(url);
         setupHeader(httpPut, rule);
+        if (param instanceof EmptyRequestBody) { // e.g. POST but noRequestBody()
+            return httpPut;
+        }
         final RequestBodySender converter = rule.getRequestBodySender().orElseThrow(() -> {
             return createRemoteApiSenderOfRequestBodyNotFoundException(returnType, url, param, rule, httpMethod);
         });
         converter.prepareBodyRequest(httpPut, param, rule);
         return httpPut;
+    }
+
+    public static class EmptyRequestBody {
     }
 
     // ===================================================================================

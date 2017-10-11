@@ -88,7 +88,7 @@ public class MockHttpClient extends CloseableHttpClient {
             throws IOException, ClientProtocolException {
         final Charset charset = StandardCharsets.UTF_8;
         final String url = extractRequestUrl(httpRequest); // e.g. http://localhost:8090/harbor/lido/product/list/1
-        final String body = extractRequestBody(httpRequest, charset);
+        final String body = extractRequestBody(httpRequest, charset); // null allowed
         final Map<String, List<String>> headerMap = extractHeaderMap(httpRequest);
         final String hostName = httpHost.getHostName();
         final Integer port = httpHost.getPort() >= 0 ? httpHost.getPort() : null;
@@ -128,12 +128,16 @@ public class MockHttpClient extends CloseableHttpClient {
         if (request instanceof HttpEntityEnclosingRequest) {
             final HttpEntityEnclosingRequest httpPost = (HttpEntityEnclosingRequest) request;
             final HttpEntity entity = httpPost.getEntity();
-            try (InputStream content = entity.getContent(); InputStreamReader reader = new InputStreamReader(content, charset)) {
-                body = DfResourceUtil.readText(reader);
-            } catch (UnsupportedOperationException | IOException e) {
-                throw new IllegalStateException("Failed to read the text: request=" + request, e);
+            if (entity != null) {
+                try (InputStream content = entity.getContent(); InputStreamReader reader = new InputStreamReader(content, charset)) {
+                    body = DfResourceUtil.readText(reader);
+                } catch (UnsupportedOperationException | IOException e) {
+                    throw new IllegalStateException("Failed to read the text: request=" + request, e);
+                }
+            } else { // e.g. POST but noRequestBody()
+                body = null;
             }
-        } else {
+        } else { // e.g. GET
             body = null;
         }
         return body;

@@ -22,6 +22,7 @@ import java.util.stream.Collectors;
 
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.dbflute.optional.OptionalThing;
+import org.dbflute.remoteapi.FlutyRemoteApi.EmptyRequestBody;
 import org.dbflute.remoteapi.mock.MockHttpClient;
 import org.dbflute.util.DfCollectionUtil;
 
@@ -38,7 +39,7 @@ public abstract class FlutyRemoteBehavior {
     //                                                                          Definition
     //                                                                          ==========
     protected static final Object[] EMPTY_OBJECTS = new Object[] {};
-    protected static final Object EMPTY_REQUEST_BODY_OBJ = new Object();
+    protected static final EmptyRequestBody EMPTY_REQUEST_BODY = new EmptyRequestBody();
 
     // ===================================================================================
     //                                                                           Attribute
@@ -439,8 +440,8 @@ public abstract class FlutyRemoteBehavior {
      * </pre>
      * @return The object as empty. (NotNull)
      */
-    protected Object noRequestBody() {
-        return EMPTY_REQUEST_BODY_OBJ;
+    protected EmptyRequestBody noRequestBody() {
+        return EMPTY_REQUEST_BODY;
     }
 
     // ===================================================================================
