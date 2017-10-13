@@ -55,12 +55,10 @@ public class FlQuerySender implements QueryParameterSender {
     //                                                                             =======
     @Override
     public String toQueryString(Object param, Charset charset, FlutyRemoteApiRule rule) {
-        final String queryString = buildQueryString(param, charset);
-        readySendReceiveLogIfNeeds(rule, param, queryString);
-        return queryString;
+        return buildQueryString(param, charset, rule);
     }
 
-    protected String buildQueryString(Object form, Charset charset) {
+    protected String buildQueryString(Object form, Charset charset, FlutyRemoteApiRule rule) {
         final StringBuilder sb = new StringBuilder();
         final String charsetName = charset.name();
         final DfBeanDesc beanDesc = DfBeanDescFactory.getBeanDesc(form.getClass());
@@ -69,30 +67,29 @@ public class FlQuerySender implements QueryParameterSender {
             final DfPropertyDesc propertyDesc = beanDesc.getPropertyDesc(propertyName);
             final Object plainValue = propertyDesc.getValue(form);
             if (plainValue != null) {
+                final String parameterName = asSerializedParameterName(propertyDesc);
                 if (Iterable.class.isAssignableFrom(plainValue.getClass())) {
-                    Iterable<?> plainValueIterable = (Iterable<?>) plainValue;
-                    plainValueIterable.forEach(value -> {
-                        sb.append(paramIndex.getValue() == 0 ? "?" : "&");
-                        sb.append(asSerializedParameterName(propertyDesc)).append("=");
-                        try {
-                            sb.append(URLEncoder.encode(asSerializedParameterValue(value), charsetName));
-                        } catch (UnsupportedEncodingException e) {
-                            throw new IllegalStateException("Unknown encoding: " + charsetName, e);
-                        }
+                    ((Iterable<?>) plainValue).forEach(elementValue -> {
+                        final String parameterValue = asSerializedParameterValue(elementValue);
+                        buildParameterElement(sb, paramIndex, parameterName, parameterValue, charsetName);
+                        readySendReceiveLogIfNeeds(rule, parameterName, parameterValue);
                     });
                 } else {
-                    sb.append(paramIndex.getValue() == 0 ? "?" : "&");
-                    sb.append(asSerializedParameterName(propertyDesc)).append("=");
-                    try {
-                        sb.append(URLEncoder.encode(asSerializedParameterValue(plainValue), charsetName));
-                    } catch (UnsupportedEncodingException e) {
-                        throw new IllegalStateException("Unknown encoding: " + charsetName, e);
-                    }
+                    final String parameterValue = asSerializedParameterValue(plainValue);
+                    buildParameterElement(sb, paramIndex, parameterName, parameterValue, charsetName);
+                    readySendReceiveLogIfNeeds(rule, parameterName, parameterValue);
                 }
                 paramIndex.setValue(paramIndex.getValue() + 1);
             }
         }
         return sb.toString();
+    }
+
+    protected void buildParameterElement(StringBuilder sb, MyValueHolder<Integer> paramIndex, String parameterName, String parameterValue,
+            String charsetName) {
+        sb.append(paramIndex.getValue() == 0 ? "?" : "&");
+        sb.append(parameterName).append("=");
+        sb.append(encode(parameterValue, charsetName));
     }
 
     protected String asSerializedParameterName(DfPropertyDesc propertyDesc) {
@@ -103,20 +100,28 @@ public class FlQuerySender implements QueryParameterSender {
         return parameterSerializer.asSerializedParameterValue(value, mappingPolicy);
     }
 
+    protected String encode(String parameterValue, String charsetName) {
+        try {
+            return URLEncoder.encode(parameterValue, charsetName);
+        } catch (UnsupportedEncodingException e) {
+            throw new IllegalStateException("Unknown encoding: " + charsetName, e);
+        }
+    }
+
     // -----------------------------------------------------
     //                                  Send/Receive Logging
     //                                  --------------------
-    protected void readySendReceiveLogIfNeeds(FlutyRemoteApiRule rule, Object param, String queryString) {
+    protected void readySendReceiveLogIfNeeds(FlutyRemoteApiRule rule, String parameterName, String parameterValue) {
         final SendReceiveLogOption option = rule.getSendReceiveLogOption();
         if (option.isEnabled()) {
-            option.keeper().keepQueryParameter(queryString);
+            option.keeper().keepQueryParameter(parameterName, parameterValue);
         }
     }
 
     // ===================================================================================
     //                                                                        Small Helper
     //                                                                        ============
-    protected static class MyValueHolder<T> { // copied from Lasta Di
+    protected static class MyValueHolder<T> { // copied from Lasta Di, for use in lambda
 
         protected T value;
 

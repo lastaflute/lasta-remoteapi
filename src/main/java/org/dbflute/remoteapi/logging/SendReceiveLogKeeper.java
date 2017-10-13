@@ -16,8 +16,10 @@
 package org.dbflute.remoteapi.logging;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 
 import org.dbflute.optional.OptionalThing;
@@ -32,8 +34,8 @@ public class SendReceiveLogKeeper {
     //                                                                           Attribute
     //                                                                           =========
     protected LocalDateTime beginDateTime; // null allowed until beginning
-    protected String queryParameter; // null allowed if e.g. no parameter
-    protected Map<String, Object> formParameterMap; // null allowed if e.g. no parameter
+    protected Map<String, Object> queryParameterMap; // null allowed if e.g. no query parameter
+    protected Map<String, Object> formParameterMap; // null allowed if e.g. no form parameter
     protected String requestBodyContent; // null allowed if e.g. no body
     protected String requestBodyType; // format e.g. json, xml, null allowed if e.g. no body, body
     protected String responseBodyContent; // null allowed if e.g. no body
@@ -54,9 +56,26 @@ public class SendReceiveLogKeeper {
     // -----------------------------------------------------
     //                                          Query String
     //                                          ------------
-    public void keepQueryParameter(String queryParameter) {
-        assertArgumentNotNull("queryParameter", queryParameter);
-        this.queryParameter = queryParameter;
+    public void keepQueryParameter(String parameterName, String parameterValue) { // value may be null!? accept it just in case
+        assertArgumentNotNull("parameterName", parameterName);
+        if (queryParameterMap == null) {
+            queryParameterMap = new LinkedHashMap<String, Object>();
+        }
+        final Object existing = queryParameterMap.get(parameterName);
+        if (existing != null) {
+            if (existing instanceof List<?>) {
+                @SuppressWarnings("unchecked")
+                final List<String> valueList = (List<String>) existing;
+                valueList.add(parameterValue);
+            } else {
+                final List<String> valueList = new ArrayList<String>();
+                valueList.add(existing.toString()); // must be String, just in case
+                valueList.add(parameterValue);
+                queryParameterMap.put(parameterName, valueList); // override as list
+            }
+        } else {
+            queryParameterMap.put(parameterName, parameterValue);
+        }
     }
 
     // -----------------------------------------------------
@@ -122,10 +141,8 @@ public class SendReceiveLogKeeper {
         });
     }
 
-    public OptionalThing<String> getQueryParameter() {
-        return OptionalThing.ofNullable(queryParameter, () -> {
-            throw new IllegalStateException("Not found the query parameter.");
-        });
+    public Map<String, Object> getQueryParameterMap() {
+        return queryParameterMap != null ? Collections.unmodifiableMap(queryParameterMap) : Collections.emptyMap();
     }
 
     public Map<String, Object> getFormParameterMap() { // not null
