@@ -45,14 +45,14 @@ public class SendReceiveLogKeeper {
     protected Map<String, Object> requestHeaderMap; // null allowed if e.g. no request header
     protected Map<String, Object> queryParameterMap; // null allowed if e.g. no query parameter
     protected Map<String, Object> formParameterMap; // null allowed if e.g. no form parameter
-    protected String requestBodyContent; // null allowed if e.g. no body
-    protected String requestBodyType; // format e.g. json, xml, null allowed if e.g. no body, body
+    protected String requestBodyContent; // null allowed if e.g. no body or null body
+    protected String requestBodyType; // body format e.g. json, xml, null allowed if e.g. no body or null body
 
     // -----------------------------------------------------
     //                                              Response
     //                                              --------
     protected Map<String, Object> responseHeaderMap; // null allowed until response
-    protected String responseBodyContent; // null allowed until response or if e.g. no body
+    protected String responseBodyContent; // null allowed until response or if e.g. no body or null body
     protected String responseBodyType; // body format e.g. json, xml, null allowed until response or if e.g. no body
     protected Integer httpStatus; // null allowed
 

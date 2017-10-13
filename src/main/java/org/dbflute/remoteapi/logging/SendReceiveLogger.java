@@ -155,22 +155,22 @@ public class SendReceiveLogger {
     protected void setupBegin(StringBuilder sb, SendReceiveLogKeeper keeper) {
         final String beginExp = keeper.getBeginDateTime().map(time -> {
             return dateTimeFormatter.format(time);
-        }).orElse("no begin"); // basically no way, just in case
+        }).orElse("no begun"); // basically no way, just in case
         sb.append(" (").append(beginExp).append(")");
     }
 
     protected void setupPerformance(StringBuilder sb, SendReceiveLogKeeper keeper) {
         final OptionalThing<LocalDateTime> optBegin = keeper.getBeginDateTime();
         final OptionalThing<LocalDateTime> optEnd = keeper.getEndDateTime();
-        sb.append(" [");
+        final String performanceCost;
         if (optBegin.isPresent() && optEnd.isPresent()) {
             final long before = DfTypeUtil.toDate(optBegin.get()).getTime();
             final long after = DfTypeUtil.toDate(optEnd.get()).getTime();
-            sb.append(DfTraceViewUtil.convertToPerformanceView(after - before));
+            performanceCost = DfTraceViewUtil.convertToPerformanceView(after - before);
         } else {
-            sb.append("no end");
+            performanceCost = "no ended";
         }
-        sb.append("]");
+        sb.append(" [").append(performanceCost).append("]");
     }
 
     protected void setupCaller(StringBuilder sb, SendReceiveLogOption option) {

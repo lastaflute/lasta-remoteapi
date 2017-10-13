@@ -663,7 +663,7 @@ public class FlutyRemoteApi {
     protected void keepBeginDateTimeIfNeeds(FlutyRemoteApiRule rule) {
         final SendReceiveLogOption option = rule.getSendReceiveLogOption();
         if (option.isEnabled()) {
-            option.keeper().keepBeginDateTime(flashLocalDateTime());
+            option.keeper().keepBeginDateTime(flashDateTime());
         }
     }
 
@@ -716,14 +716,14 @@ public class FlutyRemoteApi {
     protected void keepEndDateTimeIfNeeds(FlutyRemoteApiRule rule) {
         final SendReceiveLogOption option = rule.getSendReceiveLogOption();
         if (option.isEnabled()) {
-            option.keeper().keepEndDateTime(flashLocalDateTime());
+            option.keeper().keepEndDateTime(flashDateTime());
         }
     }
 
     // -----------------------------------------------------
     //                                            Flash Date
     //                                            ----------
-    protected LocalDateTime flashLocalDateTime() { // may be overriden
+    protected LocalDateTime flashDateTime() { // may be overriden
         return DBFluteSystem.currentLocalDateTime();
     }
 

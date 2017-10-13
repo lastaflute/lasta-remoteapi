@@ -184,7 +184,7 @@ public class LastaRemoteApi extends FlutyRemoteApi {
     //                                                                          Basic Keep
     //                                                                          ==========
     @Override
-    protected LocalDateTime flashLocalDateTime() {
+    protected LocalDateTime flashDateTime() {
         final TimeManager timeManager = requestManager.getTimeManager();
         final Date flashDate = timeManager.flashDate(); // not depends on transaction so use flash date
         return DfTypeUtil.toLocalDateTime(flashDate, timeManager.getBusinessTimeZone());
@@ -208,11 +208,17 @@ public class LastaRemoteApi extends FlutyRemoteApi {
         protected String buildLastaFluteExp() {
             final String requestPath = ThreadCacheContext.findRequestPath(); // may contain query
             if (requestPath == null) { // no way, just in case
-                return null;
+                return null; // no caller info
             }
-            // e.g.
+            // _/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/
+            // e.g. web
             //  /sea/land/1/2/ (2017-10-14 00:31:54.773) #f7ese3f
+            //    => caller:{/sea/land/1/2/ (2017-10-14 00:31:54.773) #f7ese3f}
+            //
+            // e.g. job
             //  SeaLandJob (2017-10-14 00:31:54.773) #hm9fk12
+            //    => caller:{SeaLandJob (2017-10-14 00:31:54.773) #hm9fk12}
+            // _/_/_/_/_/_/_/_/_/_/
             final StringBuilder sb = new StringBuilder();
             buildCallerRequestPath(sb, requestPath);
             buildCallerBeginTime(sb);
@@ -230,7 +236,7 @@ public class LastaRemoteApi extends FlutyRemoteApi {
         }
 
         protected void buildCallerBeginTime(StringBuilder sb) {
-            final Object beginTime = ThreadCacheContext.getObject("fw:beginTime"); // expects LastaFlute-1.0.1
+            final Object beginTime = findCallerBeginTime();
             if (beginTime != null) {
                 sb.append(" (");
                 final String beginExp;
@@ -244,11 +250,19 @@ public class LastaRemoteApi extends FlutyRemoteApi {
             }
         }
 
+        protected Object findCallerBeginTime() {
+            return ThreadCacheContext.getObject("fw:beginTime"); // expects LastaFlute-1.0.1, LastaJob-0.5.2
+        }
+
         protected void buildCallerProcessHash(StringBuilder sb) {
-            final Object processHash = ThreadCacheContext.getObject("fw:processHash"); // expects LastaFlute-1.0.1
+            final Object processHash = findCallerProcessHash();
             if (processHash != null) {
                 sb.append(" #").append(processHash);
             }
+        }
+
+        protected Object findCallerProcessHash() {
+            return ThreadCacheContext.getObject("fw:processHash"); // expects LastaFlute-1.0.1, LastaJob-0.5.2
         }
     }
 
