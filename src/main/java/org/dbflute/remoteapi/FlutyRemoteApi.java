@@ -42,7 +42,6 @@ import org.apache.http.client.methods.HttpPut;
 import org.apache.http.client.methods.HttpUriRequest;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.util.EntityUtils;
-import org.dbflute.helper.function.IndependentProcessor;
 import org.dbflute.helper.message.ExceptionMessageBuilder;
 import org.dbflute.jdbc.Classification;
 import org.dbflute.optional.OptionalThing;
@@ -664,8 +663,8 @@ public class FlutyRemoteApi {
         return new SendReceiveLogger();
     }
 
-    protected Consumer<IndependentProcessor> prepareSendReceiveLogAsync() { // may be overridden
-        return processor -> processor.process(); // non-async as default
+    protected Consumer<Runnable> prepareSendReceiveLogAsync() { // may be overridden
+        return runner -> runner.run(); // non-async as default
     }
 
     // ===================================================================================

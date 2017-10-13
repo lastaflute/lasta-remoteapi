@@ -43,7 +43,7 @@ import org.dbflute.remoteapi.logging.SendReceiveLogOption;
 import org.dbflute.remoteapi.receiver.ResponseBodyReceiver;
 import org.dbflute.remoteapi.sender.body.RequestBodySender;
 import org.dbflute.remoteapi.sender.query.QueryParameterSender;
-import org.dbflute.remoteapi.validation.RemoteValidatorOption;
+import org.dbflute.remoteapi.validation.SendReceiveValidatorOption;
 import org.dbflute.util.DfCollectionUtil;
 
 /**
@@ -80,7 +80,7 @@ public class FlutyRemoteApiRule {
     protected Type failureResponseType; // null allowed, not required
     protected ClientErrorTranslator clientErrorTranslator; // null allowed, not required
     protected ClientErrorRetryDeterminer clientErrorRetryDeterminer; // null allowed, not required
-    protected RemoteValidatorOption validatorOption = newValidatorOption(); // not null, as default, light instance
+    protected SendReceiveValidatorOption validatorOption = newValidatorOption(); // not null, as default, light instance
     protected SendReceiveLogOption sendReceiveLogOption = newSendReceiveLogOption(); // not null, as default, light instance
 
     // #hope jflute can accept response header, interface? mapping? (2017/09/13)
@@ -297,20 +297,20 @@ public class FlutyRemoteApiRule {
      * Validate param and return object as your option.
      * @param opLambda The callback for setting of validator option. (NotNull)
      */
-    public void validateAs(Consumer<RemoteValidatorOption> opLambda) {
+    public void validateAs(Consumer<SendReceiveValidatorOption> opLambda) {
         assertArgumentNotNull("opLambda", opLambda);
-        final RemoteValidatorOption option = createValidatorOption(opLambda);
+        final SendReceiveValidatorOption option = createValidatorOption(opLambda);
         this.validatorOption = option;
     }
 
-    protected RemoteValidatorOption createValidatorOption(Consumer<RemoteValidatorOption> opLambda) {
-        final RemoteValidatorOption option = newValidatorOption();
+    protected SendReceiveValidatorOption createValidatorOption(Consumer<SendReceiveValidatorOption> opLambda) {
+        final SendReceiveValidatorOption option = newValidatorOption();
         opLambda.accept(option);
         return option;
     }
 
-    protected RemoteValidatorOption newValidatorOption() {
-        return new RemoteValidatorOption();
+    protected SendReceiveValidatorOption newValidatorOption() {
+        return new SendReceiveValidatorOption();
     }
 
     // -----------------------------------------------------
@@ -464,7 +464,7 @@ public class FlutyRemoteApiRule {
     /**
      * @return The option of validator. (NotNull)
      */
-    public RemoteValidatorOption getValidatorOption() {
+    public SendReceiveValidatorOption getValidatorOption() {
         return validatorOption;
     }
 

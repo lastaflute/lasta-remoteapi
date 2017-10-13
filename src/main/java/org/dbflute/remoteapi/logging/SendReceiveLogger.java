@@ -19,7 +19,6 @@ import java.time.format.DateTimeFormatter;
 import java.util.Map;
 import java.util.function.Consumer;
 
-import org.dbflute.helper.function.IndependentProcessor;
 import org.dbflute.remoteapi.http.SupportedHttpMethod;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -51,7 +50,7 @@ public class SendReceiveLogger {
     // ===================================================================================
     //                                                                               Show
     //                                                                              ======
-    public void show(SupportedHttpMethod httpMethod, String url, SendReceiveLogOption option, Consumer<IndependentProcessor> async) {
+    public void show(SupportedHttpMethod httpMethod, String url, SendReceiveLogOption option, Consumer<Runnable> async) {
         final Logger logger = deriveLogger(option);
         if (!isLoggerEnabled(logger)) { // e.g. option is true but no logger settings
             return;
@@ -67,7 +66,7 @@ public class SendReceiveLogger {
         return option.getCategoryName().map(name -> LoggerFactory.getLogger(LOGGER_NAME + "." + name)).orElse(baseLogger);
     }
 
-    protected void doShow(SupportedHttpMethod httpMethod, String url, SendReceiveLogOption option, Consumer<IndependentProcessor> async,
+    protected void doShow(SupportedHttpMethod httpMethod, String url, SendReceiveLogOption option, Consumer<Runnable> async,
             Logger logger) {
         async.accept(() -> {
             final String whole = buildWhole(httpMethod, url, option);

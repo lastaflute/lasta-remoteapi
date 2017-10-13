@@ -23,7 +23,6 @@ import java.util.function.Consumer;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import org.dbflute.helper.function.IndependentProcessor;
 import org.dbflute.helper.message.ExceptionMessageBuilder;
 import org.dbflute.optional.OptionalThing;
 import org.dbflute.remoteapi.FlutyRemoteApi;
@@ -191,9 +190,9 @@ public class LastaRemoteApi extends FlutyRemoteApi {
     //                                                                Send/Receive Logging
     //                                                                ====================
     @Override
-    protected Consumer<IndependentProcessor> prepareSendReceiveLogAsync() {
+    protected Consumer<Runnable> prepareSendReceiveLogAsync() {
         final AsyncManager asyncManager = requestManager.getAsyncManager();
-        return processor -> {
+        return runner -> {
             asyncManager.async(new ConcurrentAsyncCall() {
 
                 @Override
@@ -203,7 +202,7 @@ public class LastaRemoteApi extends FlutyRemoteApi {
 
                 @Override
                 public void callback() {
-                    processor.process();
+                    runner.run();
                 }
             });
         };
