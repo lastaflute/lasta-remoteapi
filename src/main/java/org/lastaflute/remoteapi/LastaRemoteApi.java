@@ -29,7 +29,11 @@ import org.dbflute.remoteapi.FlutyRemoteApi;
 import org.dbflute.remoteapi.FlutyRemoteApiRule;
 import org.dbflute.remoteapi.exception.RemoteApiRequestValidationErrorException;
 import org.dbflute.remoteapi.exception.RemoteApiResponseValidationErrorException;
+import org.dbflute.remoteapi.logging.SendReceiveLogOption;
+import org.dbflute.remoteapi.logging.SendReceiveLogger;
 import org.dbflute.util.DfTypeUtil;
+import org.dbflute.util.Srl;
+import org.lastaflute.core.magic.ThreadCacheContext;
 import org.lastaflute.core.magic.async.AsyncManager;
 import org.lastaflute.core.magic.async.ConcurrentAsyncCall;
 import org.lastaflute.core.message.UserMessages;
@@ -189,6 +193,62 @@ public class LastaRemoteApi extends FlutyRemoteApi {
     // ===================================================================================
     //                                                                Send/Receive Logging
     //                                                                ====================
+    @Override
+    protected SendReceiveLogger createSendReceiveLogger() {
+        return new LastaSendReceiveLogger();
+    }
+
+    public static class LastaSendReceiveLogger extends SendReceiveLogger {
+
+        @Override
+        protected String findFromExp(SendReceiveLogOption option) {
+            return buildLastaFluteExp();
+        }
+
+        protected String buildLastaFluteExp() {
+            final String requestPath = ThreadCacheContext.findRequestPath(); // may contain query
+            if (requestPath == null) { // no way, just in case
+                return null;
+            }
+            // e.g. /wx/rmharbor/products/?productName=S (2017-10-14 00:31:54.773) #f7ese3f
+            final StringBuilder sb = new StringBuilder();
+            setupFromRequestPath(sb, requestPath);
+            setupFromBeginDateTime(sb);
+            setupFromProcessHash(sb);
+            return sb.toString();
+        }
+
+        protected void setupFromRequestPath(StringBuilder sb, String requestPath) {
+            sb.append(buildFromPureRequestPath(requestPath));
+        }
+
+        protected String buildFromPureRequestPath(String requestPath) {
+            return Srl.substringFirstFront(requestPath, "?"); // see query at in-out logging instead
+        }
+
+        protected void setupFromBeginDateTime(StringBuilder sb) {
+            final Object beginTime = ThreadCacheContext.getObject("fw:beginTime"); // expects LastaFlute-1.0.1
+            if (beginTime != null) {
+                sb.append(" (");
+                final String beginExp;
+                if (beginTime instanceof LocalDateTime) { // basically here
+                    beginExp = dateTimeFormatter.format((LocalDateTime) beginTime);
+                } else { // no way, just in case
+                    beginExp = beginTime.toString();
+                }
+                sb.append(beginExp);
+                sb.append(")");
+            }
+        }
+
+        protected void setupFromProcessHash(StringBuilder sb) {
+            final Object processHash = ThreadCacheContext.getObject("fw:processHash"); // expects LastaFlute-1.0.1
+            if (processHash != null) {
+                sb.append(" #").append(processHash);
+            }
+        }
+    }
+
     @Override
     protected Consumer<Runnable> prepareSendReceiveLogAsync() {
         final AsyncManager asyncManager = requestManager.getAsyncManager();
