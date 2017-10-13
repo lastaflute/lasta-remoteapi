@@ -19,6 +19,7 @@ import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.lang.reflect.Type;
 import java.net.URLEncoder;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -41,6 +42,7 @@ import org.apache.http.client.methods.HttpPut;
 import org.apache.http.client.methods.HttpUriRequest;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.util.EntityUtils;
+import org.dbflute.helper.function.IndependentProcessor;
 import org.dbflute.helper.message.ExceptionMessageBuilder;
 import org.dbflute.jdbc.Classification;
 import org.dbflute.optional.OptionalThing;
@@ -62,9 +64,12 @@ import org.dbflute.remoteapi.exception.retry.ClientErrorRetryDeterminer;
 import org.dbflute.remoteapi.exception.retry.ClientErrorRetryResource;
 import org.dbflute.remoteapi.exception.translation.ClientErrorTranslatingResource;
 import org.dbflute.remoteapi.http.SupportedHttpMethod;
+import org.dbflute.remoteapi.logging.SendReceiveLogOption;
+import org.dbflute.remoteapi.logging.SendReceiveLogger;
 import org.dbflute.remoteapi.receiver.ResponseBodyReceiver;
 import org.dbflute.remoteapi.sender.body.RequestBodySender;
 import org.dbflute.remoteapi.sender.query.QueryParameterSender;
+import org.dbflute.system.DBFluteSystem;
 import org.dbflute.util.Srl;
 import org.lastaflute.core.magic.ThreadCacheContext;
 import org.lastaflute.core.util.Lato;
@@ -194,6 +199,7 @@ public class FlutyRemoteApi {
         assertArgumentNotNull("httpMethod", httpMethod);
         assertArgumentNotNull("emptyBodyFactory", emptyBodyFactory);
         final FlutyRemoteApiRule rule = createRemoteApiRule(ruleLambda);
+        keepBeginDateTimeIfNeeds(rule);
         return retryableRequest(returnType, urlBase, actionPath, pathVariables, optParam, rule, () -> {
             return actuallyRequestEmptyBody(returnType, urlBase, actionPath, pathVariables, optParam, rule, httpMethod, emptyBodyFactory);
         }, clientError -> {
@@ -210,7 +216,15 @@ public class FlutyRemoteApi {
             final Map<String, List<String>> headerMap = rule.getHeaders().orElseGet(() -> Collections.emptyMap());
             logger.debug("#flow #remote ...Sending request as {} to Remote API:\n{}\n with headers: {}", httpMethod, url, headerMap);
         }
-        return executeEmptyBody(returnType, url, rule, httpMethod, emptyBodyFactory);
+        try {
+            return executeEmptyBody(returnType, url, rule, httpMethod, emptyBodyFactory);
+        } catch (RuntimeException e) {
+            keepCauseIfNeeds(rule, e);
+            throw e;
+        } finally {
+            showSendReceiveLogIfNeeds(httpMethod, url, rule);
+        }
+
     }
 
     protected <RETURN> RETURN executeEmptyBody(Type returnType, String url, FlutyRemoteApiRule rule, SupportedHttpMethod httpMethod,
@@ -248,6 +262,7 @@ public class FlutyRemoteApi {
         assertArgumentNotNull("httpMethod", httpMethod);
         assertArgumentNotNull("enclosingFactory", enclosingFactory);
         final FlutyRemoteApiRule rule = createRemoteApiRule(ruleLambda);
+        keepBeginDateTimeIfNeeds(rule);
         return retryableRequest(returnType, urlBase, actionPath, pathVariables, param, rule, () -> {
             return actuallyRequestEnclosing(returnType, urlBase, actionPath, pathVariables, param, rule, httpMethod, enclosingFactory);
         }, clientError -> {
@@ -267,7 +282,14 @@ public class FlutyRemoteApi {
             logger.debug("#flow #remote ...Sending request as {} to Remote API:\n{}\n with param: {}\n with headers: {}", httpMethod, url,
                     paramDisp, headerMap);
         }
-        return executeEnclosing(returnType, url, param, rule, httpMethod, enclosingFactory);
+        try {
+            return executeEnclosing(returnType, url, param, rule, httpMethod, enclosingFactory);
+        } catch (RuntimeException e) {
+            keepCauseIfNeeds(rule, e);
+            throw e;
+        } finally {
+            showSendReceiveLogIfNeeds(httpMethod, url, rule);
+        }
     }
 
     protected <RETURN> RETURN executeEnclosing(Type returnType, String url, Object param, FlutyRemoteApiRule rule,
@@ -285,24 +307,24 @@ public class FlutyRemoteApi {
 
     protected HttpEntityEnclosingRequestBase prepareHttpEnclosing(Type returnType, String url, Object param, FlutyRemoteApiRule rule,
             SupportedHttpMethod httpMethod, Function<String, HttpEntityEnclosingRequestBase> enclosingFactory) {
-        final HttpEntityEnclosingRequestBase httpPut = enclosingFactory.apply(url);
-        setupHeader(httpPut, rule);
+        final HttpEntityEnclosingRequestBase enclosingRequest = enclosingFactory.apply(url);
+        setupHeader(enclosingRequest, rule);
         if (param instanceof EmptyRequestBody) { // e.g. POST but noRequestBody()
-            return httpPut;
+            return enclosingRequest;
         }
         final RequestBodySender converter = rule.getRequestBodySender().orElseThrow(() -> {
             return createRemoteApiSenderOfRequestBodyNotFoundException(returnType, url, param, rule, httpMethod);
         });
-        converter.prepareBodyRequest(httpPut, param, rule);
-        return httpPut;
+        converter.prepareEnclosingRequest(enclosingRequest, param, rule);
+        return enclosingRequest;
     }
 
-    public static class EmptyRequestBody {
+    public static class EmptyRequestBody { // special type to control noRequestBody()
     }
 
     // ===================================================================================
-    //                                                                           Retryable
-    //                                                                           =========
+    //                                                                   Retryable Request
+    //                                                                   =================
     protected <RETURN> RETURN retryableRequest(Type returnType, String urlBase, String actionPath, Object[] pathVariables,
             Object optOrParam, FlutyRemoteApiRule rule, Supplier<RETURN> actuallyRequester,
             Function<RemoteApiHttpClientErrorException, ClientErrorRetryResource> retryResourceProvider) {
@@ -489,7 +511,8 @@ public class FlutyRemoteApi {
         final QueryParameterSender sender = rule.getQueryParameterSender().orElseThrow(() -> {
             return createRemoteApiSenderOfQueryParameterNotFoundException(sb, returnType, form, rule);
         });
-        sb.append(sender.toQueryString(form, rule.getQueryParameterCharset()));
+        final String queryString = sender.toQueryString(form, rule.getQueryParameterCharset(), rule);
+        sb.append(queryString);
     }
 
     // ===================================================================================
@@ -594,7 +617,7 @@ public class FlutyRemoteApi {
             return createRemoteApiReceiverOfResponseBodyNotFoundException(returnType, url, form, httpStatus, body, rule);
         });
         try {
-            return receiver.toResponseReturn(body, returnType);
+            return receiver.toResponseReturn(body, returnType, rule);
         } catch (RuntimeException e) {
             throwRemoteApiResponseParseFailureException(returnType, url, form, httpStatus, body, receiver, e);
             return null; // unreachable
@@ -603,6 +626,46 @@ public class FlutyRemoteApi {
 
     protected boolean isVoid(Type returnType) {
         return Void.class.equals(returnType) || void.class.equals(returnType);
+    }
+
+    // ===================================================================================
+    //                                                                          Basic Keep
+    //                                                                          ==========
+    protected void keepBeginDateTimeIfNeeds(FlutyRemoteApiRule rule) { // basically for send-receive logging
+        final SendReceiveLogOption option = rule.getSendReceiveLogOption();
+        if (option.isEnabled()) {
+            option.keeper().keepBeginDateTime(prepareBeginDateTime());
+        }
+    }
+
+    protected LocalDateTime prepareBeginDateTime() { // may be overriden
+        return DBFluteSystem.currentLocalDateTime();
+    }
+
+    protected void keepCauseIfNeeds(FlutyRemoteApiRule rule, RuntimeException cause) { // basically for send-receive logging
+        final SendReceiveLogOption option = rule.getSendReceiveLogOption();
+        if (option.isEnabled()) {
+            option.keeper().keepCause(cause);
+        }
+    }
+
+    // ===================================================================================
+    //                                                                Send/Receive Logging
+    //                                                                ====================
+    protected void showSendReceiveLogIfNeeds(SupportedHttpMethod httpMethod, String url, FlutyRemoteApiRule rule) {
+        final SendReceiveLogOption option = rule.getSendReceiveLogOption();
+        if (option.isEnabled()) {
+            final SendReceiveLogger sendReceiveLogger = createSendReceiveLogger();
+            sendReceiveLogger.show(httpMethod, url, option, prepareSendReceiveLogAsync());
+        }
+    }
+
+    protected SendReceiveLogger createSendReceiveLogger() {
+        return new SendReceiveLogger();
+    }
+
+    protected Consumer<IndependentProcessor> prepareSendReceiveLogAsync() { // may be overridden
+        return processor -> processor.process(); // non-async as default
     }
 
     // ===================================================================================

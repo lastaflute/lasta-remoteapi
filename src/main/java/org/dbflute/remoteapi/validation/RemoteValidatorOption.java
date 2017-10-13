@@ -19,7 +19,7 @@ package org.dbflute.remoteapi.validation;
  * @author jflute
  * @since 0.3.6 (2017/09/28 Thursday)
  */
-public class FlRemoteValidatorOption {
+public class RemoteValidatorOption {
 
     // ===================================================================================
     //                                                                           Attribute
@@ -32,22 +32,22 @@ public class FlRemoteValidatorOption {
     // ===================================================================================
     //                                                                              Option
     //                                                                              ======
-    public FlRemoteValidatorOption handleAsWarnParam() {
+    public RemoteValidatorOption handleAsWarnParam() {
         handleAsWarnParam = true;
         return this;
     }
 
-    public FlRemoteValidatorOption handleAsWarnReturn() {
+    public RemoteValidatorOption handleAsWarnReturn() {
         handleAsWarnReturn = true;
         return this;
     }
 
-    public FlRemoteValidatorOption suppressParam() {
+    public RemoteValidatorOption suppressParam() {
         suppressParam = true;
         return this;
     }
 
-    public FlRemoteValidatorOption suppressReturn() {
+    public RemoteValidatorOption suppressReturn() {
         suppressReturn = true;
         return this;
     }

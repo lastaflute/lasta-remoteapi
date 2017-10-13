@@ -30,5 +30,5 @@ public interface RequestBodySender {
      * @param param The parmeater object for body part. (NotNull)
      * @param rule The rule of remote API. (NotNull)
      */
-    void prepareBodyRequest(HttpEntityEnclosingRequest enclosingRequest, Object param, FlutyRemoteApiRule rule);
+    void prepareEnclosingRequest(HttpEntityEnclosingRequest enclosingRequest, Object param, FlutyRemoteApiRule rule);
 }

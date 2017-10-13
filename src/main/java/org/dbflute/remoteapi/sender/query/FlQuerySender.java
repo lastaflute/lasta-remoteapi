@@ -22,6 +22,8 @@ import java.nio.charset.Charset;
 import org.dbflute.helper.beans.DfBeanDesc;
 import org.dbflute.helper.beans.DfPropertyDesc;
 import org.dbflute.helper.beans.factory.DfBeanDescFactory;
+import org.dbflute.remoteapi.FlutyRemoteApiRule;
+import org.dbflute.remoteapi.logging.SendReceiveLogOption;
 import org.dbflute.remoteapi.mapping.FlParameterSerializer;
 import org.dbflute.remoteapi.mapping.FlRemoteMappingPolicy;
 
@@ -52,13 +54,15 @@ public class FlQuerySender implements QueryParameterSender {
     //                                                                             Convert
     //                                                                             =======
     @Override
-    public String toQueryString(Object form, Charset queryParameterCharset) {
-        return buildQueryParameter(form, queryParameterCharset);
+    public String toQueryString(Object param, Charset charset, FlutyRemoteApiRule rule) {
+        final String queryString = buildQueryString(param, charset);
+        readySendReceiveLogIfNeeds(rule, param, queryString);
+        return queryString;
     }
 
-    protected String buildQueryParameter(Object form, Charset queryParameterCharset) {
+    protected String buildQueryString(Object form, Charset charset) {
         final StringBuilder sb = new StringBuilder();
-        final String encoding = queryParameterCharset.name();
+        final String charsetName = charset.name();
         final DfBeanDesc beanDesc = DfBeanDescFactory.getBeanDesc(form.getClass());
         final MyValueHolder<Integer> paramIndex = new MyValueHolder<>(0);
         for (String propertyName : beanDesc.getProppertyNameList()) {
@@ -71,18 +75,18 @@ public class FlQuerySender implements QueryParameterSender {
                         sb.append(paramIndex.getValue() == 0 ? "?" : "&");
                         sb.append(asSerializedParameterName(propertyDesc)).append("=");
                         try {
-                            sb.append(URLEncoder.encode(asSerializedParameterValue(value), encoding));
+                            sb.append(URLEncoder.encode(asSerializedParameterValue(value), charsetName));
                         } catch (UnsupportedEncodingException e) {
-                            throw new IllegalStateException("Unknown encoding: " + encoding, e);
+                            throw new IllegalStateException("Unknown encoding: " + charsetName, e);
                         }
                     });
                 } else {
                     sb.append(paramIndex.getValue() == 0 ? "?" : "&");
                     sb.append(asSerializedParameterName(propertyDesc)).append("=");
                     try {
-                        sb.append(URLEncoder.encode(asSerializedParameterValue(plainValue), encoding));
+                        sb.append(URLEncoder.encode(asSerializedParameterValue(plainValue), charsetName));
                     } catch (UnsupportedEncodingException e) {
-                        throw new IllegalStateException("Unknown encoding: " + encoding, e);
+                        throw new IllegalStateException("Unknown encoding: " + charsetName, e);
                     }
                 }
                 paramIndex.setValue(paramIndex.getValue() + 1);
@@ -91,15 +95,22 @@ public class FlQuerySender implements QueryParameterSender {
         return sb.toString();
     }
 
-    // ===================================================================================
-    //                                                                  Parameter Handling
-    //                                                                  ==================
-    protected String asSerializedParameterName(DfPropertyDesc propertyDesc) { // may be overridden
+    protected String asSerializedParameterName(DfPropertyDesc propertyDesc) {
         return parameterSerializer.asSerializedParameterName(propertyDesc, mappingPolicy);
     }
 
     protected String asSerializedParameterValue(Object value) {
         return parameterSerializer.asSerializedParameterValue(value, mappingPolicy);
+    }
+
+    // -----------------------------------------------------
+    //                                  Send/Receive Logging
+    //                                  --------------------
+    protected void readySendReceiveLogIfNeeds(FlutyRemoteApiRule rule, Object param, String queryString) {
+        final SendReceiveLogOption option = rule.getSendReceiveLogOption();
+        if (option.isEnabled()) {
+            option.keeper().keepQueryParameter(queryString);
+        }
     }
 
     // ===================================================================================

@@ -39,14 +39,16 @@ import org.apache.http.ssl.TrustStrategy;
 import org.dbflute.optional.OptionalThing;
 import org.dbflute.remoteapi.exception.retry.ClientErrorRetryDeterminer;
 import org.dbflute.remoteapi.exception.translation.ClientErrorTranslator;
+import org.dbflute.remoteapi.logging.SendReceiveLogOption;
 import org.dbflute.remoteapi.receiver.ResponseBodyReceiver;
 import org.dbflute.remoteapi.sender.body.RequestBodySender;
 import org.dbflute.remoteapi.sender.query.QueryParameterSender;
-import org.dbflute.remoteapi.validation.FlRemoteValidatorOption;
+import org.dbflute.remoteapi.validation.RemoteValidatorOption;
 import org.dbflute.util.DfCollectionUtil;
 
 /**
- * The rule of remote API.
+ * The rule of remote API. <br>
+ * Not thread safe, created per one request.
  * @author awane
  * @author jflute
  */
@@ -78,11 +80,13 @@ public class FlutyRemoteApiRule {
     protected Type failureResponseType; // null allowed, not required
     protected ClientErrorTranslator clientErrorTranslator; // null allowed, not required
     protected ClientErrorRetryDeterminer clientErrorRetryDeterminer; // null allowed, not required
-    protected FlRemoteValidatorOption validatorOption = newValidatorOption(); // not null, as default
+    protected RemoteValidatorOption validatorOption = newValidatorOption(); // not null, as default, light instance
+    protected SendReceiveLogOption sendReceiveLogOption = newSendReceiveLogOption(); // not null, as default, light instance
 
     // #hope jflute can accept response header, interface? mapping? (2017/09/13)
     // #hope jflute request trace ID option (2017/09/13)
     // #hope jflute improve tracebility like DBFlute (2017/09/13)
+    // #hope jflute remoteApi call count in request (2017/10/13)
 
     // ===================================================================================
     //                                                                         Http Client
@@ -119,8 +123,8 @@ public class FlutyRemoteApiRule {
     //                                                                      Setting Facade
     //                                                                      ==============
     // -----------------------------------------------------
-    //                                         Required Rule
-    //                                         -------------
+    //                                       Sender/Receiver
+    //                                       ---------------
     /**
      * @param queryParameterSender The sender of (request) query parameter. (NotNull)
      */
@@ -146,8 +150,8 @@ public class FlutyRemoteApiRule {
     }
 
     // -----------------------------------------------------
-    //                                         Optional Rule
-    //                                         -------------
+    //                                            Connection
+    //                                            ----------
     public void setSslUntrusted(boolean sslUntrusted) {
         this.sslUntrusted = sslUntrusted;
     }
@@ -164,6 +168,9 @@ public class FlutyRemoteApiRule {
         this.socketTimeout = socketTimeout;
     }
 
+    // -----------------------------------------------------
+    //                                              Encoding
+    //                                              --------
     /**
      * @param pathVariableCharset The charset of request path variable. (NotNull)
      */
@@ -196,6 +203,9 @@ public class FlutyRemoteApiRule {
         this.responseBodyCharset = responseBodyCharset;
     }
 
+    // -----------------------------------------------------
+    //                                           HTTP Header
+    //                                           -----------
     /**
      * Set header value by the name. <br>
      * It overwrites the same-name header if it already exists.
@@ -231,6 +241,9 @@ public class FlutyRemoteApiRule {
         valueList.add(value);
     }
 
+    // -----------------------------------------------------
+    //                                        Error Handling
+    //                                        --------------
     /**
      * Handle failure response as specified type. <br>
      * You can get the failure response from exception.
@@ -277,24 +290,47 @@ public class FlutyRemoteApiRule {
         this.clientErrorRetryDeterminer = resourceLambda;
     }
 
+    // -----------------------------------------------------
+    //                                            Validation
+    //                                            ----------
     /**
      * Validate param and return object as your option.
      * @param opLambda The callback for setting of validator option. (NotNull)
      */
-    public void validateAs(Consumer<FlRemoteValidatorOption> opLambda) {
+    public void validateAs(Consumer<RemoteValidatorOption> opLambda) {
         assertArgumentNotNull("opLambda", opLambda);
-        final FlRemoteValidatorOption option = createValidatorOption(opLambda);
+        final RemoteValidatorOption option = createValidatorOption(opLambda);
         this.validatorOption = option;
     }
 
-    protected FlRemoteValidatorOption createValidatorOption(Consumer<FlRemoteValidatorOption> opLambda) {
-        final FlRemoteValidatorOption option = newValidatorOption();
+    protected RemoteValidatorOption createValidatorOption(Consumer<RemoteValidatorOption> opLambda) {
+        final RemoteValidatorOption option = newValidatorOption();
         opLambda.accept(option);
         return option;
     }
 
-    protected FlRemoteValidatorOption newValidatorOption() {
-        return new FlRemoteValidatorOption();
+    protected RemoteValidatorOption newValidatorOption() {
+        return new RemoteValidatorOption();
+    }
+
+    // -----------------------------------------------------
+    //                                   SendReceive Logging
+    //                                   -------------------
+    public void showSendReceiveLog(Consumer<SendReceiveLogOption> opLambda) {
+        assertArgumentNotNull("opLambda", opLambda);
+        final SendReceiveLogOption option = createSendReceiveLogOption(opLambda);
+        option.enable(); // fixed if you call this
+        this.sendReceiveLogOption = option;
+    }
+
+    protected SendReceiveLogOption createSendReceiveLogOption(Consumer<SendReceiveLogOption> opLambda) {
+        final SendReceiveLogOption option = newSendReceiveLogOption();
+        opLambda.accept(option);
+        return option;
+    }
+
+    protected SendReceiveLogOption newSendReceiveLogOption() {
+        return new SendReceiveLogOption();
     }
 
     // ===================================================================================
@@ -331,6 +367,7 @@ public class FlutyRemoteApiRule {
         sb.append(", various:{").append(clientErrorTranslator);
         sb.append(", ").append(clientErrorRetryDeterminer);
         sb.append(", ").append(validatorOption);
+        sb.append(", ").append(sendReceiveLogOption);
         sb.append("}}");
         return sb.toString();
     }
@@ -338,9 +375,6 @@ public class FlutyRemoteApiRule {
     // ===================================================================================
     //                                                                            Accessor
     //                                                                            ========
-    // -----------------------------------------------------
-    //                                         Required Rule
-    //                                         -------------
     public OptionalThing<QueryParameterSender> getQueryParameterSender() {
         return OptionalThing.ofNullable(queryParameterSender, () -> {
             throw new IllegalStateException("Not found the queryParameterSender in the option: " + toString());
@@ -359,9 +393,6 @@ public class FlutyRemoteApiRule {
         });
     }
 
-    // -----------------------------------------------------
-    //                                         Optional Rule
-    //                                         -------------
     public boolean isSslUntrusted() {
         return sslUntrusted;
     }
@@ -433,8 +464,15 @@ public class FlutyRemoteApiRule {
     /**
      * @return The option of validator. (NotNull)
      */
-    public FlRemoteValidatorOption getValidatorOption() {
+    public RemoteValidatorOption getValidatorOption() {
         return validatorOption;
+    }
+
+    /**
+     * @return The option of send-receive logging. (NotNull)
+     */
+    public SendReceiveLogOption getSendReceiveLogOption() {
+        return sendReceiveLogOption;
     }
 
     // ===================================================================================

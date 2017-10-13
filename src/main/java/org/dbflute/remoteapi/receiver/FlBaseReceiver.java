@@ -15,25 +15,22 @@
  */
 package org.dbflute.remoteapi.receiver;
 
-import java.lang.reflect.Type;
-
 import org.dbflute.optional.OptionalThing;
 import org.dbflute.remoteapi.FlutyRemoteApiRule;
+import org.dbflute.remoteapi.logging.SendReceiveLogOption;
 
 /**
- * The receiver of response body.
- * @author inoue
  * @author jflute
+ * @since 0.3.7 (2017/10/13 Friday at deli)
  */
-public interface ResponseBodyReceiver {
+public abstract class FlBaseReceiver implements ResponseBodyReceiver {
 
-    /**
-     * Convert response body to return object.
-     * @param <RETURN> the type of response return.
-     * @param body The optional body string of response. (NotNull, EmptyAllowed: when no body)
-     * @param beanType The specified bean type as return object. (NotNull)
-     * @param rule The rule of remote API. (NotNull)
-     * @return The converted return object from the response body. (NotNull)
-     */
-    <RETURN> RETURN toResponseReturn(OptionalThing<String> body, Type beanType, FlutyRemoteApiRule rule);
+    protected void readySendReceiveLogIfNeeds(FlutyRemoteApiRule rule, OptionalThing<String> body, String content) {
+        final SendReceiveLogOption option = rule.getSendReceiveLogOption();
+        if (option.isEnabled()) {
+            option.keeper().keepResponseBody(content, getSendReceiveLogResponseBodyType());
+        }
+    }
+
+    protected abstract String getSendReceiveLogResponseBodyType();
 }

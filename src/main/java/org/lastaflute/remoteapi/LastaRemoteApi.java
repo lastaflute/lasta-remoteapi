@@ -16,19 +16,26 @@
 package org.lastaflute.remoteapi;
 
 import java.lang.reflect.Type;
+import java.time.LocalDateTime;
+import java.util.Date;
 import java.util.Locale;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import org.dbflute.helper.function.IndependentProcessor;
 import org.dbflute.helper.message.ExceptionMessageBuilder;
 import org.dbflute.optional.OptionalThing;
 import org.dbflute.remoteapi.FlutyRemoteApi;
 import org.dbflute.remoteapi.FlutyRemoteApiRule;
 import org.dbflute.remoteapi.exception.RemoteApiRequestValidationErrorException;
 import org.dbflute.remoteapi.exception.RemoteApiResponseValidationErrorException;
+import org.dbflute.util.DfTypeUtil;
+import org.lastaflute.core.magic.async.AsyncManager;
+import org.lastaflute.core.magic.async.ConcurrentAsyncCall;
 import org.lastaflute.core.message.UserMessages;
 import org.lastaflute.core.message.supplier.UserMessagesCreator;
+import org.lastaflute.core.time.TimeManager;
 import org.lastaflute.core.util.Lato;
 import org.lastaflute.web.response.ApiResponse;
 import org.lastaflute.web.response.JsonResponse;
@@ -168,6 +175,38 @@ public class LastaRemoteApi extends FlutyRemoteApi {
     @Override
     protected FlutyRemoteApiRule newRemoteApiRule() {
         return new LastaRemoteApiRule();
+    }
+
+    // ===================================================================================
+    //                                                                          Basic Keep
+    //                                                                          ==========
+    @Override
+    protected LocalDateTime prepareBeginDateTime() {
+        final TimeManager timeManager = requestManager.getTimeManager();
+        final Date flashDate = timeManager.flashDate(); // not depends on transaction so use flash date
+        return DfTypeUtil.toLocalDateTime(flashDate, timeManager.getBusinessTimeZone());
+    }
+
+    // ===================================================================================
+    //                                                                Send/Receive Logging
+    //                                                                ====================
+    @Override
+    protected Consumer<IndependentProcessor> prepareSendReceiveLogAsync() {
+        final AsyncManager asyncManager = requestManager.getAsyncManager();
+        return processor -> {
+            asyncManager.async(new ConcurrentAsyncCall() {
+
+                @Override
+                public ConcurrentAsyncImportance importance() {
+                    return ConcurrentAsyncImportance.TERTIARY; // as low priority
+                }
+
+                @Override
+                public void callback() {
+                    processor.process();
+                }
+            });
+        };
     }
 
     // ===================================================================================
