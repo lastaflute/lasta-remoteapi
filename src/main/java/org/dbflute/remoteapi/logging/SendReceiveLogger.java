@@ -38,7 +38,7 @@ public class SendReceiveLogger {
     //                                                                          ==========
     public static final String LOGGER_NAME = "lastaflute.remoteapi.sendreceive";
     protected static final Logger baseLogger = LoggerFactory.getLogger(LOGGER_NAME);
-    protected static final DateTimeFormatter dateTimeFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss.SSS");
+    protected static final DateTimeFormatter beginTimeFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss.SSS");
 
     // ===================================================================================
     //                                                                             Logging
@@ -154,7 +154,7 @@ public class SendReceiveLogger {
 
     protected void setupBegin(StringBuilder sb, SendReceiveLogKeeper keeper) {
         final String beginExp = keeper.getBeginDateTime().map(time -> {
-            return dateTimeFormatter.format(time);
+            return beginTimeFormatter.format(time);
         }).orElse("no begun"); // basically no way, just in case
         sb.append(" (").append(beginExp).append(")");
     }

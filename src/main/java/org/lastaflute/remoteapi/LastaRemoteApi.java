@@ -241,7 +241,7 @@ public class LastaRemoteApi extends FlutyRemoteApi {
                 sb.append(" (");
                 final String beginExp;
                 if (beginTime instanceof LocalDateTime) { // basically here
-                    beginExp = dateTimeFormatter.format((LocalDateTime) beginTime);
+                    beginExp = beginTimeFormatter.format((LocalDateTime) beginTime);
                 } else { // no way, just in case
                     beginExp = beginTime.toString();
                 }
