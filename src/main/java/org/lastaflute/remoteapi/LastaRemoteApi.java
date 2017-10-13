@@ -109,7 +109,7 @@ public class LastaRemoteApi extends FlutyRemoteApi {
 
     protected ResponseSimpleBeanValidator createTransferredBeanValidator() {
         // use ActionValidator #for_now (with suppressing request process) by jflute
-        return new ResponseSimpleBeanValidator(requestManager, callerExp, isTransferredBeanValidationAsWarning()) {
+        return new ResponseSimpleBeanValidator(requestManager, facadeExp, isTransferredBeanValidationAsWarning()) {
             @Override
             protected ActionValidator<UserMessages> createActionValidator() {
                 final Class<?>[] groups = getValidatorGroups().orElse(ActionValidator.DEFAULT_GROUPS);
@@ -201,7 +201,7 @@ public class LastaRemoteApi extends FlutyRemoteApi {
     public static class LastaSendReceiveLogger extends SendReceiveLogger {
 
         @Override
-        protected String findFromExp(SendReceiveLogOption option) {
+        protected String findCallerExp(SendReceiveLogOption option) {
             return buildLastaFluteExp();
         }
 
@@ -210,23 +210,26 @@ public class LastaRemoteApi extends FlutyRemoteApi {
             if (requestPath == null) { // no way, just in case
                 return null;
             }
-            // e.g. /wx/rmharbor/products/?productName=S (2017-10-14 00:31:54.773) #f7ese3f
+            // e.g.
+            //  /sea/land/1/2/ (2017-10-14 00:31:54.773) #f7ese3f
+            //  SeaLandJob (2017-10-14 00:31:54.773) #hm9fk12
             final StringBuilder sb = new StringBuilder();
-            setupFromRequestPath(sb, requestPath);
-            setupFromBeginDateTime(sb);
-            setupFromProcessHash(sb);
+            buildCallerRequestPath(sb, requestPath);
+            buildCallerBeginTime(sb);
+            buildCallerProcessHash(sb);
             return sb.toString();
         }
 
-        protected void setupFromRequestPath(StringBuilder sb, String requestPath) {
-            sb.append(buildFromPureRequestPath(requestPath));
+        protected void buildCallerRequestPath(StringBuilder sb, String requestPath) {
+            final String pure = removeQueryParameter(requestPath); // see query at in-out logging instead
+            sb.append(pure);
         }
 
-        protected String buildFromPureRequestPath(String requestPath) {
-            return Srl.substringFirstFront(requestPath, "?"); // see query at in-out logging instead
+        protected String removeQueryParameter(String requestPath) {
+            return Srl.substringFirstFront(requestPath, "?");
         }
 
-        protected void setupFromBeginDateTime(StringBuilder sb) {
+        protected void buildCallerBeginTime(StringBuilder sb) {
             final Object beginTime = ThreadCacheContext.getObject("fw:beginTime"); // expects LastaFlute-1.0.1
             if (beginTime != null) {
                 sb.append(" (");
@@ -241,7 +244,7 @@ public class LastaRemoteApi extends FlutyRemoteApi {
             }
         }
 
-        protected void setupFromProcessHash(StringBuilder sb) {
+        protected void buildCallerProcessHash(StringBuilder sb) {
             final Object processHash = ThreadCacheContext.getObject("fw:processHash"); // expects LastaFlute-1.0.1
             if (processHash != null) {
                 sb.append(" #").append(processHash);

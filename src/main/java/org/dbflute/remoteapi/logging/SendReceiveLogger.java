@@ -85,10 +85,10 @@ public class SendReceiveLogger {
         final SendReceiveLogKeeper keeper = option.keeper();
         final StringBuilder sb = new StringBuilder();
         setupBasic(sb, httpMethod, requestPath, keeper);
-        setupCallerExp(sb, keeper);
+        setupFacadeExp(sb, keeper);
         setupBeginExp(sb, keeper);
         setupPerformanceCost(sb, keeper);
-        setupFromExp(sb, option);
+        setupCallerExp(sb, option);
         setupCauseExp(sb, keeper);
 
         // _/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/
@@ -135,24 +135,27 @@ public class SendReceiveLogger {
         sb.append(" ");
         sb.append(requestPath);
         sb.append(" ");
-        sb.append(keeper.getHttpStatus().map(stat -> String.valueOf(stat)).orElse("---"));
+        final String statusExp = keeper.getHttpStatus().map(stat -> {
+            return String.valueOf(stat);
+        }).orElse("---"); // until response
+        sb.append(statusExp);
     }
 
-    protected void setupCallerExp(StringBuilder sb, SendReceiveLogKeeper keeper) {
-        final String callerExp = keeper.getCallerExp().map(exp -> {
+    protected void setupFacadeExp(StringBuilder sb, SendReceiveLogKeeper keeper) {
+        final String facadeExp = keeper.getFacadeExp().map(exp -> {
             if (exp instanceof Class<?>) { // basically here
                 return ((Class<?>) exp).getSimpleName();
             } else {
                 return exp.toString();
             }
-        }).orElse("UnknownFacade"); // basically no way, just in case
-        sb.append(" ").append(callerExp);
+        }).orElse("unknown"); // basically no way, just in case
+        sb.append(" ").append(facadeExp);
     }
 
     protected void setupBeginExp(StringBuilder sb, SendReceiveLogKeeper keeper) {
         final String beginExp = keeper.getBeginDateTime().map(time -> {
             return dateTimeFormatter.format(time);
-        }).orElse("no begin"); // basically no way, just in case
+        }).orElse("no_begin"); // basically no way, just in case
         sb.append(" (").append(beginExp).append(")");
     }
 
@@ -165,15 +168,15 @@ public class SendReceiveLogger {
             final long after = DfTypeUtil.toDate(optEnd.get()).getTime();
             sb.append(DfTraceViewUtil.convertToPerformanceView(after - before));
         } else {
-            sb.append("no end");
+            sb.append("no_end");
         }
         sb.append("]");
     }
 
-    protected void setupFromExp(StringBuilder sb, SendReceiveLogOption option) {
-        final String fromExp = findFromExp(option);
-        if (fromExp != null) {
-            sb.append(" from:{").append(fromExp).append("}");
+    protected void setupCallerExp(StringBuilder sb, SendReceiveLogOption option) {
+        final String callerExp = findCallerExp(option);
+        if (callerExp != null) {
+            sb.append(" caller:{").append(callerExp).append("}");
         }
     }
 
@@ -193,9 +196,9 @@ public class SendReceiveLogger {
     }
 
     // ===================================================================================
-    //                                                                     From Expression
-    //                                                                     ===============
-    protected String findFromExp(SendReceiveLogOption option) { // may be overridden
+    //                                                                   Caller Expression
+    //                                                                   =================
+    protected String findCallerExp(SendReceiveLogOption option) { // may be overridden
         return null; // no expression as default
     }
 

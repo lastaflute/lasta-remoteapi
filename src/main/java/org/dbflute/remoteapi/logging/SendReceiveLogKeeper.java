@@ -37,7 +37,7 @@ public class SendReceiveLogKeeper {
     //                                           Basic Begin
     //                                           -----------
     protected LocalDateTime beginDateTime; // null allowed until beginning
-    protected Object callerExp; // null allowed until beginning
+    protected Object facadeExp; // null allowed until beginning
 
     // -----------------------------------------------------
     //                                               Request
@@ -73,9 +73,9 @@ public class SendReceiveLogKeeper {
         this.beginDateTime = beginDateTime;
     }
 
-    public void keepCallerExp(Object callerExp) {
-        assertArgumentNotNull("callerExp", callerExp);
-        this.callerExp = callerExp;
+    public void keepFacadeExp(Object facadeExp) {
+        assertArgumentNotNull("facadeExp", facadeExp);
+        this.facadeExp = facadeExp;
     }
 
     // -----------------------------------------------------
@@ -198,9 +198,9 @@ public class SendReceiveLogKeeper {
         });
     }
 
-    public OptionalThing<Object> getCallerExp() {
-        return OptionalThing.ofNullable(callerExp, () -> {
-            throw new IllegalStateException("Not found the caller expression.");
+    public OptionalThing<Object> getFacadeExp() {
+        return OptionalThing.ofNullable(facadeExp, () -> {
+            throw new IllegalStateException("Not found the facade expression.");
         });
     }
 

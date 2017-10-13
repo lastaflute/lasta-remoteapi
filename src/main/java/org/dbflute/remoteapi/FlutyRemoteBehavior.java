@@ -57,7 +57,7 @@ public abstract class FlutyRemoteBehavior {
     //                                      Create RemoteApi
     //                                      ----------------
     protected FlutyRemoteApi createRemoteApi() {
-        return newRemoteApi(createRemoteApiOptionSetupper(), getCallerExp());
+        return newRemoteApi(createRemoteApiOptionSetupper(), getFacadeExp());
     }
 
     // -----------------------------------------------------
@@ -131,17 +131,22 @@ public abstract class FlutyRemoteBehavior {
     protected abstract void yourDefaultRule(FlutyRemoteApiRule rule);
 
     // -----------------------------------------------------
-    //                                     Caller Expression
+    //                                     Facade Expression
     //                                     -----------------
-    protected Object getCallerExp() { // not null, for various purpose (basically debug)
+    protected Object getFacadeExp() { // not null, for various purpose (basically debug)
         return getClass(); // as default
+    }
+
+    @Deprecated // use getFacadeExp()
+    protected Object getCallerExp() { // not null, for various purpose (basically debug)
+        return getFacadeExp(); // as default
     }
 
     // -----------------------------------------------------
     //                                    RemoteApi Instance
     //                                    ------------------
-    protected FlutyRemoteApi newRemoteApi(Consumer<FlutyRemoteApiRule> ruleSetupper, Object callerExp) {
-        return new FlutyRemoteApi(ruleSetupper, callerExp);
+    protected FlutyRemoteApi newRemoteApi(Consumer<FlutyRemoteApiRule> ruleSetupper, Object facadeExp) {
+        return new FlutyRemoteApi(ruleSetupper, facadeExp);
     }
 
     // ===================================================================================

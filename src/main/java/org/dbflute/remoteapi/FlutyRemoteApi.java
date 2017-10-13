@@ -94,14 +94,14 @@ public class FlutyRemoteApi {
     //                                                                           Attribute
     //                                                                           =========
     protected final Consumer<FlutyRemoteApiRule> defaultRuleLambda;
-    protected final Object callerExp; // for various purpose, basically debug
+    protected final Object facadeExp; // for various purpose, basically debug
 
     // ===================================================================================
     //                                                                         Constructor
     //                                                                         ===========
-    public FlutyRemoteApi(Consumer<FlutyRemoteApiRule> defaultRuleLambda, Object callerExp) {
+    public FlutyRemoteApi(Consumer<FlutyRemoteApiRule> defaultRuleLambda, Object facadeExp) {
         this.defaultRuleLambda = defaultRuleLambda;
-        this.callerExp = callerExp;
+        this.facadeExp = facadeExp;
     }
 
     // ===================================================================================
@@ -200,7 +200,7 @@ public class FlutyRemoteApi {
         assertArgumentNotNull("emptyBodyFactory", emptyBodyFactory);
         final FlutyRemoteApiRule rule = createRemoteApiRule(ruleLambda);
         keepBeginDateTimeIfNeeds(rule);
-        keepCallerExpIfNeeds(rule);
+        keepFacadeExpIfNeeds(rule);
         return retryableRequest(returnType, urlBase, actionPath, pathVariables, optParam, rule, () -> {
             return actuallyRequestEmptyBody(returnType, urlBase, actionPath, pathVariables, optParam, rule, httpMethod, emptyBodyFactory);
         }, clientError -> {
@@ -264,7 +264,7 @@ public class FlutyRemoteApi {
         assertArgumentNotNull("enclosingFactory", enclosingFactory);
         final FlutyRemoteApiRule rule = createRemoteApiRule(ruleLambda);
         keepBeginDateTimeIfNeeds(rule);
-        keepCallerExpIfNeeds(rule);
+        keepFacadeExpIfNeeds(rule);
         return retryableRequest(returnType, urlBase, actionPath, pathVariables, param, rule, () -> {
             return actuallyRequestEnclosing(returnType, urlBase, actionPath, pathVariables, param, rule, httpMethod, enclosingFactory);
         }, clientError -> {
@@ -667,10 +667,10 @@ public class FlutyRemoteApi {
         }
     }
 
-    protected void keepCallerExpIfNeeds(FlutyRemoteApiRule rule) {
+    protected void keepFacadeExpIfNeeds(FlutyRemoteApiRule rule) {
         final SendReceiveLogOption option = rule.getSendReceiveLogOption();
         if (option.isEnabled()) {
-            option.keeper().keepCallerExp(callerExp);
+            option.keeper().keepFacadeExp(facadeExp);
         }
     }
 
@@ -766,7 +766,7 @@ public class FlutyRemoteApi {
         br.addElement(Arrays.asList(pathVariables));
         setupRequestInfo(br, returnType, urlBase + actionPath, queryParam);
         setupYourRule(br, rule);
-        setupCallerExpression(br);
+        setupFacadeExpression(br);
         final String msg = br.buildExceptionMessage();
         throw new RemoteApiPathVariableShortElementException(msg);
     }
@@ -785,7 +785,7 @@ public class FlutyRemoteApi {
         br.addElement(Arrays.asList(pathVariables));
         setupRequestInfo(br, returnType, urlBase + actionPath, queryParam);
         setupYourRule(br, rule);
-        setupCallerExpression(br);
+        setupFacadeExpression(br);
         final String msg = br.buildExceptionMessage();
         throw new RemoteApiPathVariableNullElementException(msg);
     }
@@ -802,7 +802,7 @@ public class FlutyRemoteApi {
         //setupRequestInfo(br, returnType, url, optOrParam);
         br.addItem("Client Error");
         br.addElement(clientError.getMessage());
-        setupCallerExpression(br);
+        setupFacadeExpression(br);
         final String msg = br.buildExceptionMessage();
         throw new RemoteApiRetryReadyFailureException(msg, cause);
     }
@@ -819,7 +819,7 @@ public class FlutyRemoteApi {
         br.addNotice("Client Error as HTTP status from the remote API.");
         setupRequestInfo(br, returnType, url, form);
         setupResponseInfo(br, httpStatus, body);
-        setupCallerExpression(br);
+        setupFacadeExpression(br);
         final String msg = br.buildExceptionMessage();
         throw new RemoteApiHttpClientErrorException(msg, httpStatus, failureResponseHolder);
     }
@@ -830,7 +830,7 @@ public class FlutyRemoteApi {
         br.addNotice("Server Error as HTTP status from the remote API.");
         setupRequestInfo(br, returnType, url, form);
         setupResponseInfo(br, httpStatus, body);
-        setupCallerExpression(br);
+        setupFacadeExpression(br);
         final String msg = br.buildExceptionMessage();
         throw new RemoteApiHttpServerErrorException(msg, httpStatus, failureResponseHolder);
     }
@@ -842,7 +842,7 @@ public class FlutyRemoteApi {
         final ExceptionMessageBuilder br = new ExceptionMessageBuilder();
         br.addNotice("IO Error to the remote API.");
         setupRequestInfo(br, returnType, url, form);
-        setupCallerExpression(br);
+        setupFacadeExpression(br);
         final String msg = br.buildExceptionMessage();
         throw new RemoteApiIOException(msg, cause);
     }
@@ -858,7 +858,7 @@ public class FlutyRemoteApi {
         setupResponseInfo(br, httpStatus, body);
         br.addItem("Receiver");
         br.addElement(receiver);
-        setupCallerExpression(br);
+        setupFacadeExpression(br);
         final String msg = br.buildExceptionMessage();
         throw new RemoteApiResponseParseFailureException(msg, e);
     }
@@ -876,7 +876,7 @@ public class FlutyRemoteApi {
         setupRequestInfo(br, returnType, url, param);
         setupResponseInfo(br, httpStatus, body);
         setupYourRule(br, rule);
-        setupCallerExpression(br);
+        setupFacadeExpression(br);
         clientError.getFailureResponse().ifPresent(failureResponse -> {
             br.addItem("Failure Response");
             br.addElement(convertBeanToDebugString(failureResponse));
@@ -904,7 +904,7 @@ public class FlutyRemoteApi {
         br.addElement("    doRequestGet(..., rule -> rule.sendQueryBy(new LaQuerySender()));");
         setupRequestInfo(br, returnType, url, form);
         setupYourRule(br, rule);
-        setupCallerExpression(br);
+        setupFacadeExpression(br);
         final String msg = br.buildExceptionMessage();
         return new RemoteApiSenderOfQueryParameterNotFoundException(msg);
     }
@@ -927,7 +927,7 @@ public class FlutyRemoteApi {
         setupYourRule(br, rule);
         br.addItem("HTTP Method");
         br.addElement(httpMethod);
-        setupCallerExpression(br);
+        setupFacadeExpression(br);
         final String msg = br.buildExceptionMessage();
         return new RemoteApiSenderOfRequestBodyNotFoundException(msg);
     }
@@ -948,7 +948,7 @@ public class FlutyRemoteApi {
         setupRequestInfo(br, returnType, url, form);
         setupResponseInfo(br, httpStatus, body);
         setupYourRule(br, rule);
-        setupCallerExpression(br);
+        setupFacadeExpression(br);
         final String msg = br.buildExceptionMessage();
         return new RemoteApiReceiverOfResponseBodyNotFoundException(msg);
     }
@@ -1016,9 +1016,9 @@ public class FlutyRemoteApi {
         br.addElement(rule);
     }
 
-    protected void setupCallerExpression(final ExceptionMessageBuilder br) {
-        br.addItem("Caller Expression");
-        br.addElement(callerExp);
+    protected void setupFacadeExpression(ExceptionMessageBuilder br) {
+        br.addItem("Facade Expression");
+        br.addElement(facadeExp);
     }
 
     // ===================================================================================
