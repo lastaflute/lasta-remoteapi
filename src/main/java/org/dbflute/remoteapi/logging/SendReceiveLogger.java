@@ -91,29 +91,24 @@ public class SendReceiveLogger {
         setupFromExp(sb, option);
         setupCauseExp(sb, keeper);
 
-        // send-receive data here
-        boolean alreadyLineSep = false;
-
         // _/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/
         // Request: headers, parameter, body
         // _/_/_/_/_/_/_/_/_/_/
         {
             final String headerExp = buildMapExp(keeper.getRequestHeaderMap());
             if (headerExp != null) {
-                alreadyLineSep = buildSendReceive(sb, "requestHeader", headerExp, alreadyLineSep);
+                buildSendReceive(sb, "requestHeader", headerExp);
             }
             final String paramsExp = buildRequestParameterExp(keeper);
             if (paramsExp != null) {
                 final String realExp = option.getRequestParameterFilter().map(filter -> filter.apply(paramsExp)).orElse(paramsExp);
-                alreadyLineSep = buildSendReceive(sb, "requestParameter", realExp, alreadyLineSep);
+                buildSendReceive(sb, "requestParameter", realExp);
             }
-            final OptionalThing<String> optBody = keeper.getRequestBodyContent();
-            if (optBody.isPresent()) {
-                final String body = optBody.get();
+            keeper.getRequestBodyContent().ifPresent(body -> {
                 final String title = "requestBody(" + keeper.getRequestBodyType().orElse("unknown") + ")";
                 final String realExp = option.getRequestBodyFilter().map(filter -> filter.apply(body)).orElse(body);
-                alreadyLineSep = buildSendReceive(sb, title, realExp, alreadyLineSep);
-            }
+                buildSendReceive(sb, title, realExp);
+            });
         }
 
         // _/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/
@@ -122,16 +117,14 @@ public class SendReceiveLogger {
         {
             final String headerExp = buildMapExp(keeper.getResponseHeaderMap());
             if (headerExp != null) {
-                alreadyLineSep = buildSendReceive(sb, "responseHeader", headerExp, alreadyLineSep);
+                buildSendReceive(sb, "responseHeader", headerExp);
             }
-            final OptionalThing<String> optBody = keeper.getResponseBodyContent();
-            if (optBody.isPresent()) {
-                if (!option.isSuppressResponseBody()) {
-                    final String body = optBody.get();
+            if (!option.isSuppressResponseBody()) {
+                keeper.getResponseBodyContent().ifPresent(body -> {
                     final String title = "responseBody(" + keeper.getResponseBodyType().orElse("unknown") + ")";
                     final String realExp = option.getResponseBodyFilter().map(filter -> filter.apply(body)).orElse(body);
-                    alreadyLineSep = buildSendReceive(sb, title, realExp, alreadyLineSep);
-                }
+                    buildSendReceive(sb, title, realExp);
+                });
             }
         }
         return sb.toString();
@@ -243,16 +236,13 @@ public class SendReceiveLogger {
         return sb.toString();
     }
 
-    protected boolean buildSendReceive(StringBuilder sb, String title, String value, boolean alreadyLineSep) {
-        boolean nowLineSep = alreadyLineSep;
+    protected void buildSendReceive(StringBuilder sb, String title, String value) {
+        // always line separator because many remote APIs have large data and many items
+        sb.append("\n").append(title).append(":");
         if (value != null && value.contains("\n")) {
-            sb.append("\n").append(title).append(":").append("\n");
-            nowLineSep = true;
-        } else {
-            sb.append(alreadyLineSep ? "\n" : " ").append(title).append(":");
+            sb.append("\n");
         }
         sb.append(value == null || !value.isEmpty() ? value : "(empty)");
-        return nowLineSep;
     }
 
     // ===================================================================================
