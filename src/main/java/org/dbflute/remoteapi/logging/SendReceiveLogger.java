@@ -85,14 +85,14 @@ public class SendReceiveLogger {
         final SendReceiveLogKeeper keeper = option.keeper();
         final StringBuilder sb = new StringBuilder();
         setupBasic(sb, httpMethod, requestPath, keeper);
-        setupFacadeExp(sb, keeper);
-        setupBeginExp(sb, keeper);
-        setupPerformanceCost(sb, keeper);
-        setupCallerExp(sb, option);
-        setupCauseExp(sb, keeper);
+        setupFacade(sb, keeper);
+        setupBegin(sb, keeper);
+        setupPerformance(sb, keeper);
+        setupCaller(sb, option);
+        setupCause(sb, keeper);
 
-        // _/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/
-        // Request: headers, parameter, body
+        // _/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/
+        // Request: requestHeader, requestParameter, requestBody
         // _/_/_/_/_/_/_/_/_/_/
         {
             final String headerExp = buildMapExp(keeper.getRequestHeaderMap());
@@ -112,7 +112,7 @@ public class SendReceiveLogger {
         }
 
         // _/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/
-        // Response: headers, body
+        // Response: responseHeader, responseBody
         // _/_/_/_/_/_/_/_/_/_/
         {
             final String headerExp = buildMapExp(keeper.getResponseHeaderMap());
@@ -141,7 +141,7 @@ public class SendReceiveLogger {
         sb.append(statusExp);
     }
 
-    protected void setupFacadeExp(StringBuilder sb, SendReceiveLogKeeper keeper) {
+    protected void setupFacade(StringBuilder sb, SendReceiveLogKeeper keeper) {
         final String facadeExp = keeper.getFacadeExp().map(exp -> {
             if (exp instanceof Class<?>) { // basically here
                 return ((Class<?>) exp).getSimpleName();
@@ -152,14 +152,14 @@ public class SendReceiveLogger {
         sb.append(" ").append(facadeExp);
     }
 
-    protected void setupBeginExp(StringBuilder sb, SendReceiveLogKeeper keeper) {
+    protected void setupBegin(StringBuilder sb, SendReceiveLogKeeper keeper) {
         final String beginExp = keeper.getBeginDateTime().map(time -> {
             return dateTimeFormatter.format(time);
-        }).orElse("no_begin"); // basically no way, just in case
+        }).orElse("no begin"); // basically no way, just in case
         sb.append(" (").append(beginExp).append(")");
     }
 
-    protected void setupPerformanceCost(StringBuilder sb, SendReceiveLogKeeper keeper) {
+    protected void setupPerformance(StringBuilder sb, SendReceiveLogKeeper keeper) {
         final OptionalThing<LocalDateTime> optBegin = keeper.getBeginDateTime();
         final OptionalThing<LocalDateTime> optEnd = keeper.getEndDateTime();
         sb.append(" [");
@@ -168,19 +168,19 @@ public class SendReceiveLogger {
             final long after = DfTypeUtil.toDate(optEnd.get()).getTime();
             sb.append(DfTraceViewUtil.convertToPerformanceView(after - before));
         } else {
-            sb.append("no_end");
+            sb.append("no end");
         }
         sb.append("]");
     }
 
-    protected void setupCallerExp(StringBuilder sb, SendReceiveLogOption option) {
+    protected void setupCaller(StringBuilder sb, SendReceiveLogOption option) {
         final String callerExp = findCallerExp(option);
         if (callerExp != null) {
             sb.append(" caller:{").append(callerExp).append("}");
         }
     }
 
-    protected void setupCauseExp(StringBuilder sb, SendReceiveLogKeeper keeper) {
+    protected void setupCause(StringBuilder sb, SendReceiveLogKeeper keeper) {
         keeper.getCause().ifPresent(cause -> {
             sb.append(" *").append(cause.getClass().getSimpleName());
             sb.append(" #").append(Integer.toHexString(cause.hashCode()));
