@@ -180,7 +180,7 @@ public class LastaRemoteApi extends FlutyRemoteApi {
     //                                                                          Basic Keep
     //                                                                          ==========
     @Override
-    protected LocalDateTime prepareBeginDateTime() {
+    protected LocalDateTime flashLocalDateTime() {
         final TimeManager timeManager = requestManager.getTimeManager();
         final Date flashDate = timeManager.flashDate(); // not depends on transaction so use flash date
         return DfTypeUtil.toLocalDateTime(flashDate, timeManager.getBusinessTimeZone());

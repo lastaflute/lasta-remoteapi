@@ -316,10 +316,15 @@ public class FlutyRemoteApiRule {
     // -----------------------------------------------------
     //                                   SendReceive Logging
     //                                   -------------------
+    /**
+     * Show send-receive log as your option. (INFO logging) <br>
+     * The logging is enabled if you call this method. 
+     * @param opLambda The callback for setting of send-receive logging option. (NotNull)
+     */
     public void showSendReceiveLog(Consumer<SendReceiveLogOption> opLambda) {
         assertArgumentNotNull("opLambda", opLambda);
         final SendReceiveLogOption option = createSendReceiveLogOption(opLambda);
-        option.enable(); // fixed if you call this
+        option.xframeworkEnable(); // fixed if you call this
         this.sendReceiveLogOption = option;
     }
 

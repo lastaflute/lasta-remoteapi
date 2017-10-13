@@ -33,57 +33,78 @@ public class SendReceiveLogKeeper {
     // ===================================================================================
     //                                                                           Attribute
     //                                                                           =========
+    // -----------------------------------------------------
+    //                                           Basic Begin
+    //                                           -----------
     protected LocalDateTime beginDateTime; // null allowed until beginning
+    protected Object callerExp; // null allowed until beginning
+
+    // -----------------------------------------------------
+    //                                               Request
+    //                                               -------
+    protected Map<String, Object> requestHeaderMap; // null allowed if e.g. no request header
     protected Map<String, Object> queryParameterMap; // null allowed if e.g. no query parameter
     protected Map<String, Object> formParameterMap; // null allowed if e.g. no form parameter
     protected String requestBodyContent; // null allowed if e.g. no body
     protected String requestBodyType; // format e.g. json, xml, null allowed if e.g. no body, body
-    protected String responseBodyContent; // null allowed if e.g. no body
-    protected String responseBodyType; // body format e.g. json, xml, null allowed if e.g. no body
+
+    // -----------------------------------------------------
+    //                                              Response
+    //                                              --------
+    protected Map<String, Object> responseHeaderMap; // null allowed until response
+    protected String responseBodyContent; // null allowed until response or if e.g. no body
+    protected String responseBodyType; // body format e.g. json, xml, null allowed until response or if e.g. no body
+    protected Integer httpStatus; // null allowed
+
+    // -----------------------------------------------------
+    //                                             Basic End
+    //                                             ---------
     protected RuntimeException cause; // null allowed
+    protected LocalDateTime endDateTime; // null allowed until ending
 
     // ===================================================================================
     //                                                                         Keep Facade
     //                                                                         ===========
     // -----------------------------------------------------
-    //                                        Begin DateTime
-    //                                        --------------
+    //                                           Basic Begin
+    //                                           -----------
     public void keepBeginDateTime(LocalDateTime beginDateTime) {
         assertArgumentNotNull("beginDateTime", beginDateTime);
         this.beginDateTime = beginDateTime;
     }
 
+    public void keepCallerExp(Object callerExp) {
+        assertArgumentNotNull("callerExp", callerExp);
+        this.callerExp = callerExp;
+    }
+
     // -----------------------------------------------------
-    //                                          Query String
-    //                                          ------------
+    //                                               Request
+    //                                               -------
+    public void keepRequestHeader(Map<String, ? extends Object> requestHeaderMap) {
+        assertArgumentNotNull("requestHeaderMap", requestHeaderMap);
+        requestHeaderMap.forEach((name, value) -> addRequestHeader(name, value)); // copy for independency
+    }
+
+    protected void addRequestHeader(String name, Object value) { // value may be null!? accept it just in case
+        assertArgumentNotNull("name", name);
+        if (requestHeaderMap == null) {
+            requestHeaderMap = new LinkedHashMap<String, Object>();
+        }
+        requestHeaderMap.put(name, value);
+    }
+
     public void keepQueryParameter(String parameterName, String parameterValue) { // value may be null!? accept it just in case
         assertArgumentNotNull("parameterName", parameterName);
         if (queryParameterMap == null) {
             queryParameterMap = new LinkedHashMap<String, Object>();
         }
-        final Object existing = queryParameterMap.get(parameterName);
-        if (existing != null) {
-            if (existing instanceof List<?>) {
-                @SuppressWarnings("unchecked")
-                final List<String> valueList = (List<String>) existing;
-                valueList.add(parameterValue);
-            } else {
-                final List<String> valueList = new ArrayList<String>();
-                valueList.add(existing.toString()); // must be String, just in case
-                valueList.add(parameterValue);
-                queryParameterMap.put(parameterName, valueList); // override as list
-            }
-        } else {
-            queryParameterMap.put(parameterName, parameterValue);
-        }
+        addHierarchalMapElement(queryParameterMap, parameterName, parameterValue);
     }
 
-    // -----------------------------------------------------
-    //                                        Form Parameter
-    //                                        --------------
     public void keepFormParameter(Map<String, ? extends Object> parameterMap) {
         assertArgumentNotNull("parameterMap", parameterMap);
-        parameterMap.forEach((key, value) -> addFormParameter(key, value));
+        parameterMap.forEach((key, value) -> addFormParameter(key, value)); // copy for independency
     }
 
     protected void addFormParameter(String key, Object value) { // value may be null!? accept it just in case
@@ -94,9 +115,6 @@ public class SendReceiveLogKeeper {
         formParameterMap.put(key, value);
     }
 
-    // -----------------------------------------------------
-    //                                          Request Body
-    //                                          ------------
     public void keepRequestBody(String requestBodyContent, String requestBodyType) { // accept null just in case
         assertArgumentNotNull("requestBodyType", requestBodyType);
         this.requestBodyContent = requestBodyContent;
@@ -104,25 +122,61 @@ public class SendReceiveLogKeeper {
     }
 
     // -----------------------------------------------------
-    //                                         Response Body
-    //                                         -------------
+    //                                              Response
+    //                                              --------
+    public void keepResponseHeader(String name, String value) {
+        assertArgumentNotNull("name", name);
+        if (responseHeaderMap == null) {
+            responseHeaderMap = new LinkedHashMap<String, Object>();
+        }
+        addHierarchalMapElement(responseHeaderMap, name, value);
+    }
+
     public void keepResponseBody(String responseBodyContent, String responseBodyType) { // accept null just in case
         assertArgumentNotNull("responseBodyType", responseBodyType);
         this.responseBodyContent = responseBodyContent;
         this.responseBodyType = responseBodyType;
     }
 
+    public void keepHttpStatus(Integer httpStatus) {
+        assertArgumentNotNull("httpStatus", httpStatus);
+        this.httpStatus = httpStatus;
+    }
+
     // -----------------------------------------------------
-    //                                             Exception
+    //                                             Basic End
     //                                             ---------
     public void keepCause(RuntimeException cause) {
         assertArgumentNotNull("cause", cause);
         this.cause = cause;
     }
 
+    public void keepEndDateTime(LocalDateTime endDateTime) {
+        assertArgumentNotNull("endDateTime", endDateTime);
+        this.endDateTime = endDateTime;
+    }
+
     // ===================================================================================
     //                                                                        Small Helper
     //                                                                        ============
+    protected void addHierarchalMapElement(Map<String, Object> map, String name, String value) {
+        if (map.containsKey(name)) {
+            final Object existing = map.get(name); // may be null value
+            if (existing instanceof List<?>) {
+                @SuppressWarnings("unchecked")
+                final List<String> valueList = (List<String>) existing;
+                valueList.add(value); // may be null value
+            } else {
+                final List<Object> valueList = new ArrayList<Object>();
+                valueList.add(existing); // may be null value
+                valueList.add(value); // may be null value
+                map.put(name, valueList); // override as list
+            }
+        } else {
+            map.put(name, value); // may be null value
+        }
+    }
+
     protected void assertArgumentNotNull(String variableName, Object value) {
         if (variableName == null) {
             throw new IllegalArgumentException("The variableName should not be null.");
@@ -135,10 +189,26 @@ public class SendReceiveLogKeeper {
     // ===================================================================================
     //                                                                            Accessor
     //                                                                            ========
+    // -----------------------------------------------------
+    //                                           Basic Begin
+    //                                           -----------
     public OptionalThing<LocalDateTime> getBeginDateTime() {
         return OptionalThing.ofNullable(beginDateTime, () -> {
             throw new IllegalStateException("Not found the begin date-time.");
         });
+    }
+
+    public OptionalThing<Object> getCallerExp() {
+        return OptionalThing.ofNullable(callerExp, () -> {
+            throw new IllegalStateException("Not found the caller expression.");
+        });
+    }
+
+    // -----------------------------------------------------
+    //                                               Requset
+    //                                               -------
+    public Map<String, Object> getRequestHeaderMap() {
+        return requestHeaderMap != null ? Collections.unmodifiableMap(requestHeaderMap) : Collections.emptyMap();
     }
 
     public Map<String, Object> getQueryParameterMap() {
@@ -161,6 +231,13 @@ public class SendReceiveLogKeeper {
         });
     }
 
+    // -----------------------------------------------------
+    //                                              Response
+    //                                              --------
+    public Map<String, Object> getResponseHeaderMap() {
+        return responseHeaderMap != null ? Collections.unmodifiableMap(responseHeaderMap) : Collections.emptyMap();
+    }
+
     public OptionalThing<String> getResponseBodyContent() {
         return OptionalThing.ofNullable(responseBodyContent, () -> {
             throw new IllegalStateException("Not found the response body content.");
@@ -173,9 +250,24 @@ public class SendReceiveLogKeeper {
         });
     }
 
+    public OptionalThing<Integer> getHttpStatus() {
+        return OptionalThing.ofNullable(httpStatus, () -> {
+            throw new IllegalStateException("Not found the HTTP Status.");
+        });
+    }
+
+    // -----------------------------------------------------
+    //                                             Basic End
+    //                                             ---------
     public OptionalThing<RuntimeException> getCause() {
         return OptionalThing.ofNullable(cause, () -> {
             throw new IllegalStateException("Not found the cause.");
+        });
+    }
+
+    public OptionalThing<LocalDateTime> getEndDateTime() {
+        return OptionalThing.ofNullable(endDateTime, () -> {
+            throw new IllegalStateException("Not found the end date-time.");
         });
     }
 }

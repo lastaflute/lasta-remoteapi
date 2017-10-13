@@ -15,11 +15,15 @@
  */
 package org.dbflute.remoteapi.logging;
 
+import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Map;
 import java.util.function.Consumer;
 
+import org.dbflute.optional.OptionalThing;
 import org.dbflute.remoteapi.http.SupportedHttpMethod;
+import org.dbflute.util.DfTraceViewUtil;
+import org.dbflute.util.DfTypeUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -50,13 +54,13 @@ public class SendReceiveLogger {
     // ===================================================================================
     //                                                                               Show
     //                                                                              ======
-    public void show(SupportedHttpMethod httpMethod, String url, SendReceiveLogOption option, Consumer<Runnable> async) {
+    public void show(SupportedHttpMethod httpMethod, String requestPath, SendReceiveLogOption option, Consumer<Runnable> async) {
         final Logger logger = deriveLogger(option);
         if (!isLoggerEnabled(logger)) { // e.g. option is true but no logger settings
             return;
         }
         try {
-            doShow(httpMethod, url, option, async, logger);
+            doShow(httpMethod, requestPath, option, async, logger);
         } catch (RuntimeException continued) { // not main process, just in case of empty async
             logger.info("*Failed to show send-receive log: ", continued);
         }
@@ -66,101 +70,151 @@ public class SendReceiveLogger {
         return option.getCategoryName().map(name -> LoggerFactory.getLogger(LOGGER_NAME + "." + name)).orElse(baseLogger);
     }
 
-    protected void doShow(SupportedHttpMethod httpMethod, String url, SendReceiveLogOption option, Consumer<Runnable> async,
+    protected void doShow(SupportedHttpMethod httpMethod, String requestPath, SendReceiveLogOption option, Consumer<Runnable> async,
             Logger logger) {
         async.accept(() -> {
-            final String whole = buildWhole(httpMethod, url, option);
+            final String whole = buildWhole(httpMethod, requestPath, option);
             log(logger, whole);
         });
     }
 
-    protected String buildWhole(SupportedHttpMethod httpMethod, String url, SendReceiveLogOption option) {
+    // ===================================================================================
+    //                                                                         Build Whole
+    //                                                                         ===========
+    protected String buildWhole(SupportedHttpMethod httpMethod, String requestPath, SendReceiveLogOption option) {
+        final SendReceiveLogKeeper keeper = option.keeper();
         final StringBuilder sb = new StringBuilder();
-        //        final String requestPath = requestManager.getRequestPath();
-        //        final String httpMethod = requestManager.getHttpMethod().orElse("unknown");
-        //        sb.append(httpMethod).append(" ").append(requestPath);
-        //        // not use HTTP status because of not fiexed yet here when e.g. exception
-        //        // (and in-out logging is not access log and you can derive it by exception type)
-        //        //requestManager.getResponseManager().getResponse().getStatus();
-        //        final String actionName = runtime.getActionType().getSimpleName();
-        //        final String methodName = runtime.getActionExecute().getExecuteMethod().getName();
-        //        sb.append(" ").append(actionName).append("@").append(methodName).append("()");
-        //        final String beginExp = keeper.getBeginDateTime().map(begin -> {
-        //            return dateTimeFormatter.format(begin);
-        //        }).orElse("no begun"); // basically no way, just in case
-        //        sb.append(" (").append(beginExp).append(")");
-        //        keeper.getBeginDateTime().ifPresent(begin -> {
-        //            final long before = DfTypeUtil.toDate(begin).getTime();
-        //            final long after = DfTypeUtil.toDate(requestManager.getTimeManager().currentDateTime()).getTime();
-        //            sb.append(" [").append(DfTraceViewUtil.convertToPerformanceView(after - before)).append("]");
-        //        });
-        //        requestManager.getHeaderUserAgent().ifPresent(userAgent -> {
-        //            sb.append(" {").append(Srl.cut(userAgent, 50, "...")).append("}");
-        //        });
-        //        final RuntimeException failureCause = runtime.getFailureCause();
-        //        if (failureCause != null) {
-        //            sb.append(" *").append(failureCause.getClass().getSimpleName());
-        //            sb.append(" #").append(Integer.toHexString(failureCause.hashCode()));
-        //        }
-        //        boolean alreadyLineSep = false;
-        //        final String paramsExp = buildRequestParameterExp(keeper);
-        //        if (paramsExp != null) {
-        //            final String realExp = option.getRequestParameterFilter().map(filter -> filter.apply(paramsExp)).orElse(paramsExp);
-        //            alreadyLineSep = buildSendReceive(sb, "requestParameter", realExp, alreadyLineSep);
-        //        }
-        //        if (keeper.getRequestBodyContent().isPresent()) {
-        //            final String body = keeper.getRequestBodyContent().get();
-        //            final String realExp = option.getRequestBodyFilter().map(filter -> filter.apply(body)).orElse(body);
-        //            alreadyLineSep = buildSendReceive(sb, "requestBody", realExp, alreadyLineSep);
-        //        }
-        //        if (keeper.getResponseBodyContent().isPresent()) {
-        //            if (!keeper.getOption().isSuppressResponseBody()) {
-        //                final String body = keeper.getResponseBodyContent().get();
-        //                final String realExp = option.getResponseBodyFilter().map(filter -> filter.apply(body)).orElse(body);
-        //                alreadyLineSep = buildSendReceive(sb, "responseBody", realExp, alreadyLineSep);
-        //            }
-        //        }
-        //        final OptionalThing<RequestedSqlCount> optSql =
-        //                requestManager.getAttribute(LastaWebKey.DBFLUTE_SQL_COUNT_KEY, RequestedSqlCount.class);
-        //        if (optSql.isPresent()) {
-        //            final RequestedSqlCount count = optSql.get();
-        //            if (count.getTotalCountOfSql() > 0) {
-        //                alreadyLineSep = buildSendReceive(sb, "sqlCount", count.toString(), alreadyLineSep);
-        //            }
-        //        }
-        //        final OptionalThing<RequestedMailCount> optMail =
-        //                requestManager.getAttribute(LastaWebKey.MAILFLUTE_MAIL_COUNT_KEY, RequestedMailCount.class);
-        //        if (optMail.isPresent()) {
-        //            final RequestedMailCount count = optMail.get();
-        //            if (count.getCountOfPosting() > 0) {
-        //                alreadyLineSep = buildSendReceive(sb, "mailCount", count.toString(), alreadyLineSep);
-        //            }
-        //        }
+        setupBasic(sb, httpMethod, requestPath, keeper);
+        setupCallerExp(sb, keeper);
+        setupBeginExp(sb, keeper);
+        setupPerformanceCost(sb, keeper);
+        setupFromExp(sb, option);
+        setupCauseExp(sb, keeper);
+
+        // send-receive data here
+        boolean alreadyLineSep = false;
+
+        // _/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/
+        // Request: headers, parameter, body
+        // _/_/_/_/_/_/_/_/_/_/
+        {
+            final String headerExp = buildMapExp(keeper.getRequestHeaderMap());
+            if (headerExp != null) {
+                alreadyLineSep = buildSendReceive(sb, "requestHeader", headerExp, alreadyLineSep);
+            }
+            final String paramsExp = buildRequestParameterExp(keeper);
+            if (paramsExp != null) {
+                final String realExp = option.getRequestParameterFilter().map(filter -> filter.apply(paramsExp)).orElse(paramsExp);
+                alreadyLineSep = buildSendReceive(sb, "requestParameter", realExp, alreadyLineSep);
+            }
+            final OptionalThing<String> optBody = keeper.getRequestBodyContent();
+            if (optBody.isPresent()) {
+                final String body = optBody.get();
+                final String title = "requestBody(" + keeper.getRequestBodyType().orElse("unknown") + ")";
+                final String realExp = option.getRequestBodyFilter().map(filter -> filter.apply(body)).orElse(body);
+                alreadyLineSep = buildSendReceive(sb, title, realExp, alreadyLineSep);
+            }
+        }
+
+        // _/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/
+        // Response: headers, body
+        // _/_/_/_/_/_/_/_/_/_/
+        {
+            final String headerExp = buildMapExp(keeper.getResponseHeaderMap());
+            if (headerExp != null) {
+                alreadyLineSep = buildSendReceive(sb, "responseHeader", headerExp, alreadyLineSep);
+            }
+            final OptionalThing<String> optBody = keeper.getResponseBodyContent();
+            if (optBody.isPresent()) {
+                if (!option.isSuppressResponseBody()) {
+                    final String body = optBody.get();
+                    final String title = "responseBody(" + keeper.getResponseBodyType().orElse("unknown") + ")";
+                    final String realExp = option.getResponseBodyFilter().map(filter -> filter.apply(body)).orElse(body);
+                    alreadyLineSep = buildSendReceive(sb, title, realExp, alreadyLineSep);
+                }
+            }
+        }
         return sb.toString();
     }
 
-    protected boolean buildSendReceive(StringBuilder sb, String title, String value, boolean alreadyLineSep) {
-        boolean nowLineSep = alreadyLineSep;
-        if (value != null && value.contains("\n")) {
-            sb.append("\n").append(title).append(":").append("\n");
-            nowLineSep = true;
+    protected void setupBasic(StringBuilder sb, SupportedHttpMethod httpMethod, String requestPath, SendReceiveLogKeeper keeper) {
+        sb.append(httpMethod.name().toUpperCase()); // originally upper but just in case
+        sb.append(" ");
+        sb.append(requestPath);
+        sb.append(" ");
+        sb.append(keeper.getHttpStatus().map(stat -> String.valueOf(stat)).orElse("---"));
+    }
+
+    protected void setupCallerExp(StringBuilder sb, SendReceiveLogKeeper keeper) {
+        final String callerExp = keeper.getCallerExp().map(exp -> {
+            if (exp instanceof Class<?>) { // basically here
+                return ((Class<?>) exp).getSimpleName();
+            } else {
+                return exp.toString();
+            }
+        }).orElse("UnknownFacade"); // basically no way, just in case
+        sb.append(" ").append(callerExp);
+    }
+
+    protected void setupBeginExp(StringBuilder sb, SendReceiveLogKeeper keeper) {
+        final String beginExp = keeper.getBeginDateTime().map(time -> {
+            return dateTimeFormatter.format(time);
+        }).orElse("no begin"); // basically no way, just in case
+        sb.append(" (").append(beginExp).append(")");
+    }
+
+    protected void setupPerformanceCost(StringBuilder sb, SendReceiveLogKeeper keeper) {
+        final OptionalThing<LocalDateTime> optBegin = keeper.getBeginDateTime();
+        final OptionalThing<LocalDateTime> optEnd = keeper.getEndDateTime();
+        sb.append(" [");
+        if (optBegin.isPresent() && optEnd.isPresent()) {
+            final long before = DfTypeUtil.toDate(optBegin.get()).getTime();
+            final long after = DfTypeUtil.toDate(optEnd.get()).getTime();
+            sb.append(DfTraceViewUtil.convertToPerformanceView(after - before));
         } else {
-            sb.append(alreadyLineSep ? "\n" : " ").append(title).append(":");
+            sb.append("no end");
         }
-        sb.append(value == null || !value.isEmpty() ? value : "(empty)");
-        return nowLineSep;
+        sb.append("]");
+    }
+
+    protected void setupFromExp(StringBuilder sb, SendReceiveLogOption option) {
+        final String fromExp = findFromExp(option);
+        if (fromExp != null) {
+            sb.append(" from:{").append(fromExp).append("}");
+        }
+    }
+
+    protected void setupCauseExp(StringBuilder sb, SendReceiveLogKeeper keeper) {
+        keeper.getCause().ifPresent(cause -> {
+            sb.append(" *").append(cause.getClass().getSimpleName());
+            sb.append(" #").append(Integer.toHexString(cause.hashCode()));
+        });
+    }
+
+    protected String buildRequestParameterExp(SendReceiveLogKeeper keeper) {
+        String requestParameterExp = buildMapExp(keeper.getQueryParameterMap());
+        if (requestParameterExp == null) {
+            requestParameterExp = buildMapExp(keeper.getFormParameterMap());
+        }
+        return requestParameterExp;
     }
 
     // ===================================================================================
-    //                                                                   Request Parameter
-    //                                                                   =================
-    protected String buildRequestParameterExp(SendReceiveLogKeeper keeper) {
-        final Map<String, Object> parameterMap = keeper.getFormParameterMap();
-        if (parameterMap.isEmpty()) {
+    //                                                                     From Expression
+    //                                                                     ===============
+    protected String findFromExp(SendReceiveLogOption option) { // may be overridden
+        return null; // no expression as default
+    }
+
+    // ===================================================================================
+    //                                                                        Assist Logic
+    //                                                                        ============
+    protected String buildMapExp(Map<String, Object> map) { // returns null allowed
+        if (map.isEmpty()) {
             return null;
         }
         final StringBuilder sb = new StringBuilder();
-        parameterMap.forEach((key, value) -> {
+        map.forEach((key, value) -> {
             if (sb.length() > 0) {
                 sb.append(", ");
             }
@@ -187,6 +241,18 @@ public class SendReceiveLogger {
         });
         sb.insert(0, "{").append("}");
         return sb.toString();
+    }
+
+    protected boolean buildSendReceive(StringBuilder sb, String title, String value, boolean alreadyLineSep) {
+        boolean nowLineSep = alreadyLineSep;
+        if (value != null && value.contains("\n")) {
+            sb.append("\n").append(title).append(":").append("\n");
+            nowLineSep = true;
+        } else {
+            sb.append(alreadyLineSep ? "\n" : " ").append(title).append(":");
+        }
+        sb.append(value == null || !value.isEmpty() ? value : "(empty)");
+        return nowLineSep;
     }
 
     // ===================================================================================

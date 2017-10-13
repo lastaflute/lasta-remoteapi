@@ -28,20 +28,13 @@ public class SendReceiveLogOption {
     // ===================================================================================
     //                                                                           Attribute
     //                                                                           =========
-    protected boolean enabled;
     protected String categoryName; // lastaflute.remoteapi.sendreceive.[here], null allowed
     protected boolean suppressResponseBody; // may be too big
     protected Function<String, String> requestParameterFilter;
     protected Function<String, String> requestBodyFilter;
     protected Function<String, String> responseBodyFilter;
     protected SendReceiveLogKeeper sendReceiveLogKeeper; // null allowed, not required, lazy-loaded
-
-    // ===================================================================================
-    //                                                                          Initialize
-    //                                                                          ==========
-    public void enable() { // for framework
-        enabled = true;
-    }
+    protected boolean enabled;
 
     // ===================================================================================
     //                                                                         Easy-to-Use
@@ -107,6 +100,13 @@ public class SendReceiveLogOption {
             sendReceiveLogKeeper = new SendReceiveLogKeeper();
         }
         return sendReceiveLogKeeper;
+    }
+
+    // ===================================================================================
+    //                                                                           Framework
+    //                                                                           =========
+    public void xframeworkEnable() { // for framework
+        enabled = true;
     }
 
     // ===================================================================================

@@ -51,7 +51,8 @@ public class FlutyRemoteApiTest extends PlainTestCase {
         Class<Object> beanType = Object.class;
         OptionalThing<Object> noQuery = OptionalThing.empty();
         FlutyRemoteApiRule rule = new FlutyRemoteApiRule();
-        String url = remoteApi.buildUrl(beanType, "8080", actionPath, pathVariables, noQuery, rule);
+        String requestPath = remoteApi.buildRequestPath(beanType, "8080", actionPath, pathVariables, noQuery, rule);
+        String url = remoteApi.buildUrl(beanType, "8080", requestPath, noQuery, rule);
         log(url);
         return url;
     }
