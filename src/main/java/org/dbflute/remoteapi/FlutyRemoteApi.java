@@ -43,6 +43,7 @@ import org.apache.http.client.methods.HttpPut;
 import org.apache.http.client.methods.HttpUriRequest;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.util.EntityUtils;
+import org.dbflute.helper.function.IndependentProcessor;
 import org.dbflute.helper.message.ExceptionMessageBuilder;
 import org.dbflute.jdbc.Classification;
 import org.dbflute.optional.OptionalThing;
@@ -93,13 +94,15 @@ public class FlutyRemoteApi {
     // ===================================================================================
     //                                                                           Attribute
     //                                                                           =========
-    protected final Consumer<FlutyRemoteApiRule> defaultRuleLambda;
-    protected final Object facadeExp; // for various purpose, basically debug
+    protected final Consumer<FlutyRemoteApiRule> defaultRuleLambda; // not null
+    protected final Object facadeExp; // for various purpose, basically debug, not null
 
     // ===================================================================================
     //                                                                         Constructor
     //                                                                         ===========
     public FlutyRemoteApi(Consumer<FlutyRemoteApiRule> defaultRuleLambda, Object facadeExp) {
+        assertArgumentNotNull("defaultRuleLambda", defaultRuleLambda);
+        assertArgumentNotNull("facadeExp", facadeExp);
         this.defaultRuleLambda = defaultRuleLambda;
         this.facadeExp = facadeExp;
     }
@@ -366,6 +369,7 @@ public class FlutyRemoteApi {
     protected <RETURN> RETURN delegateExecute(SupportedHttpMethod httpMethod, String requestPath, FlutyRemoteApiRule rule,
             Supplier<RETURN> execution) {
         try {
+            saveMemories();
             return execution.get();
         } catch (RuntimeException e) {
             keepCauseIfNeeds(rule, e);
@@ -651,6 +655,47 @@ public class FlutyRemoteApi {
 
     protected boolean isVoid(Type returnType) {
         return Void.class.equals(returnType) || void.class.equals(returnType);
+    }
+
+    // ===================================================================================
+    //                                                                            Memories
+    //                                                                            ========
+    protected void saveMemories() {
+        if (!ThreadCacheContext.exists()) {
+            return;
+        }
+        final Consumer<String> counter = counterComesHere();
+        if (counter == null) { // e.g. before LastaFlute-1.0.1
+            return;
+        }
+        final String facadeName;
+        if (facadeExp instanceof Class<?>) {
+            facadeName = ((Class<?>) facadeExp).getSimpleName();
+        } else {
+            facadeName = facadeExp.toString();
+        }
+        counter.accept(facadeName);
+    }
+
+    protected Consumer<String> counterComesHere() {
+        Consumer<String> counter = findlRemoteApiCounter();
+        if (counter == null) {
+            final IndependentProcessor initializer = findRemoteApiCounterInitializer();
+            if (initializer != null) {
+                initializer.process();
+                counter = findlRemoteApiCounter();
+            }
+        }
+        return counter;
+    }
+
+    // expectes LastaFlute-1.0.1
+    protected Consumer<String> findlRemoteApiCounter() {
+        return ThreadCacheContext.getObject("fw:remoteApiCounter");
+    }
+
+    protected IndependentProcessor findRemoteApiCounterInitializer() {
+        return ThreadCacheContext.getObject("fw:remoteApiCounterInitializer");
     }
 
     // ===================================================================================
