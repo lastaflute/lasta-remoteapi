@@ -13,28 +13,34 @@
  * either express or implied. See the License for the specific language
  * governing permissions and limitations under the License.
  */
-package org.lastaflute.remoteapi.sender.body;
+package org.lastaflute.remoteapi.mapping;
 
-import org.dbflute.remoteapi.mapping.FlParameterSerializer;
 import org.dbflute.remoteapi.mapping.FlRemoteMappingPolicy;
-import org.dbflute.remoteapi.sender.body.FlFormSender;
-import org.lastaflute.remoteapi.mapping.LaParameterSerializer;
 
 /**
- * @author awane
  * @author jflute
  */
-public class LaFormSender extends FlFormSender {
+public interface LaRemoteMappingPolicy extends FlRemoteMappingPolicy {
 
     // ===================================================================================
-    //                                                                         Constructor
-    //                                                                         ===========
-    public LaFormSender(FlRemoteMappingPolicy mappingPolicy) {
-        super(mappingPolicy);
+    //                                                                        Field Naming
+    //                                                                        ============
+    /**
+     * @return The field naming type of form. (contains query form) (NotNull)
+     */
+    default FormFieldNaming getFieldNaming() {
+        return defaultFieldNaming();
     }
 
-    @Override
-    protected FlParameterSerializer createParameterSerializer() {
-        return new LaParameterSerializer(); // for e.g. field naming
+    static FormFieldNaming defaultFieldNaming() { // for overriding method use
+        return FormFieldNaming.IDENTITY;
+    }
+
+    enum FormFieldNaming {
+
+        /** Gson's FieldNamingPolicy.IDENTITY */
+        IDENTITY,
+        /** Gson's FieldNamingPolicy.LOWER_CASE_WITH_UNDERSCORES */
+        CAMEL_TO_LOWER_SNAKE
     }
 }

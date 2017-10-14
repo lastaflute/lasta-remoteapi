@@ -16,6 +16,8 @@
 package org.lastaflute.remoteapi;
 
 import java.lang.reflect.Type;
+import java.time.LocalDateTime;
+import java.util.Date;
 import java.util.Locale;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
@@ -27,8 +29,16 @@ import org.dbflute.remoteapi.FlutyRemoteApi;
 import org.dbflute.remoteapi.FlutyRemoteApiRule;
 import org.dbflute.remoteapi.exception.RemoteApiRequestValidationErrorException;
 import org.dbflute.remoteapi.exception.RemoteApiResponseValidationErrorException;
+import org.dbflute.remoteapi.logging.SendReceiveLogOption;
+import org.dbflute.remoteapi.logging.SendReceiveLogger;
+import org.dbflute.util.DfTypeUtil;
+import org.dbflute.util.Srl;
+import org.lastaflute.core.magic.ThreadCacheContext;
+import org.lastaflute.core.magic.async.AsyncManager;
+import org.lastaflute.core.magic.async.ConcurrentAsyncCall;
 import org.lastaflute.core.message.UserMessages;
 import org.lastaflute.core.message.supplier.UserMessagesCreator;
+import org.lastaflute.core.time.TimeManager;
 import org.lastaflute.core.util.Lato;
 import org.lastaflute.web.response.ApiResponse;
 import org.lastaflute.web.response.JsonResponse;
@@ -72,7 +82,7 @@ public class LastaRemoteApi extends FlutyRemoteApi {
     //                                                                          Validation
     //                                                                          ==========
     @Override
-    protected void validateParam(Type beanType, String urlBase, String actionPath, Object[] pathVariables, Object param,
+    protected void validateParam(Type returnType, String urlBase, String actionPath, Object[] pathVariables, Object param,
             FlutyRemoteApiRule rule) {
         if (rule.getValidatorOption().isSuppressParam()) {
             return;
@@ -80,12 +90,12 @@ public class LastaRemoteApi extends FlutyRemoteApi {
         try {
             createTransferredBeanValidator().validate(param);
         } catch (ResponseBeanValidationErrorException e) {
-            handleRemoteApiRequestValidationError(beanType, urlBase, actionPath, pathVariables, param, rule, e);
+            handleRemoteApiRequestValidationError(returnType, urlBase, actionPath, pathVariables, param, rule, e);
         }
     }
 
     @Override
-    protected void validateReturn(Type beanType, String url, OptionalThing<Object> form, int httpStatus, OptionalThing<String> body,
+    protected void validateReturn(Type returnType, String url, OptionalThing<Object> form, int httpStatus, OptionalThing<String> body,
             Object ret, FlutyRemoteApiRule rule) {
         if (rule.getValidatorOption().isSuppressReturn()) {
             return;
@@ -93,13 +103,13 @@ public class LastaRemoteApi extends FlutyRemoteApi {
         try {
             createTransferredBeanValidator().validate(ret);
         } catch (ResponseBeanValidationErrorException | ValidationStoppedException e) {
-            handleRemoteApiResponseValidationError(beanType, url, form, httpStatus, body, ret, rule, e);
+            handleRemoteApiResponseValidationError(returnType, url, form, httpStatus, body, ret, rule, e);
         }
     }
 
     protected ResponseSimpleBeanValidator createTransferredBeanValidator() {
         // use ActionValidator #for_now (with suppressing request process) by jflute
-        return new ResponseSimpleBeanValidator(requestManager, callerExp, isTransferredBeanValidationAsWarning()) {
+        return new ResponseSimpleBeanValidator(requestManager, facadeExp, isTransferredBeanValidationAsWarning()) {
             @Override
             protected ActionValidator<UserMessages> createActionValidator() {
                 final Class<?>[] groups = getValidatorGroups().orElse(ActionValidator.DEFAULT_GROUPS);
@@ -126,7 +136,7 @@ public class LastaRemoteApi extends FlutyRemoteApi {
         };
     }
 
-    protected void handleRemoteApiRequestValidationError(Type beanType, String urlBase, String actionPath, Object[] pathVariables,
+    protected void handleRemoteApiRequestValidationError(Type returnType, String urlBase, String actionPath, Object[] pathVariables,
             Object param, FlutyRemoteApiRule rule, ResponseBeanValidationErrorException e) {
         final ExceptionMessageBuilder br = new ExceptionMessageBuilder();
         br.addNotice("Validation Error as Param object for the remote API.");
@@ -136,7 +146,7 @@ public class LastaRemoteApi extends FlutyRemoteApi {
             sb.append(Stream.of(pathVariables).map(el -> el.toString()).collect(Collectors.joining("/"))); // simple for debug message
         }
         final String url = sb.toString();
-        setupRequestInfo(br, beanType, url, OptionalThing.of(param));
+        setupRequestInfo(br, returnType, url, OptionalThing.of(param));
         setupYourRule(br, rule);
         final String msg = br.buildExceptionMessage();
         if (rule.getValidatorOption().isHandleAsWarnParam()) {
@@ -146,11 +156,11 @@ public class LastaRemoteApi extends FlutyRemoteApi {
         }
     }
 
-    protected void handleRemoteApiResponseValidationError(Type beanType, String url, OptionalThing<Object> param, int httpStatus,
+    protected void handleRemoteApiResponseValidationError(Type returnType, String url, OptionalThing<Object> param, int httpStatus,
             OptionalThing<String> body, Object ret, FlutyRemoteApiRule rule, RuntimeException e) {
         final ExceptionMessageBuilder br = new ExceptionMessageBuilder();
         br.addNotice("Validation Error as Return object for the remote API.");
-        setupRequestInfo(br, beanType, url, param);
+        setupRequestInfo(br, returnType, url, param);
         setupResponseInfo(br, httpStatus, body);
         setupReturnInfo(br, ret);
         setupYourRule(br, rule);
@@ -168,6 +178,111 @@ public class LastaRemoteApi extends FlutyRemoteApi {
     @Override
     protected FlutyRemoteApiRule newRemoteApiRule() {
         return new LastaRemoteApiRule();
+    }
+
+    // ===================================================================================
+    //                                                                          Basic Keep
+    //                                                                          ==========
+    @Override
+    protected LocalDateTime flashDateTime() {
+        final TimeManager timeManager = requestManager.getTimeManager();
+        final Date flashDate = timeManager.flashDate(); // not depends on transaction so use flash date
+        return DfTypeUtil.toLocalDateTime(flashDate, timeManager.getBusinessTimeZone());
+    }
+
+    // ===================================================================================
+    //                                                                Send/Receive Logging
+    //                                                                ====================
+    @Override
+    protected SendReceiveLogger createSendReceiveLogger() {
+        return new LastaSendReceiveLogger();
+    }
+
+    public static class LastaSendReceiveLogger extends SendReceiveLogger {
+
+        @Override
+        protected String findCallerExp(SendReceiveLogOption option) {
+            return buildLastaFluteExp();
+        }
+
+        protected String buildLastaFluteExp() {
+            final String requestPath = ThreadCacheContext.findRequestPath(); // may contain query
+            if (requestPath == null) { // no way, just in case
+                return null; // no caller info
+            }
+            // _/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/
+            // e.g. web
+            //  /sea/land/1/2/ (2017-10-14 00:31:54.773) #f7ese3f
+            //    => caller:{/sea/land/1/2/ (2017-10-14 00:31:54.773) #f7ese3f}
+            //
+            // e.g. job
+            //  SeaLandJob (2017-10-14 00:31:54.773) #hm9fk12
+            //    => caller:{SeaLandJob (2017-10-14 00:31:54.773) #hm9fk12}
+            // _/_/_/_/_/_/_/_/_/_/
+            final StringBuilder sb = new StringBuilder();
+            buildCallerRequestPath(sb, requestPath);
+            buildCallerBeginTime(sb);
+            buildCallerProcessHash(sb);
+            return sb.toString();
+        }
+
+        protected void buildCallerRequestPath(StringBuilder sb, String requestPath) {
+            final String pure = removeQueryParameter(requestPath); // see query at in-out logging instead
+            sb.append(pure);
+        }
+
+        protected String removeQueryParameter(String requestPath) {
+            return Srl.substringFirstFront(requestPath, "?");
+        }
+
+        protected void buildCallerBeginTime(StringBuilder sb) {
+            final Object beginTime = findCallerBeginTime();
+            if (beginTime != null) {
+                sb.append(" (");
+                final String beginExp;
+                if (beginTime instanceof LocalDateTime) { // basically here
+                    beginExp = beginTimeFormatter.format((LocalDateTime) beginTime);
+                } else { // no way, just in case
+                    beginExp = beginTime.toString();
+                }
+                sb.append(beginExp);
+                sb.append(")");
+            }
+        }
+
+        protected Object findCallerBeginTime() {
+            return ThreadCacheContext.getObject("fw:beginTime"); // expects LastaFlute-1.0.1, LastaJob-0.5.2
+        }
+
+        protected void buildCallerProcessHash(StringBuilder sb) {
+            final Object processHash = findCallerProcessHash();
+            if (processHash != null) {
+                sb.append(" #").append(processHash);
+            }
+        }
+
+        protected Object findCallerProcessHash() {
+            return ThreadCacheContext.getObject("fw:processHash"); // expects LastaFlute-1.0.1, LastaJob-0.5.2
+        }
+    }
+
+    @Override
+    protected Consumer<Runnable> prepareSendReceiveLogAsync() {
+        final AsyncManager asyncManager = requestManager.getAsyncManager();
+        return runner -> {
+            asyncManager.async(new ConcurrentAsyncCall() {
+
+                @Override
+                public ConcurrentAsyncImportance importance() {
+                    return ConcurrentAsyncImportance.TERTIARY; // as low priority
+                }
+
+                @Override
+                public void callback() {
+                    runner.run();
+                }
+            });
+        };
     }
 
     // ===================================================================================

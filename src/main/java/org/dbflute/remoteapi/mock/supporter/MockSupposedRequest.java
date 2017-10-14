@@ -15,6 +15,9 @@
  */
 package org.dbflute.remoteapi.mock.supporter;
 
+import java.util.List;
+import java.util.Map;
+
 import org.dbflute.optional.OptionalThing;
 
 /**
@@ -30,15 +33,17 @@ public class MockSupposedRequest {
     protected final String body; // null allowed, not required
     protected final String hostName; // null allowed if unknown (basically known)
     protected final Integer port; // null allowed if unknown (basically known)
+    protected final Map<String, List<String>> headerMap; // not null, empty allowed, read-only
 
     // ===================================================================================
     //                                                                         Constructor
     //                                                                         ===========
-    public MockSupposedRequest(String url, String body, String hostName, Integer port) {
+    public MockSupposedRequest(String url, String body, String hostName, Integer port, Map<String, List<String>> headerMap) {
         this.url = url;
         this.body = body;
         this.hostName = hostName;
         this.port = port;
+        this.headerMap = headerMap; // should be read-only
     }
 
     // ===================================================================================
@@ -72,5 +77,9 @@ public class MockSupposedRequest {
         return OptionalThing.ofNullable(port, () -> {
             throw new IllegalStateException("Not found the port: url=" + url);
         });
+    }
+
+    public Map<String, List<String>> getHeaderMap() {
+        return headerMap;
     }
 }

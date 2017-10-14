@@ -22,6 +22,8 @@ import java.nio.charset.Charset;
 import org.dbflute.helper.beans.DfBeanDesc;
 import org.dbflute.helper.beans.DfPropertyDesc;
 import org.dbflute.helper.beans.factory.DfBeanDescFactory;
+import org.dbflute.remoteapi.FlutyRemoteApiRule;
+import org.dbflute.remoteapi.logging.SendReceiveLogOption;
 import org.dbflute.remoteapi.mapping.FlParameterSerializer;
 import org.dbflute.remoteapi.mapping.FlRemoteMappingPolicy;
 
@@ -44,7 +46,7 @@ public class FlQuerySender implements QueryParameterSender {
         this.parameterSerializer = createParameterSerializer();
     }
 
-    protected FlParameterSerializer createParameterSerializer() {
+    protected FlParameterSerializer createParameterSerializer() { // may be overridden
         return new FlParameterSerializer();
     }
 
@@ -52,38 +54,30 @@ public class FlQuerySender implements QueryParameterSender {
     //                                                                             Convert
     //                                                                             =======
     @Override
-    public String toQueryString(Object form, Charset queryParameterCharset) {
-        return buildQueryParameter(form, queryParameterCharset);
+    public String toQueryString(Object param, Charset charset, FlutyRemoteApiRule rule) {
+        return buildQueryString(param, charset, rule);
     }
 
-    protected String buildQueryParameter(Object form, Charset queryParameterCharset) {
+    protected String buildQueryString(Object form, Charset charset, FlutyRemoteApiRule rule) {
         final StringBuilder sb = new StringBuilder();
-        final String encoding = queryParameterCharset.name();
+        final String charsetName = charset.name();
         final DfBeanDesc beanDesc = DfBeanDescFactory.getBeanDesc(form.getClass());
         final MyValueHolder<Integer> paramIndex = new MyValueHolder<>(0);
         for (String propertyName : beanDesc.getProppertyNameList()) {
             final DfPropertyDesc propertyDesc = beanDesc.getPropertyDesc(propertyName);
             final Object plainValue = propertyDesc.getValue(form);
             if (plainValue != null) {
+                final String parameterName = asSerializedParameterName(propertyDesc);
                 if (Iterable.class.isAssignableFrom(plainValue.getClass())) {
-                    Iterable<?> plainValueIterable = (Iterable<?>) plainValue;
-                    plainValueIterable.forEach(value -> {
-                        sb.append(paramIndex.getValue() == 0 ? "?" : "&");
-                        sb.append(asSerializedParameterName(propertyDesc)).append("=");
-                        try {
-                            sb.append(URLEncoder.encode(asSerializedParameterValue(value), encoding));
-                        } catch (UnsupportedEncodingException e) {
-                            throw new IllegalStateException("Unknown encoding: " + encoding, e);
-                        }
+                    ((Iterable<?>) plainValue).forEach(elementValue -> {
+                        final String parameterValue = asSerializedParameterValue(elementValue);
+                        buildParameterElement(sb, paramIndex, parameterName, parameterValue, charsetName);
+                        readySendReceiveLogIfNeeds(rule, parameterName, parameterValue);
                     });
                 } else {
-                    sb.append(paramIndex.getValue() == 0 ? "?" : "&");
-                    sb.append(asSerializedParameterName(propertyDesc)).append("=");
-                    try {
-                        sb.append(URLEncoder.encode(asSerializedParameterValue(plainValue), encoding));
-                    } catch (UnsupportedEncodingException e) {
-                        throw new IllegalStateException("Unknown encoding: " + encoding, e);
-                    }
+                    final String parameterValue = asSerializedParameterValue(plainValue);
+                    buildParameterElement(sb, paramIndex, parameterName, parameterValue, charsetName);
+                    readySendReceiveLogIfNeeds(rule, parameterName, parameterValue);
                 }
                 paramIndex.setValue(paramIndex.getValue() + 1);
             }
@@ -91,21 +85,43 @@ public class FlQuerySender implements QueryParameterSender {
         return sb.toString();
     }
 
-    // ===================================================================================
-    //                                                                  Parameter Handling
-    //                                                                  ==================
-    protected String asSerializedParameterName(DfPropertyDesc propertyDesc) { // may be overridden
-        return propertyDesc.getPropertyName();
+    protected void buildParameterElement(StringBuilder sb, MyValueHolder<Integer> paramIndex, String parameterName, String parameterValue,
+            String charsetName) {
+        sb.append(paramIndex.getValue() == 0 ? "?" : "&");
+        sb.append(parameterName).append("=");
+        sb.append(encode(parameterValue, charsetName));
+    }
+
+    protected String asSerializedParameterName(DfPropertyDesc propertyDesc) {
+        return parameterSerializer.asSerializedParameterName(propertyDesc, mappingPolicy);
     }
 
     protected String asSerializedParameterValue(Object value) {
         return parameterSerializer.asSerializedParameterValue(value, mappingPolicy);
     }
 
+    protected String encode(String parameterValue, String charsetName) {
+        try {
+            return URLEncoder.encode(parameterValue, charsetName);
+        } catch (UnsupportedEncodingException e) {
+            throw new IllegalStateException("Unknown encoding: " + charsetName, e);
+        }
+    }
+
+    // -----------------------------------------------------
+    //                                  Send/Receive Logging
+    //                                  --------------------
+    protected void readySendReceiveLogIfNeeds(FlutyRemoteApiRule rule, String parameterName, String parameterValue) {
+        final SendReceiveLogOption option = rule.getSendReceiveLogOption();
+        if (option.isEnabled()) {
+            option.keeper().keepQueryParameter(parameterName, parameterValue);
+        }
+    }
+
     // ===================================================================================
     //                                                                        Small Helper
     //                                                                        ============
-    protected static class MyValueHolder<T> { // copied from Lasta Di
+    protected static class MyValueHolder<T> { // copied from Lasta Di, for use in lambda
 
         protected T value;
 

@@ -17,6 +17,8 @@ package org.dbflute.remoteapi.sender.body;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 import org.apache.http.HttpEntityEnclosingRequest;
 import org.apache.http.NameValuePair;
@@ -26,6 +28,7 @@ import org.dbflute.helper.beans.DfBeanDesc;
 import org.dbflute.helper.beans.DfPropertyDesc;
 import org.dbflute.helper.beans.factory.DfBeanDescFactory;
 import org.dbflute.remoteapi.FlutyRemoteApiRule;
+import org.dbflute.remoteapi.logging.SendReceiveLogOption;
 import org.dbflute.remoteapi.mapping.FlParameterSerializer;
 import org.dbflute.remoteapi.mapping.FlRemoteMappingPolicy;
 
@@ -57,7 +60,7 @@ public class FlFormSender implements RequestBodySender {
     //                                                                             Prepare
     //                                                                             =======
     @Override
-    public void prepareBodyRequest(HttpEntityEnclosingRequest enclosingRequest, Object param, FlutyRemoteApiRule rule) {
+    public void prepareEnclosingRequest(HttpEntityEnclosingRequest enclosingRequest, Object param, FlutyRemoteApiRule rule) {
         final DfBeanDesc beanDesc = DfBeanDescFactory.getBeanDesc(param.getClass());
         final List<NameValuePair> parameters = new ArrayList<>();
         beanDesc.getProppertyNameList().stream().forEach(proppertyName -> {
@@ -67,24 +70,41 @@ public class FlFormSender implements RequestBodySender {
             if (plainValue != null && Iterable.class.isAssignableFrom(plainValue.getClass())) {
                 final Iterable<?> plainValueIterable = (Iterable<?>) plainValue;
                 plainValueIterable.forEach(value -> {
-                    parameters.add(new BasicNameValuePair(serializedParameterName, asSerializedParameterValue(value)));
+                    parameters.add(createBasicNameValuePair(serializedParameterName, asSerializedParameterValue(value)));
                 });
             } else {
-                parameters.add(new BasicNameValuePair(serializedParameterName, asSerializedParameterValue(plainValue)));
+                parameters.add(createBasicNameValuePair(serializedParameterName, asSerializedParameterValue(plainValue)));
             }
         });
         enclosingRequest.setEntity(createUrlEncodedFormEntity(parameters, rule));
+        readySendReceiveLogIfNeeds(rule, param, parameters);
+    }
+
+    protected BasicNameValuePair createBasicNameValuePair(String name, String value) {
+        return new BasicNameValuePair(name, value);
     }
 
     protected UrlEncodedFormEntity createUrlEncodedFormEntity(List<NameValuePair> parameters, FlutyRemoteApiRule rule) {
         return new UrlEncodedFormEntity(parameters, rule.getRequestBodyCharset());
     }
 
+    // -----------------------------------------------------
+    //                                  Send/Receive Logging
+    //                                  --------------------
+    protected void readySendReceiveLogIfNeeds(FlutyRemoteApiRule rule, Object param, List<NameValuePair> parameters) {
+        final SendReceiveLogOption option = rule.getSendReceiveLogOption();
+        if (option.isEnabled()) {
+            final Map<String, String> keptMap =
+                    parameters.stream().collect(Collectors.toMap(bean -> bean.getName(), bean -> bean.getValue()));
+            option.keeper().keepFormParameter(keptMap);
+        }
+    }
+
     // ===================================================================================
     //                                                                  Parameter Handling
     //                                                                  ==================
     protected String asSerializedParameterName(DfPropertyDesc propertyDesc) { // may be overridden
-        return propertyDesc.getPropertyName();
+        return parameterSerializer.asSerializedParameterName(propertyDesc, mappingPolicy);
     }
 
     protected String asSerializedParameterValue(Object value) {

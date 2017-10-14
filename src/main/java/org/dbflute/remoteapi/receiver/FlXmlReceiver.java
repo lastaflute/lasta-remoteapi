@@ -21,21 +21,35 @@ import java.lang.reflect.Type;
 import javax.xml.bind.JAXB;
 
 import org.dbflute.optional.OptionalThing;
+import org.dbflute.remoteapi.FlutyRemoteApiRule;
 
 /**
  * @author inoue
  * @author jflute
  */
-public class FlXmlReceiver implements ResponseBodyReceiver {
+public class FlXmlReceiver extends FlBaseReceiver {
 
+    // ===================================================================================
+    //                                                                          Convert to
+    //                                                                          ==========
     @SuppressWarnings("unchecked")
-    public <RETURN> RETURN toResponseReturn(OptionalThing<String> body, Type type) {
+    @Override
+    public <RETURN> RETURN toResponseReturn(OptionalThing<String> body, Type type, FlutyRemoteApiRule rule) {
         if (!(type instanceof Class<?>)) {
             throw new IllegalArgumentException("The specified type is not Class: type=" + type);
         }
         final String target = body.orElseThrow(() -> { // translated with rich message so simple here
             return new IllegalStateException("Not found the response body as XML.");
         });
+        readySendReceiveLogIfNeeds(rule, body, target);
         return (RETURN) JAXB.unmarshal(new StringReader(target), (Class<?>) type);
+    }
+
+    // -----------------------------------------------------
+    //                                  Send/Receive Logging
+    //                                  --------------------
+    @Override
+    protected String getSendReceiveLogResponseBodyType() {
+        return "xml";
     }
 }

@@ -17,6 +17,8 @@ package org.dbflute.remoteapi.sender.query;
 
 import java.nio.charset.Charset;
 
+import org.dbflute.remoteapi.FlutyRemoteApiRule;
+
 /**
  * The sender of query parameter.
  * @author jflute
@@ -24,9 +26,10 @@ import java.nio.charset.Charset;
 public interface QueryParameterSender {
 
     /**
-     * @param form The form data for query string. (NotNull)
-     * @param queryParameterCharset The charset of query parameter. (NotNull)
+     * @param param The object of query parameter. (NotNull)
+     * @param charset The charset of query parameter. (NotNull)
+     * @param rule The rule of remote API. (NotNull)
      * @return The converted query string. e.g. ?sea=mystic&amp;land=oneman (NotNull)
      */
-    String toQueryString(Object form, Charset queryParameterCharset);
+    String toQueryString(Object param, Charset charset, FlutyRemoteApiRule rule);
 }

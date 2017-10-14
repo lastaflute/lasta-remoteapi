@@ -19,6 +19,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.Map;
 
+import org.dbflute.helper.beans.DfPropertyDesc;
 import org.dbflute.jdbc.Classification;
 
 /**
@@ -26,6 +27,16 @@ import org.dbflute.jdbc.Classification;
  */
 public class FlParameterSerializer {
 
+    // ===================================================================================
+    //                                                                      Parameter Name
+    //                                                                      ==============
+    public String asSerializedParameterName(DfPropertyDesc propertyDesc, FlRemoteMappingPolicy mappingPolicy) {
+        return propertyDesc.getPropertyName();
+    }
+
+    // ===================================================================================
+    //                                                                     Parameter Value
+    //                                                                     ===============
     public String asSerializedParameterValue(Object value, FlRemoteMappingPolicy mappingPolicy) { // with standard rule filter
         if (value == null) {
             return null;

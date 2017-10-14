@@ -23,6 +23,7 @@ import org.dbflute.helper.beans.DfBeanDesc;
 import org.dbflute.helper.beans.DfPropertyDesc;
 import org.dbflute.helper.beans.factory.DfBeanDescFactory;
 import org.dbflute.optional.OptionalThing;
+import org.dbflute.remoteapi.FlutyRemoteApiRule;
 import org.dbflute.util.DfCollectionUtil;
 import org.dbflute.util.DfReflectionUtil;
 
@@ -30,18 +31,33 @@ import org.dbflute.util.DfReflectionUtil;
  * @author awane
  * @author jflute
  */
-public class FlSplitReceiver implements ResponseBodyReceiver {
+public class FlSplitReceiver extends FlBaseReceiver {
 
+    // ===================================================================================
+    //                                                                           Attribute
+    //                                                                           =========
     protected final String delimiter;
     protected final String delimiterByKeyValue;
+    protected final String responseBodyType;
 
+    // ===================================================================================
+    //                                                                         Constructor
+    //                                                                         ===========
     public FlSplitReceiver(String delimiter, String delimiterByKeyValue) {
         this.delimiter = delimiter;
         this.delimiterByKeyValue = delimiterByKeyValue;
+        this.responseBodyType = buildResponseBodyType(delimiter);
     }
 
+    protected String buildResponseBodyType(String delimiter) {
+        return "split(" + delimiter + ", " + delimiterByKeyValue + ")";
+    }
+
+    // ===================================================================================
+    //                                                                          Convert to
+    //                                                                          ==========
     @Override
-    public <RETURN> RETURN toResponseReturn(OptionalThing<String> body, Type type) {
+    public <RETURN> RETURN toResponseReturn(OptionalThing<String> body, Type type, FlutyRemoteApiRule rule) {
         if (!(type instanceof Class<?>)) {
             throw new IllegalArgumentException("The specified type is not Class: type=" + type);
         }
@@ -69,6 +85,7 @@ public class FlSplitReceiver implements ResponseBodyReceiver {
                 propertyDesc.setValue(ret, value);
             }
         });
+        readySendReceiveLogIfNeeds(rule, body, target);
         return ret;
     }
 
@@ -78,5 +95,13 @@ public class FlSplitReceiver implements ResponseBodyReceiver {
 
     protected Object asDeserializedParameterValue(String value) {
         return value;
+    }
+
+    // -----------------------------------------------------
+    //                                  Send/Receive Logging
+    //                                  --------------------
+    @Override
+    protected String getSendReceiveLogResponseBodyType() {
+        return responseBodyType;
     }
 }

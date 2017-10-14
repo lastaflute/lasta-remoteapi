@@ -19,19 +19,29 @@ import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
 
 import org.dbflute.optional.OptionalThing;
+import org.dbflute.remoteapi.FlutyRemoteApiRule;
 
 /**
  * @author inoue
  * @author jflute
  */
-public abstract class FlJsonReceiver implements ResponseBodyReceiver {
+public abstract class FlJsonReceiver extends FlBaseReceiver {
 
-    @SuppressWarnings("unchecked")
+    // ===================================================================================
+    //                                                                          Convert to
+    //                                                                          ==========
     @Override
-    public <RETURN> RETURN toResponseReturn(OptionalThing<String> body, Type beanType) {
+    public <RETURN> RETURN toResponseReturn(OptionalThing<String> body, Type beanType, FlutyRemoteApiRule rule) {
         final String json = body.orElseThrow(() -> { // translated with rich message so simple here
             return new IllegalStateException("Not found the response body as JSON.");
         });
+        final RETURN ret = resolveJsonReturn(json, beanType);
+        readySendReceiveLogIfNeeds(rule, body, json);
+        return ret;
+    }
+
+    @SuppressWarnings("unchecked")
+    protected <RETURN> RETURN resolveJsonReturn(String json, Type beanType) {
         if (beanType instanceof Class<?>) {
             return (RETURN) fromJson(json, (Class<?>) beanType);
         } else {
@@ -42,4 +52,12 @@ public abstract class FlJsonReceiver implements ResponseBodyReceiver {
     protected abstract <BEAN> BEAN fromJson(String json, Class<BEAN> beanType);
 
     protected abstract <BEAN> BEAN fromJsonParameteried(String json, ParameterizedType parameterizedType);
+
+    // -----------------------------------------------------
+    //                                  Send/Receive Logging
+    //                                  --------------------
+    @Override
+    protected String getSendReceiveLogResponseBodyType() {
+        return "json";
+    }
 }

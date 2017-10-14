@@ -36,7 +36,7 @@ public class ClientErrorTranslatingResource {
     // ===================================================================================
     //                                                                           Attribute
     //                                                                           =========
-    protected final Type beanType; // not null
+    protected final Type returnType; // not null
     protected final String url; // not null
     protected final VaErrorHook validationErrorHook; // null allowed
     protected final RemoteApiHttpClientErrorException clientError; // not null
@@ -44,9 +44,9 @@ public class ClientErrorTranslatingResource {
     // ===================================================================================
     //                                                                         Constructor
     //                                                                         ===========
-    public ClientErrorTranslatingResource(Type beanType, String url, VaErrorHook validationErrorHook,
+    public ClientErrorTranslatingResource(Type returnType, String url, VaErrorHook validationErrorHook,
             RemoteApiHttpClientErrorException clientError) {
-        this.beanType = beanType;
+        this.returnType = returnType;
         this.url = url;
         this.validationErrorHook = validationErrorHook;
         this.clientError = clientError;
@@ -92,7 +92,7 @@ public class ClientErrorTranslatingResource {
         br.addElement("        remoteHarborBhv.requestSignin(param);");
         br.addElement("    }");
         br.addItem("Bean Type");
-        br.addElement(beanType);
+        br.addElement(returnType);
         br.addItem("Remote API");
         br.addElement(url);
         br.addItem("Messages");
@@ -104,8 +104,8 @@ public class ClientErrorTranslatingResource {
     // ===================================================================================
     //                                                                            Accessor
     //                                                                            ========
-    public Type getBeanType() {
-        return beanType;
+    public Type getReturnType() {
+        return returnType;
     }
 
     public String getUrl() {

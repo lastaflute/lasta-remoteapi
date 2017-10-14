@@ -13,11 +13,17 @@
  * either express or implied. See the License for the specific language
  * governing permissions and limitations under the License.
  */
-package org.dbflute.remoteapi.mapping;
+package org.dbflute.remoteapi.exception;
 
 /**
  * @author jflute
- * @deprecated use FlVacantMappingPolicy instead
+ * @since 0.3.7 (2017/10/05 Thursday)
  */
-public class FlVacantRemoteMappingPolicy implements FlRemoteMappingPolicy { // state-less
+public class RemoteApiPathVariableShortElementException extends RemoteApiBaseException {
+
+    private static final long serialVersionUID = 1L;
+
+    public RemoteApiPathVariableShortElementException(String msg) {
+        super(msg);
+    }
 }

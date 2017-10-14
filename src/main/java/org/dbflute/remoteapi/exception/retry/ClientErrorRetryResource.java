@@ -18,6 +18,7 @@ package org.dbflute.remoteapi.exception.retry;
 import java.lang.reflect.Type;
 
 import org.dbflute.optional.OptionalThing;
+import org.dbflute.remoteapi.FlutyRemoteApiRule;
 import org.dbflute.remoteapi.exception.RemoteApiHttpClientErrorException;
 import org.dbflute.remoteapi.http.SupportedHttpMethod;
 
@@ -27,28 +28,79 @@ import org.dbflute.remoteapi.http.SupportedHttpMethod;
  */
 public class ClientErrorRetryResource {
 
-    protected final Type beanType;
+    // ===================================================================================
+    //                                                                           Attribute
+    //                                                                           =========
+    protected final Type returnType;
     protected final String urlBase;
     protected final String actionPath;
     protected final Object[] pathVariables;
     protected final OptionalThing<? extends Object> param;
+    protected final FlutyRemoteApiRule rule; // only for changing status
     protected final SupportedHttpMethod httpMethod;
     protected final RemoteApiHttpClientErrorException clientError;
 
-    public ClientErrorRetryResource(Type beanType, String urlBase, String actionPath, Object[] pathVariables,
-            OptionalThing<? extends Object> param, SupportedHttpMethod httpMethod, RemoteApiHttpClientErrorException clientError) {
+    // ===================================================================================
+    //                                                                         Constructor
+    //                                                                         ===========
+    public ClientErrorRetryResource(Type returnType, String urlBase, String actionPath, Object[] pathVariables,
+            OptionalThing<? extends Object> param, FlutyRemoteApiRule rule, SupportedHttpMethod httpMethod,
+            RemoteApiHttpClientErrorException clientError) {
         super();
-        this.beanType = beanType;
+        this.returnType = returnType;
         this.urlBase = urlBase;
         this.actionPath = actionPath;
         this.pathVariables = pathVariables;
         this.param = param;
+        this.rule = rule;
         this.httpMethod = httpMethod;
         this.clientError = clientError;
     }
 
-    public Type getBeanType() {
-        return beanType;
+    // ===================================================================================
+    //                                                                        Change State
+    //                                                                        ============
+    /**
+     * Set header value by the name. <br>
+     * It overwrites the same-name header if it already exists.
+     * @param name The name of the header. (NotNull)
+     * @param value The value of the header. (NotNull)
+     */
+    public void setHeader(String name, String value) {
+        assertArgumentNotNull("name", name);
+        assertArgumentNotNull("value", value);
+        rule.setHeader(name, value);
+    }
+
+    /**
+     * Add header value by the name. <br>
+     * It is added as the second-or-more value if the name already exists.
+     * @param name The name of the header. (NotNull)
+     * @param value The value of the header, which may be as the second-or-more value. (NotNull)
+     */
+    public void addHeader(String name, String value) {
+        assertArgumentNotNull("name", name);
+        assertArgumentNotNull("value", value);
+        rule.addHeader(name, value);
+    }
+
+    // ===================================================================================
+    //                                                                        Small Helper
+    //                                                                        ============
+    protected void assertArgumentNotNull(String variableName, Object value) {
+        if (variableName == null) {
+            throw new IllegalArgumentException("The variableName should not be null.");
+        }
+        if (value == null) {
+            throw new IllegalArgumentException("The argument '" + variableName + "' should not be null.");
+        }
+    }
+
+    // ===================================================================================
+    //                                                                            Accessor
+    //                                                                            ========
+    public Type getReturnType() {
+        return returnType;
     }
 
     public String getUrlBase() {
@@ -65,6 +117,10 @@ public class ClientErrorRetryResource {
 
     public OptionalThing<? extends Object> getParam() {
         return param;
+    }
+
+    protected FlutyRemoteApiRule getRule() { // not public, has state so touch via facade methods
+        return rule;
     }
 
     public SupportedHttpMethod getHttpMethod() {
