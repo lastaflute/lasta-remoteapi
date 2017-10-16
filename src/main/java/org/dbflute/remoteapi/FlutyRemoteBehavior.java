@@ -382,6 +382,61 @@ public abstract class FlutyRemoteBehavior {
         return remoteApi.requestDelete(returnType, getUrlBase(), actionPath, pathVariables, param, ruleLambda);
     }
 
+    // -----------------------------------------------------
+    //                                                 Patch
+    //                                                 -----
+    /**
+     * Request as PATCH, receiving as simple bean type.
+     * <pre>
+     * e.g. if sender, receiver are already set as default: /lido/product/list/7
+     *  return doRequestPatch(RemoteProductListReturn.class, "/lido/product/list", moreUrl(7), body, rule -&gt; {});
+     *  
+     * e.g. if sender, receiver are not set yet, so set them here: /lido/product/list/7
+     *  return doRequestPatch(RemoteProductListReturn.class, "/lido/product/list", moreUrl(7), body, rule -&gt; {
+     *      rule.sendBodyBy(new LaJsonSender(...));
+     *      rule.receiveBodyBy(new LaJsonReceiver(...));
+     *  });
+     * </pre>
+     * @param <RETURN> The type of response return.
+     * @param returnType The class type of bean as return (response body), should have default constructor. (NotNull)
+     * @param actionPath The path to action without URL parameter. e.g. /sea/land (NotNull)
+     * @param pathVariables The array of URL path variables, e.g. ["hangar", 3]. (NotNull, EmptyAllowed)
+     * @param param The parameter object of PATCH parameters, may be JSON body. (NotNull)
+     * @param ruleLambda The callback for rule of remote API. (NotNull)
+     * @return The analyzed return of response from the request. (NotNull)
+     */
+    protected <RETURN> RETURN doRequestPatch(Class<? extends RETURN> returnType //
+            , String actionPath, Object[] pathVariables, Object param, Consumer<FlutyRemoteApiRule> ruleLambda) {
+        return remoteApi.requestPatch(returnType, getUrlBase(), actionPath, pathVariables, param, ruleLambda);
+    }
+
+    /**
+     * Request as PATCH, receiving as parameterized type (has nested generics).
+     * <pre>
+     * e.g. if sender, receiver are already set as default: /lido/product/list/7
+     *  return doRequestPatch(new ParameterizedRef&lt;RemoteSearchPagingReturn&lt;RemoteProductRowReturn&gt;&gt;() {
+     *  }.getType(), "/lido/product/list", moreUrl(7), body, rule -&gt; {});
+     *  
+     * e.g. if sender, receiver are not set yet, so set them here: /lido/product/list/7
+     *  return doRequestPatch(new ParameterizedRef&lt;RemoteSearchPagingReturn&lt;RemoteProductRowReturn&gt;&gt;() {
+     *  }.getType(), "/lido/product/list", moreUrl(7), body, rule -&gt; {
+     *      rule.sendBodyBy(new LaJsonSender(...));
+     *      rule.receiveBodyBy(new LaJsonReceiver(...));
+     *  });
+     * </pre>
+     * @param <RETURN> The type of response return.
+     * @param returnType The parameterized type of bean as return (response body), should have default constructor. (NotNull)
+     * @param actionPath The path to action without URL parameter. e.g. /sea/land (NotNull)
+     * @param pathVariables The array of URL path variables, e.g. ["hangar", 3]. (NotNull, EmptyAllowed)
+     * @param param The parameter object of PATCH parameters, may be JSON body. (NotNull)
+     * @param ruleLambda The callback for rule of remote API. (NotNull)
+     * @return The analyzed return of response from the request. (NotNull)
+     */
+    protected <RETURN> RETURN doRequestPatch(ParameterizedType returnType //
+            , String actionPath, Object[] pathVariables, Object param, Consumer<FlutyRemoteApiRule> ruleLambda) {
+        return remoteApi.requestPatch(returnType, getUrlBase(), actionPath, pathVariables, param, ruleLambda);
+    }
+
     // ===================================================================================
     //                                                                        Assist Logic
     //                                                                        ============

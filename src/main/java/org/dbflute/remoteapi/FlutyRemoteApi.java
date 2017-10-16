@@ -38,6 +38,7 @@ import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpDelete;
 import org.apache.http.client.methods.HttpEntityEnclosingRequestBase;
 import org.apache.http.client.methods.HttpGet;
+import org.apache.http.client.methods.HttpPatch;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.client.methods.HttpPut;
 import org.apache.http.client.methods.HttpUriRequest;
@@ -184,6 +185,26 @@ public class FlutyRemoteApi {
             OptionalThing<? extends Object> param, Consumer<FlutyRemoteApiRule> ruleLambda) {
         return doRequestEmptyBody(returnType, urlBase, actionPath, pathVariables, param, ruleLambda, SupportedHttpMethod.DELETE, url -> {
             return new HttpDelete(url);
+        });
+    }
+
+    // ===================================================================================
+    //                                                                       Request PATCH
+    //                                                                       =============
+    /**
+     * @param <RETURN> The type of response return.
+     * @param returnType The class type of bean as return (response body), should have default constructor. (NotNull)
+     * @param urlBase The base part of URL to remote API server. e.g. http://localhost:8090/harbor (NotNull)
+     * @param actionPath The path to action without URL parameter, and trailing slash is no difference. e.g. /sea/land (NotNull)
+     * @param pathVariables The array of URL path variables, e.g. ["hangar", 3]. (NotNull, EmptyAllowed)
+     * @param param The parameter object of PATCH parameters, may be JSON body. (NotNull)
+     * @param ruleLambda The callback for rule of remote API. (NotNull)
+     * @return The analyzed return of response from the request. (NotNull)
+     */
+    public <RETURN> RETURN requestPatch(Type returnType, String urlBase, String actionPath, Object[] pathVariables, Object param,
+            Consumer<FlutyRemoteApiRule> ruleLambda) {
+        return doRequestEnclosing(returnType, urlBase, actionPath, pathVariables, param, ruleLambda, SupportedHttpMethod.PATCH, url -> {
+            return new HttpPatch(url);
         });
     }
 
