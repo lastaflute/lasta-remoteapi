@@ -15,6 +15,9 @@
  */
 package org.dbflute.remoteapi.logging;
 
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.function.Function;
 
 import org.dbflute.optional.OptionalThing;
@@ -30,9 +33,10 @@ public class SendReceiveLogOption {
     //                                                                           =========
     protected String categoryName; // lastaflute.remoteapi.sendreceive.[here], null allowed
     protected boolean suppressResponseBody; // may be too big
-    protected Function<String, String> requestParameterFilter;
-    protected Function<String, String> requestBodyFilter;
-    protected Function<String, String> responseBodyFilter;
+    protected Function<String, String> requestParameterFilter; // null allowed, not required
+    protected Function<String, String> requestBodyFilter; // null allowed, not required
+    protected Set<String> responseHeaderTargetSet; // null allowed, not required
+    protected Function<String, String> responseBodyFilter; // null allowed, not required
     protected SendReceiveLogKeeper sendReceiveLogKeeper; // null allowed, not required, lazy-loaded
     protected boolean enabled;
 
@@ -40,9 +44,7 @@ public class SendReceiveLogOption {
     //                                                                         Easy-to-Use
     //                                                                         ===========
     public SendReceiveLogOption categorize(String categoryName) {
-        if (categoryName == null) {
-            throw new IllegalArgumentException("The argument 'categoryName' should not be null.");
-        }
+        assertArgumentNotNull("categoryName", categoryName);
         this.categoryName = categoryName;
         return this;
     }
@@ -61,9 +63,7 @@ public class SendReceiveLogOption {
      * @return this. (NotNull)
      */
     public SendReceiveLogOption filterRequestParameter(Function<String, String> requestParameterFilter) {
-        if (requestParameterFilter == null) {
-            throw new IllegalArgumentException("The argument 'requestParameterFilter' should not be null.");
-        }
+        assertArgumentNotNull("requestParameterFilter", requestParameterFilter);
         this.requestParameterFilter = requestParameterFilter;
         return this;
     }
@@ -73,10 +73,23 @@ public class SendReceiveLogOption {
      * @return this. (NotNull)
      */
     public SendReceiveLogOption filterRequestBody(Function<String, String> requestBodyFilter) {
-        if (requestBodyFilter == null) {
-            throw new IllegalArgumentException("The argument 'requestBodyFilter' should not be null.");
-        }
+        assertArgumentNotNull("requestBodyFilter", requestBodyFilter);
         this.requestBodyFilter = requestBodyFilter;
+        return this;
+    }
+
+    /**
+     * @param headerNames The array of header name, as logging target. (NotNull)
+     * @return this. (NotNull)
+     */
+    public SendReceiveLogOption targetResponseHeader(String... headerNames) {
+        assertArgumentNotNull("headerNames", headerNames);
+        if (responseHeaderTargetSet == null) {
+            responseHeaderTargetSet = new HashSet<String>();
+        }
+        for (String headerName : headerNames) {
+            responseHeaderTargetSet.add(headerName);
+        }
         return this;
     }
 
@@ -85,9 +98,7 @@ public class SendReceiveLogOption {
      * @return this. (NotNull)
      */
     public SendReceiveLogOption filterResponseBody(Function<String, String> responseBodyFilter) {
-        if (responseBodyFilter == null) {
-            throw new IllegalArgumentException("The argument 'responseBodyFilter' should not be null.");
-        }
+        assertArgumentNotNull("responseBodyFilter", responseBodyFilter);
         this.responseBodyFilter = responseBodyFilter;
         return this;
     }
@@ -107,6 +118,18 @@ public class SendReceiveLogOption {
     //                                                                           =========
     public void xframeworkEnable() { // for framework
         enabled = true;
+    }
+
+    // ===================================================================================
+    //                                                                        Small Helper
+    //                                                                        ============
+    protected void assertArgumentNotNull(String variableName, Object value) {
+        if (variableName == null) {
+            throw new IllegalArgumentException("The variableName should not be null.");
+        }
+        if (value == null) {
+            throw new IllegalArgumentException("The argument '" + variableName + "' should not be null.");
+        }
     }
 
     // ===================================================================================
@@ -136,6 +159,10 @@ public class SendReceiveLogOption {
         return OptionalThing.ofNullable(requestBodyFilter, () -> {
             throw new IllegalStateException("Not found the requestBodyFilter.");
         });
+    }
+
+    public Set<String> getResponseHeaderTargetSet() {
+        return responseHeaderTargetSet != null ? Collections.unmodifiableSet(responseHeaderTargetSet) : Collections.emptySet();
     }
 
     public OptionalThing<Function<String, String>> getResponseBodyFilter() {
