@@ -17,7 +17,10 @@ package org.dbflute.remoteapi.logging;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.Collections;
+import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.Set;
 import java.util.function.Consumer;
 
 import org.dbflute.optional.OptionalThing;
@@ -95,7 +98,7 @@ public class SendReceiveLogger {
         // Request: requestHeader, requestParameter, requestBody
         // _/_/_/_/_/_/_/_/_/_/
         {
-            final String headerExp = buildMapExp(keeper.getRequestHeaderMap());
+            final String headerExp = buildMapExp(keeper.getRequestHeaderMap()); // only headers you set
             if (headerExp != null) {
                 buildSendReceive(sb, "requestHeader", headerExp);
             }
@@ -115,10 +118,13 @@ public class SendReceiveLogger {
         // Response: responseHeader, responseBody
         // _/_/_/_/_/_/_/_/_/_/
         {
-            final String headerExp = buildMapExp(keeper.getResponseHeaderMap());
+            // show only specified headers because of too many
+            final Map<String, Object> targetHeaderMap = extractResponseHeaderMap(option, keeper);
+            final String headerExp = buildMapExp(targetHeaderMap);
             if (headerExp != null) {
                 buildSendReceive(sb, "responseHeader", headerExp);
             }
+            // can suppress body because may be too big
             if (!option.isSuppressResponseBody()) {
                 keeper.getResponseBodyContent().ifPresent(body -> {
                     final String title = "responseBody(" + keeper.getResponseBodyType().orElse("unknown") + ")";
@@ -193,6 +199,25 @@ public class SendReceiveLogger {
             requestParameterExp = buildMapExp(keeper.getFormParameterMap());
         }
         return requestParameterExp;
+    }
+
+    protected Map<String, Object> extractResponseHeaderMap(SendReceiveLogOption option, SendReceiveLogKeeper keeper) {
+        // filtering headers as specified target only
+        final Set<String> headerTargetSet = option.getResponseHeaderTargetSet();
+        if (headerTargetSet.isEmpty()) {
+            return Collections.emptyMap();
+        }
+        final Map<String, Object> allHeaderMap = keeper.getResponseHeaderMap();
+        if (allHeaderMap.isEmpty()) {
+            return Collections.emptyMap();
+        }
+        final Map<String, Object> targetHeaderMap = new LinkedHashMap<String, Object>();
+        allHeaderMap.forEach((key, value) -> {
+            if (headerTargetSet.contains(key)) {
+                targetHeaderMap.put(key, value);
+            }
+        });
+        return targetHeaderMap;
     }
 
     // ===================================================================================

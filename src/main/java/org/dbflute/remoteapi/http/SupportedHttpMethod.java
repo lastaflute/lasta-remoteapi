@@ -21,5 +21,5 @@ package org.dbflute.remoteapi.http;
  */
 public enum SupportedHttpMethod {
 
-    GET, POST, PUT, DELETE
+    GET, POST, PUT, DELETE, PATCH
 }
