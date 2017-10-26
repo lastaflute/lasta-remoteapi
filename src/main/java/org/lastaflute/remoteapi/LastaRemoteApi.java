@@ -95,7 +95,7 @@ public class LastaRemoteApi extends FlutyRemoteApi {
     }
 
     @Override
-    protected void validateReturn(Type returnType, String url, OptionalThing<Object> form, int httpStatus, OptionalThing<String> body,
+    protected void validateReturn(Type returnType, String url, OptionalThing<Object> param, int httpStatus, OptionalThing<String> body,
             Object ret, FlutyRemoteApiRule rule) {
         if (rule.getValidatorOption().isSuppressReturn()) {
             return;
@@ -103,7 +103,7 @@ public class LastaRemoteApi extends FlutyRemoteApi {
         try {
             createTransferredBeanValidator().validate(ret);
         } catch (ResponseBeanValidationErrorException | ValidationStoppedException e) {
-            handleRemoteApiResponseValidationError(returnType, url, form, httpStatus, body, ret, rule, e);
+            handleRemoteApiResponseValidationError(returnType, url, param, httpStatus, body, ret, rule, e);
         }
     }
 

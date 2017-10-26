@@ -409,7 +409,7 @@ public class FlutyRemoteApi {
         // you can override
     }
 
-    protected void validateReturn(Type returnType, String url, OptionalThing<Object> form, int httpStatus, OptionalThing<String> body,
+    protected void validateReturn(Type returnType, String url, OptionalThing<Object> param, int httpStatus, OptionalThing<String> body,
             Object ret, FlutyRemoteApiRule rule) {
         // you can override
     }
