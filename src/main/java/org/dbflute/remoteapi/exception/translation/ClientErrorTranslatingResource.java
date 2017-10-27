@@ -16,16 +16,10 @@
 package org.dbflute.remoteapi.exception.translation;
 
 import java.lang.reflect.Type;
+import java.util.function.BiFunction;
 
-import javax.validation.groups.Default;
-
-import org.dbflute.helper.message.ExceptionMessageBuilder;
 import org.dbflute.optional.OptionalThing;
 import org.dbflute.remoteapi.exception.RemoteApiHttpClientErrorException;
-import org.dbflute.remoteapi.exception.RemoteApiValidationErrorHookNotFoundException;
-import org.lastaflute.core.message.UserMessages;
-import org.lastaflute.web.validation.VaErrorHook;
-import org.lastaflute.web.validation.exception.ValidationErrorException;
 
 /**
  * @author jflute
@@ -38,18 +32,18 @@ public class ClientErrorTranslatingResource {
     //                                                                           =========
     protected final Type returnType; // not null
     protected final String url; // not null
-    protected final VaErrorHook validationErrorHook; // null allowed
     protected final RemoteApiHttpClientErrorException clientError; // not null
+    protected final BiFunction<RemoteApiHttpClientErrorException, Object, RuntimeException> validationErrorProvider; // null allowed
 
     // ===================================================================================
     //                                                                         Constructor
     //                                                                         ===========
-    public ClientErrorTranslatingResource(Type returnType, String url, VaErrorHook validationErrorHook,
-            RemoteApiHttpClientErrorException clientError) {
+    public ClientErrorTranslatingResource(Type returnType, String url, RemoteApiHttpClientErrorException clientError,
+            BiFunction<RemoteApiHttpClientErrorException, Object, RuntimeException> validationErrorProvider) {
         this.returnType = returnType;
         this.url = url;
-        this.validationErrorHook = validationErrorHook;
         this.clientError = clientError;
+        this.validationErrorProvider = validationErrorProvider;
     }
 
     // ===================================================================================
@@ -59,46 +53,19 @@ public class ClientErrorTranslatingResource {
      * @param messages The messages from error response. (NotNull)
      * @return The exception of validation error for HTML response. (NotNull)
      */
-    public ValidationErrorException asHtmlValidationError(UserMessages messages) {
+    public RuntimeException asHtmlValidationError(Object messages) {
         if (messages == null) {
             throw new IllegalArgumentException("The argument 'messages' should not be null.");
         }
-        if (validationErrorHook == null) {
-            throwRemoteApiValidationErrorHookNotFoundException(messages);
-        }
-        final Class<?>[] runtimeGroups = new Class<?>[] { Default.class }; // not supported in remote-api so default
-        return new ValidationErrorException(runtimeGroups, messages, validationErrorHook, clientError);
+        assertValidationErrorPrepared(messages);
+        return validationErrorProvider.apply(clientError, messages);
     }
 
-    protected void throwRemoteApiValidationErrorHookNotFoundException(UserMessages messages) {
-        final ExceptionMessageBuilder br = new ExceptionMessageBuilder();
-        br.addNotice("Not found the validation error hook for client error translation.");
-        br.addItem("Advice");
-        br.addElement("Calling validate() is required in your action of HTML response");
-        br.addElement("if you treat remote API's validation error as HTML validation error.");
-        br.addElement("(You should specify basic validator annotations in your form)");
-        br.addElement("For example:");
-        br.addElement("  (x):");
-        br.addElement("    public HtmlResponse index(SigninForm form) {");
-        br.addElement("        SigninParam param = mappingToParam(form);");
-        br.addElement("        remoteHarborBhv.requestSignin(param);");
-        br.addElement("    }");
-        br.addElement("  (o):");
-        br.addElement("    public HtmlResponse index(SigninForm form) {");
-        br.addElement("        validate(form, messages -> {}, () -> { // OK");
-        br.addElement("            return asHtml(path_Signin_SigninHtml);");
-        br.addElement("        });");
-        br.addElement("        SigninParam param = mappingToParam(form);");
-        br.addElement("        remoteHarborBhv.requestSignin(param);");
-        br.addElement("    }");
-        br.addItem("Bean Type");
-        br.addElement(returnType);
-        br.addItem("Remote API");
-        br.addElement(url);
-        br.addItem("Messages");
-        br.addElement(messages);
-        final String msg = br.buildExceptionMessage();
-        throw new RemoteApiValidationErrorHookNotFoundException(msg, clientError);
+    protected void assertValidationErrorPrepared(Object messages) {
+        if (validationErrorProvider == null) {
+            String msg = "Not found the validation error provider, unsupported?: messages=" + messages;
+            throw new IllegalStateException(msg);
+        }
     }
 
     // ===================================================================================
@@ -112,12 +79,6 @@ public class ClientErrorTranslatingResource {
         return url;
     }
 
-    public OptionalThing<VaErrorHook> getValidationErrorHook() {
-        return OptionalThing.ofNullable(validationErrorHook, () -> {
-            throw new IllegalStateException("Not found the validation error hook: url=" + url);
-        });
-    }
-
     @Deprecated
     public RemoteApiHttpClientErrorException getCause() { // use getClientError()
         return clientError;
@@ -125,5 +86,11 @@ public class ClientErrorTranslatingResource {
 
     public RemoteApiHttpClientErrorException getClientError() {
         return clientError;
+    }
+
+    public OptionalThing<BiFunction<RemoteApiHttpClientErrorException, Object, RuntimeException>> getValidationErrorHook() {
+        return OptionalThing.ofNullable(validationErrorProvider, () -> {
+            throw new IllegalStateException("Not found the validation error provider: url=" + url);
+        });
     }
 }
