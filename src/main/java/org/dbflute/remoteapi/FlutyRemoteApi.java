@@ -816,7 +816,7 @@ public class FlutyRemoteApi {
         }
     }
 
-    protected SendReceiveLogger createSendReceiveLogger() {
+    protected SendReceiveLogger createSendReceiveLogger() { // may be overridden
         return new SendReceiveLogger();
     }
 

@@ -278,7 +278,7 @@ public class LastaRemoteApi extends FlutyRemoteApi {
     //                                                                ====================
     @Override
     protected SendReceiveLogger createSendReceiveLogger() {
-        return new LastaSendReceiveLogger();
+        return new LastaSendReceiveLogger().asTopKeyword("lastaflute");
     }
 
     public static class LastaSendReceiveLogger extends SendReceiveLogger {
