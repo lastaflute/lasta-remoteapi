@@ -27,8 +27,7 @@ import org.dbflute.remoteapi.mock.MockHttpClient;
 import org.dbflute.util.DfCollectionUtil;
 
 /**
- * The base class of behavior for remote API. <br>
- * Reference: <a href="http://dbflute.seasar.org/ja/lastaflute/howto/impldesign/jsondesign.html">JSON Design of JSON API</a>
+ * The base class of behavior for remote API.
  * @author awane
  * @author jflute
  * @author inoue

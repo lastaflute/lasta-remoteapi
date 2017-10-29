@@ -19,16 +19,22 @@ import java.lang.reflect.Type;
 import java.time.LocalDateTime;
 import java.util.Date;
 import java.util.Locale;
+import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import javax.validation.groups.Default;
+
+import org.dbflute.helper.function.IndependentProcessor;
 import org.dbflute.helper.message.ExceptionMessageBuilder;
 import org.dbflute.optional.OptionalThing;
 import org.dbflute.remoteapi.FlutyRemoteApi;
 import org.dbflute.remoteapi.FlutyRemoteApiRule;
+import org.dbflute.remoteapi.exception.RemoteApiHttpClientErrorException;
 import org.dbflute.remoteapi.exception.RemoteApiRequestValidationErrorException;
 import org.dbflute.remoteapi.exception.RemoteApiResponseValidationErrorException;
+import org.dbflute.remoteapi.exception.RemoteApiValidationErrorHookNotFoundException;
 import org.dbflute.remoteapi.logging.SendReceiveLogOption;
 import org.dbflute.remoteapi.logging.SendReceiveLogger;
 import org.dbflute.util.DfTypeUtil;
@@ -46,6 +52,8 @@ import org.lastaflute.web.ruts.process.exception.ResponseBeanValidationErrorExce
 import org.lastaflute.web.ruts.process.validatebean.ResponseSimpleBeanValidator;
 import org.lastaflute.web.servlet.request.RequestManager;
 import org.lastaflute.web.validation.ActionValidator;
+import org.lastaflute.web.validation.VaErrorHook;
+import org.lastaflute.web.validation.exception.ValidationErrorException;
 import org.lastaflute.web.validation.exception.ValidationStoppedException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -95,7 +103,7 @@ public class LastaRemoteApi extends FlutyRemoteApi {
     }
 
     @Override
-    protected void validateReturn(Type returnType, String url, OptionalThing<Object> form, int httpStatus, OptionalThing<String> body,
+    protected void validateReturn(Type returnType, String url, OptionalThing<Object> param, int httpStatus, OptionalThing<String> body,
             Object ret, FlutyRemoteApiRule rule) {
         if (rule.getValidatorOption().isSuppressReturn()) {
             return;
@@ -103,7 +111,7 @@ public class LastaRemoteApi extends FlutyRemoteApi {
         try {
             createTransferredBeanValidator().validate(ret);
         } catch (ResponseBeanValidationErrorException | ValidationStoppedException e) {
-            handleRemoteApiResponseValidationError(returnType, url, form, httpStatus, body, ret, rule, e);
+            handleRemoteApiResponseValidationError(returnType, url, param, httpStatus, body, ret, rule, e);
         }
     }
 
@@ -181,6 +189,81 @@ public class LastaRemoteApi extends FlutyRemoteApi {
     }
 
     // ===================================================================================
+    //                                                                   Response Handling
+    //                                                                   =================
+    @Override
+    protected BiFunction<RemoteApiHttpClientErrorException, Object, RuntimeException> prepareValidatorErrorProvider(Type returnType,
+            String url, RemoteApiHttpClientErrorException cause) {
+        final Class<?>[] runtimeGroups = new Class<?>[] { Default.class }; // not supported in remote-api so default
+        return (clientError, objMessages) -> {
+            final VaErrorHook errorHook = findValidatorErrorHook();
+            if (errorHook == null) {
+                throwRemoteApiValidationErrorHookNotFoundException(returnType, url, clientError, objMessages);
+            }
+            if (!(objMessages instanceof UserMessages)) {
+                throw new IllegalStateException("Expected user messages but: messages=" + objMessages);
+            }
+            final UserMessages messages = (UserMessages) objMessages;
+            return new ValidationErrorException(runtimeGroups, messages, errorHook, clientError);
+        };
+    }
+
+    protected VaErrorHook findValidatorErrorHook() {
+        return ThreadCacheContext.findValidatorErrorHook(); // null allowed
+    }
+
+    protected void throwRemoteApiValidationErrorHookNotFoundException(Type returnType, String url,
+            RemoteApiHttpClientErrorException clientError, Object objMessages) {
+        final ExceptionMessageBuilder br = new ExceptionMessageBuilder();
+        br.addNotice("Not found the validation error hook for client error translation.");
+        br.addItem("Advice");
+        br.addElement("Calling validate() is required in your action of HTML response");
+        br.addElement("if you treat remote API's validation error as HTML validation error.");
+        br.addElement("(You should specify basic validator annotations in your form)");
+        br.addElement("For example:");
+        br.addElement("  (x):");
+        br.addElement("    public HtmlResponse index(SigninForm form) {");
+        br.addElement("        SigninParam param = mappingToParam(form);");
+        br.addElement("        remoteHarborBhv.requestSignin(param);");
+        br.addElement("    }");
+        br.addElement("  (o):");
+        br.addElement("    public HtmlResponse index(SigninForm form) {");
+        br.addElement("        validate(form, messages -> {}, () -> { // OK");
+        br.addElement("            return asHtml(path_Signin_SigninHtml);");
+        br.addElement("        });");
+        br.addElement("        SigninParam param = mappingToParam(form);");
+        br.addElement("        remoteHarborBhv.requestSignin(param);");
+        br.addElement("    }");
+        br.addItem("Bean Type");
+        br.addElement(returnType);
+        br.addItem("Remote API");
+        br.addElement(url);
+        br.addItem("Messages");
+        br.addElement(objMessages);
+        final String msg = br.buildExceptionMessage();
+        throw new RemoteApiValidationErrorHookNotFoundException(msg, clientError);
+    }
+
+    // ===================================================================================
+    //                                                                            Memories
+    //                                                                            ========
+    @Override
+    protected boolean hasMemoriesContext() {
+        return ThreadCacheContext.exists();
+    }
+
+    // expectes LastaFlute-1.0.1
+    @Override
+    protected Consumer<String> findlRemoteApiCounter() {
+        return ThreadCacheContext.getObject("fw:remoteApiCounter");
+    }
+
+    @Override
+    protected IndependentProcessor findRemoteApiCounterInitializer() {
+        return ThreadCacheContext.getObject("fw:remoteApiCounterInitializer");
+    }
+
+    // ===================================================================================
     //                                                                          Basic Keep
     //                                                                          ==========
     @Override
@@ -195,7 +278,7 @@ public class LastaRemoteApi extends FlutyRemoteApi {
     //                                                                ====================
     @Override
     protected SendReceiveLogger createSendReceiveLogger() {
-        return new LastaSendReceiveLogger();
+        return new LastaSendReceiveLogger().asTopKeyword("lastaflute");
     }
 
     public static class LastaSendReceiveLogger extends SendReceiveLogger {

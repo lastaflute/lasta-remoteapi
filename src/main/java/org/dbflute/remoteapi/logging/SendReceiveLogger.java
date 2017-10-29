@@ -39,9 +39,13 @@ public class SendReceiveLogger {
     // ===================================================================================
     //                                                                          Definition
     //                                                                          ==========
-    public static final String LOGGER_NAME = "lastaflute.remoteapi.sendreceive";
-    protected static final Logger baseLogger = LoggerFactory.getLogger(LOGGER_NAME);
+    protected static final String LOGGER_MIDDLE_NAME = "remoteapi.sendreceive";
     protected static final DateTimeFormatter beginTimeFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss.SSS");
+
+    // ===================================================================================
+    //                                                                           Attribute
+    //                                                                           =========
+    protected String loggerTopKeyword; // [here].remoteapi.sendreceive, null allowed
 
     // ===================================================================================
     //                                                                             Logging
@@ -50,8 +54,18 @@ public class SendReceiveLogger {
         logger.info(msg);
     }
 
-    public static boolean isLoggerEnabled(Logger logger) { // used by keeper's determination
-        return logger.isInfoEnabled();
+    // ===================================================================================
+    //                                                                         Constructor
+    //                                                                         ===========
+    public SendReceiveLogger() {
+    }
+
+    // -----------------------------------------------------
+    //                                                Option
+    //                                                ------
+    public SendReceiveLogger asTopKeyword(String topKeyword) {
+        this.loggerTopKeyword = topKeyword;
+        return this;
     }
 
     // ===================================================================================
@@ -69,8 +83,24 @@ public class SendReceiveLogger {
         }
     }
 
+    public boolean isLoggerEnabled(Logger logger) {
+        return logger.isInfoEnabled();
+    }
+
     protected Logger deriveLogger(SendReceiveLogOption option) {
-        return option.getCategoryName().map(name -> LoggerFactory.getLogger(LOGGER_NAME + "." + name)).orElse(baseLogger);
+        return LoggerFactory.getLogger(prepareLoggerName(option));
+    }
+
+    protected String prepareLoggerName(SendReceiveLogOption option) {
+        return option.getCategoryName().map(name -> buildDomainLoggerName(name)).orElseGet(() -> buildBaseLoggerName());
+    }
+
+    protected String buildDomainLoggerName(String categoryName) {
+        return buildBaseLoggerName() + "." + categoryName;
+    }
+
+    protected String buildBaseLoggerName() {
+        return (loggerTopKeyword != null ? loggerTopKeyword + "." : "") + LOGGER_MIDDLE_NAME;
     }
 
     protected void doShow(SupportedHttpMethod httpMethod, String requestPath, SendReceiveLogOption option, Consumer<Runnable> async,

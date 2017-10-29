@@ -25,6 +25,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
@@ -73,9 +74,6 @@ import org.dbflute.remoteapi.sender.body.RequestBodySender;
 import org.dbflute.remoteapi.sender.query.QueryParameterSender;
 import org.dbflute.system.DBFluteSystem;
 import org.dbflute.util.Srl;
-import org.lastaflute.core.magic.ThreadCacheContext;
-import org.lastaflute.core.util.Lato;
-import org.lastaflute.web.validation.VaErrorHook;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -314,7 +312,7 @@ public class FlutyRemoteApi {
         if (!logger.isDebugEnabled()) {
             return;
         }
-        final String paramDisp = param.getClass().getSimpleName() + ":" + Lato.string(param); // because toString() might not be overridden
+        final String paramDisp = param.getClass().getSimpleName() + ":" + convertBeanToDebugString(param); // because toString() might not be overridden
         final Map<String, List<String>> headerMap = rule.getHeaders().orElseGet(() -> Collections.emptyMap());
         logger.debug("#flow #remote ...Sending request as {} to Remote API:\n{}\n with param: {}\n with headers: {}", httpMethod, url,
                 paramDisp, headerMap);
@@ -409,7 +407,7 @@ public class FlutyRemoteApi {
         // you can override
     }
 
-    protected void validateReturn(Type returnType, String url, OptionalThing<Object> form, int httpStatus, OptionalThing<String> body,
+    protected void validateReturn(Type returnType, String url, OptionalThing<Object> param, int httpStatus, OptionalThing<String> body,
             Object ret, FlutyRemoteApiRule rule) {
         // you can override
     }
@@ -588,28 +586,9 @@ public class FlutyRemoteApi {
         }
     }
 
-    protected void throwTranslatedClientErrorIfNeeds(Type returnType, String url, OptionalThing<Object> param, FlutyRemoteApiRule rule,
-            int httpStatus, OptionalThing<String> body, RemoteApiHttpClientErrorException cause) {
-        rule.getClientErrorTranslator().ifPresent(translator -> {
-            final ClientErrorTranslatingResource resource = createRemoteApiClientErrorResource(returnType, url, cause);
-            RuntimeException translated = null;
-            try {
-                translated = translator.translate(resource);
-            } catch (RuntimeException e) {
-                throwRemoteApiErrorTranslationFailureException(returnType, url, param, rule, httpStatus, body, cause, e);
-            }
-            if (translated != null) {
-                throw translated;
-            }
-        });
-    }
-
-    protected ClientErrorTranslatingResource createRemoteApiClientErrorResource(Type returnType, String url,
-            RemoteApiHttpClientErrorException cause) {
-        final VaErrorHook errorHook = ThreadCacheContext.findValidatorErrorHook(); // null allowed
-        return new ClientErrorTranslatingResource(returnType, url, errorHook, cause);
-    }
-
+    // -----------------------------------------------------
+    //                                        Parse Response
+    //                                        --------------
     protected <RETURN> RETURN parseResponse(Type returnType, String url, OptionalThing<Object> form, int httpStatus,
             OptionalThing<String> body, FlutyRemoteApiRule rule) {
         logger.debug("#flow #remote ...Receiving response as {} from Remote API:\n{}\n as {}\n{}", httpStatus, url, returnType,
@@ -678,11 +657,40 @@ public class FlutyRemoteApi {
         return Void.class.equals(returnType) || void.class.equals(returnType);
     }
 
+    // -----------------------------------------------------
+    //                                 Translate ClientError
+    //                                 ---------------------
+    protected void throwTranslatedClientErrorIfNeeds(Type returnType, String url, OptionalThing<Object> param, FlutyRemoteApiRule rule,
+            int httpStatus, OptionalThing<String> body, RemoteApiHttpClientErrorException cause) {
+        rule.getClientErrorTranslator().ifPresent(translator -> {
+            final ClientErrorTranslatingResource resource = createRemoteApiClientErrorResource(returnType, url, cause);
+            RuntimeException translated = null;
+            try {
+                translated = translator.translate(resource);
+            } catch (RuntimeException e) {
+                throwRemoteApiErrorTranslationFailureException(returnType, url, param, rule, httpStatus, body, cause, e);
+            }
+            if (translated != null) {
+                throw translated;
+            }
+        });
+    }
+
+    protected ClientErrorTranslatingResource createRemoteApiClientErrorResource(Type returnType, String url,
+            RemoteApiHttpClientErrorException cause) {
+        return new ClientErrorTranslatingResource(returnType, url, cause, prepareValidatorErrorProvider(returnType, url, cause));
+    }
+
+    protected BiFunction<RemoteApiHttpClientErrorException, Object, RuntimeException> prepareValidatorErrorProvider(Type returnType,
+            String url, RemoteApiHttpClientErrorException cause) { // may be overridden
+        return null; // as default
+    }
+
     // ===================================================================================
     //                                                                            Memories
     //                                                                            ========
     protected void saveMemories() {
-        if (!ThreadCacheContext.exists()) {
+        if (!hasMemoriesContext()) {
             return;
         }
         final Consumer<String> counter = counterComesHere();
@@ -698,6 +706,10 @@ public class FlutyRemoteApi {
         counter.accept(facadeName);
     }
 
+    protected boolean hasMemoriesContext() { // may be overridden
+        return false; // as default
+    }
+
     protected Consumer<String> counterComesHere() {
         Consumer<String> counter = findlRemoteApiCounter();
         if (counter == null) {
@@ -711,12 +723,12 @@ public class FlutyRemoteApi {
     }
 
     // expectes LastaFlute-1.0.1
-    protected Consumer<String> findlRemoteApiCounter() {
-        return ThreadCacheContext.getObject("fw:remoteApiCounter");
+    protected Consumer<String> findlRemoteApiCounter() { // may be overridden
+        return null; // as default
     }
 
-    protected IndependentProcessor findRemoteApiCounterInitializer() {
-        return ThreadCacheContext.getObject("fw:remoteApiCounterInitializer");
+    protected IndependentProcessor findRemoteApiCounterInitializer() { // may be overridden
+        return null; // as default
     }
 
     // ===================================================================================
@@ -804,7 +816,7 @@ public class FlutyRemoteApi {
         }
     }
 
-    protected SendReceiveLogger createSendReceiveLogger() {
+    protected SendReceiveLogger createSendReceiveLogger() { // may be overridden
         return new SendReceiveLogger();
     }
 

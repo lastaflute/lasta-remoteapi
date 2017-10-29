@@ -31,7 +31,7 @@ public class SendReceiveLogOption {
     // ===================================================================================
     //                                                                           Attribute
     //                                                                           =========
-    protected String categoryName; // lastaflute.remoteapi.sendreceive.[here], null allowed
+    protected String categoryName; // [top-keyword].remoteapi.sendreceive.[here], null allowed
     protected boolean suppressResponseBody; // may be too big
     protected Function<String, String> requestParameterFilter; // null allowed, not required
     protected Function<String, String> requestBodyFilter; // null allowed, not required
