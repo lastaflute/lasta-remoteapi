@@ -50,15 +50,60 @@ public class ClientErrorTranslatingResource {
     //                                                                              Facade
     //                                                                              ======
     /**
+     * Create validation error for action response.
+     * <pre>
+     * e.g. unified failure and server-managed message
+     *  rule.translateClientError(resource -&gt; {
+     *      RemoteApiHttpClientErrorException clientError = resource.getClientError();
+     *      if (clientError.getHttpStatus() == 400) { // controlled client error
+     *          RemoteHbUnifiedFailureResult result = (RemoteHbUnifiedFailureResult) clientError.getFailureResponse().get();
+     *          if (RemoteUnifiedFailureType.VALIDATION_ERROR.equals(result.cause)) {
+     *              UserMessages messages = new UserMessages();
+     *              result.errors.forEach(error -&gt; {
+     *                  error.messages.forEach(message -&gt; {
+     *                      messages.add(error.field, UserMessage.asDirectMessage(message));
+     *                  });
+     *              });
+     *              return resource.asActionValidationError(messages);
+     *          }
+     *      }
+     *      return null; // no translation
+     *  });
+     * 
+     * e.g. unified failure and client-managed message
+     *  rule.translateClientError(resource -&gt; {
+     *      RemoteApiHttpClientErrorException clientError = resource.getClientError();
+     *      if (clientError.getHttpStatus() == 400) { // controlled client error
+     *          FaicliUnifiedFailureResult result = (FaicliUnifiedFailureResult) clientError.getFailureResponse().get();
+     *          if (FaicliUnifiedFailureType.VALIDATION_ERROR.equals(result.cause)) {
+     *              UserMessages messages = new UserMessages();
+     *              result.errors.forEach(error -&gt; {
+     *                  messages.add(error.field, toUserMessage(error));
+     *              });
+     *              return resource.asActionValidationError(messages);
+     *          }
+     *      }
+     *      return null; // no translation
+     * });
+     * </pre>
      * @param messages The messages from error response. (NotNull)
-     * @return The exception of validation error for HTML response. (NotNull)
+     * @return The exception of validation error for action response. (NotNull)
      */
-    public RuntimeException asHtmlValidationError(Object messages) {
+    public RuntimeException asActionValidationError(Object messages) {
         if (messages == null) {
             throw new IllegalArgumentException("The argument 'messages' should not be null.");
         }
         assertValidationErrorPrepared(messages);
-        return validationErrorProvider.apply(clientError, messages);
+        return validationErrorProvider.apply(clientError, messages); // errorHook is HtmlResponse or ApiFailureHook
+    }
+
+    /**
+     * @param messages The messages from error response. (NotNull)
+     * @return The exception of validation error for HTML response. (NotNull)
+     * @deprecated use asActionValidationError(), already not only for HTML but also AJAX
+     */
+    public RuntimeException asHtmlValidationError(Object messages) {
+        return asActionValidationError(messages);
     }
 
     protected void assertValidationErrorPrepared(Object messages) {
