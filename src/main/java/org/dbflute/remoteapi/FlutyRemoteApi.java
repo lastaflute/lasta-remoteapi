@@ -439,11 +439,11 @@ public class FlutyRemoteApi {
     protected String buildRequestPath(Type returnType, String urlBase, String actionPath, Object[] pathVariables,
             OptionalThing<? extends Object> queryParam, FlutyRemoteApiRule rule) {
         final StringBuilder sb = new StringBuilder();
-        final ActionPathNew pathNew = prepareActionPathVariableNew(returnType, urlBase, actionPath, pathVariables, queryParam, rule);
+        final ActionPathNew pathNew = prepareActionPathNew(returnType, urlBase, actionPath, pathVariables, queryParam, rule);
         sb.append(pathNew.getActionPath());
         if (pathNew.hasPathVariables()) {
             sb.append("/");
-            sb.append(buildPathVariablePart(returnType, urlBase, actionPath, pathNew.getPathVariables(), queryParam, rule));
+            sb.append(buildPathVariableRearPart(returnType, urlBase, actionPath, pathNew.getPathVariables(), queryParam, rule));
         }
         return sb.toString();
     }
@@ -464,7 +464,7 @@ public class FlutyRemoteApi {
         return sb.toString();
     }
 
-    protected ActionPathNew prepareActionPathVariableNew(Type returnType, String urlBase, String actionPath, Object[] pathVariables,
+    protected ActionPathNew prepareActionPathNew(Type returnType, String urlBase, String actionPath, Object[] pathVariables,
             OptionalThing<? extends Object> queryParam, FlutyRemoteApiRule rule) {
         final String newActionPath;
         final Object[] newPathVariables;
@@ -478,7 +478,7 @@ public class FlutyRemoteApi {
                     if (pathVariables.length <= pathVariableUsedIndex) {
                         throwRemoteApiPathVariableShortElementException(returnType, urlBase, actionPath, pathVariables, queryParam, rule);
                     }
-                    newToken = pathVariables[pathVariableUsedIndex];
+                    newToken = convertPathVariableToString(pathVariables[pathVariableUsedIndex], rule);
                     if (newToken == null) {
                         throwRemoteApiPathVariableNullElementException(returnType, urlBase, actionPath, pathVariables, queryParam, rule);
                     }
@@ -524,7 +524,7 @@ public class FlutyRemoteApi {
         }
     }
 
-    protected String buildPathVariablePart(Type returnType, String urlBase, String actionPath, Object[] pathVariables,
+    protected String buildPathVariableRearPart(Type returnType, String urlBase, String actionPath, Object[] pathVariables,
             OptionalThing<? extends Object> queryParam, FlutyRemoteApiRule rule) {
         final String encoding = rule.getPathVariableCharset().name();
         return Stream.of(pathVariables).map(el -> {

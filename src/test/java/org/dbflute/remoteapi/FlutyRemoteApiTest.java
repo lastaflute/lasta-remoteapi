@@ -66,7 +66,7 @@ public class FlutyRemoteApiTest extends PlainTestCase {
         FlutyRemoteApiRule rule = new FlutyRemoteApiRule();
 
         // ## Act ##
-        String part = remoteApi.buildPathVariablePart(String.class, "/harbor", "/mypage",
+        String part = remoteApi.buildPathVariableRearPart(String.class, "/harbor", "/mypage",
                 new Object[] { "sea", MockCDef.MemberStatus.Formalized }, OptionalThing.empty(), rule);
 
         // ## Assert ##
@@ -80,7 +80,7 @@ public class FlutyRemoteApiTest extends PlainTestCase {
         FlutyRemoteApiRule rule = new FlutyRemoteApiRule();
 
         // ## Act ##
-        String part = remoteApi.buildPathVariablePart(String.class, "/harbor", "/mypage", new Object[] { "sea", "my/s ti-c" },
+        String part = remoteApi.buildPathVariableRearPart(String.class, "/harbor", "/mypage", new Object[] { "sea", "my/s ti-c" },
                 OptionalThing.empty(), rule);
 
         // ## Assert ##
@@ -96,7 +96,7 @@ public class FlutyRemoteApiTest extends PlainTestCase {
         // ## Act ##
         // ## Assert ##
         assertException(RemoteApiPathVariableNullElementException.class, () -> {
-            remoteApi.buildPathVariablePart(String.class, "/harbor", "/mypage", new Object[] { "sea", null }, OptionalThing.empty(), rule);
+            remoteApi.buildPathVariableRearPart(String.class, "/harbor", "/mypage", new Object[] { "sea", null }, OptionalThing.empty(), rule);
         });
     }
 }
