@@ -479,12 +479,15 @@ public class FlutyRemoteApi {
                         throwRemoteApiPathVariableShortElementException(returnType, urlBase, actionPath, pathVariables, queryParam, rule);
                     }
                     final Object variablePlainValue = pathVariables[pathVariableUsedIndex];
+                    if (variablePlainValue == null) {
+                        throwRemoteApiPathVariableNullElementException(returnType, urlBase, actionPath, pathVariables, queryParam, rule);
+                    }
                     if (isPathVariableOptionalThingEmpty(variablePlainValue)) {
                         ++pathVariableUsedIndex;
                         continue; // skip the variable (for optional parameter)
                     }
                     newToken = convertPathVariableToString(variablePlainValue, rule);
-                    if (newToken == null) {
+                    if (newToken == null) { // basically no way, just in case (e.g. code() and toString() should not return null)
                         throwRemoteApiPathVariableNullElementException(returnType, urlBase, actionPath, pathVariables, queryParam, rule);
                     }
                     ++pathVariableUsedIndex;
@@ -493,8 +496,8 @@ public class FlutyRemoteApi {
                 }
                 resolvedElementList.add(newToken);
             }
-            newActionPath = resolvedElementList.stream().map(element -> { // /sea/mystic/land/oneman
-                return element.toString(); // already converted here
+            newActionPath = resolvedElementList.stream().map(token -> { // /sea/mystic/land/oneman
+                return token.toString(); // already converted here
             }).collect(Collectors.joining("/"));
             if (pathVariables.length > 0) { // basically here
                 newPathVariables = Arrays.asList(pathVariables).subList(pathVariableUsedIndex, pathVariables.length).toArray();
@@ -534,13 +537,13 @@ public class FlutyRemoteApi {
     protected String buildPathVariableRearPart(Type returnType, String urlBase, String actionPath, Object[] pathVariables,
             OptionalThing<? extends Object> queryParam, FlutyRemoteApiRule rule) {
         final String encoding = rule.getPathVariableCharset().name();
-        return Stream.of(pathVariables).map(el -> {
+        return Stream.of(pathVariables).peek(el -> {
             if (el == null) {
                 throwRemoteApiPathVariableNullElementException(returnType, urlBase, actionPath, pathVariables, queryParam, rule);
             }
-            if (isPathVariableOptionalThingEmpty(el)) {
-                return null; // skip the variable for optional parameter
-            }
+        }).filter(el -> {
+            return !isPathVariableOptionalThingEmpty(el); // skip empty optional parameter
+        }).map(el -> {
             try {
                 return URLEncoder.encode(convertPathVariableToString(el, rule), encoding);
             } catch (UnsupportedEncodingException e) { // basically no way
