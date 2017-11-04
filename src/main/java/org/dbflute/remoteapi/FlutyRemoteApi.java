@@ -468,9 +468,9 @@ public class FlutyRemoteApi {
             OptionalThing<? extends Object> queryParam, FlutyRemoteApiRule rule) {
         final String newActionPath;
         final Object[] newPathVariables;
-        if (Srl.containsAll(actionPath, "{", "}")) { // e.g. /sea/{hangar}/land/{showbase}, {"mystic", "onamna"}
+        if (Srl.containsAll(actionPath, "{", "}")) { // e.g. /sea/{hangar}/land/{showbase}, {"mystic", "onaman"}
             final List<String> pathElementList = Srl.splitList(actionPath, "/");
-            final List<Object> resolvedElementList = new ArrayList<Object>();
+            final List<Object> resolvedElementList = new ArrayList<Object>(); // e.g. [, sea, mystic, land, onaman]
             int pathVariableUsedIndex = 0;
             for (String token : pathElementList) {
                 final Object newToken;
@@ -478,7 +478,12 @@ public class FlutyRemoteApi {
                     if (pathVariables.length <= pathVariableUsedIndex) {
                         throwRemoteApiPathVariableShortElementException(returnType, urlBase, actionPath, pathVariables, queryParam, rule);
                     }
-                    newToken = convertPathVariableToString(pathVariables[pathVariableUsedIndex], rule);
+                    final Object variablePlainValue = pathVariables[pathVariableUsedIndex];
+                    if (isPathVariableOptionalThingEmpty(variablePlainValue)) {
+                        ++pathVariableUsedIndex;
+                        continue; // skip the variable (for optional parameter)
+                    }
+                    newToken = convertPathVariableToString(variablePlainValue, rule);
                     if (newToken == null) {
                         throwRemoteApiPathVariableNullElementException(returnType, urlBase, actionPath, pathVariables, queryParam, rule);
                     }
@@ -488,7 +493,9 @@ public class FlutyRemoteApi {
                 }
                 resolvedElementList.add(newToken);
             }
-            newActionPath = resolvedElementList.stream().map(token -> token.toString()).collect(Collectors.joining("/"));
+            newActionPath = resolvedElementList.stream().map(element -> { // /sea/mystic/land/oneman
+                return element.toString(); // already converted here
+            }).collect(Collectors.joining("/"));
             if (pathVariables.length > 0) { // basically here
                 newPathVariables = Arrays.asList(pathVariables).subList(pathVariableUsedIndex, pathVariables.length).toArray();
             } else { // no way, already checked but just in case (or may be broken variable expression...!?)
@@ -531,6 +538,9 @@ public class FlutyRemoteApi {
             if (el == null) {
                 throwRemoteApiPathVariableNullElementException(returnType, urlBase, actionPath, pathVariables, queryParam, rule);
             }
+            if (isPathVariableOptionalThingEmpty(el)) {
+                return null; // skip the variable for optional parameter
+            }
             try {
                 return URLEncoder.encode(convertPathVariableToString(el, rule), encoding);
             } catch (UnsupportedEncodingException e) { // basically no way
@@ -539,12 +549,24 @@ public class FlutyRemoteApi {
         }).collect(Collectors.joining("/"));
     }
 
+    protected boolean isPathVariableOptionalThingEmpty(Object value) {
+        return value instanceof OptionalThing<?> && !((OptionalThing<?>) value).isPresent();
+    }
+
     protected String convertPathVariableToString(Object el, FlutyRemoteApiRule rule) {
-        // #hope jflute needs PathVariableFilter?
+        // #thinking needs PathVariableFilter? will support on demand by jflute
         if (el instanceof String) {
             return (String) el;
         } else if (el instanceof Classification) {
             return ((Classification) el).code();
+        } else if (el instanceof OptionalThing<?>) {
+            final Object plainValue = ((OptionalThing<?>) el).orElseTranslatingThrow(cause -> {
+                throw new IllegalStateException("Empty optional, should be checked before.", cause);
+            });
+            if (isPathVariableOptionalThingEmpty(plainValue)) { // e.g. OptionalThing<OptionalThing<?>>
+                throw new IllegalStateException("Unsupported optional in optional: " + el);
+            }
+            return convertPathVariableToString(plainValue, rule); // recursive
         } else {
             return el.toString();
         }
