@@ -82,11 +82,12 @@ public class FlutyRemoteApiRule {
     protected ClientErrorRetryDeterminer clientErrorRetryDeterminer; // null allowed, not required
     protected SendReceiveValidatorOption validatorOption = newValidatorOption(); // not null, as default, light instance
     protected SendReceiveLogOption sendReceiveLogOption = newSendReceiveLogOption(); // not null, as default, light instance
+    protected Consumer<HttpClientBuilder> httpClientSetupper; // null allowed, not required
+    protected Consumer<RequestConfig.Builder> httpRequestSetupper; // null allowed, not required
 
     // #hope jflute can accept response header, interface? mapping? (2017/09/13)
-    // #hope jflute request trace ID option (2017/09/13)
+    // #hope jflute request trace ID option, but thinking...header? (2017/09/13)
     // #hope jflute improve tracebility like DBFlute (2017/09/13)
-    // #hope jflute remoteApi call count in request (2017/10/13)
 
     // ===================================================================================
     //                                                                         Http Client
@@ -96,27 +97,61 @@ public class FlutyRemoteApiRule {
         if (__xmockHttpClient != null) {
             return __xmockHttpClient;
         }
-        final RequestConfig.Builder requestBuilder = RequestConfig.custom();
-        requestBuilder.setConnectTimeout(getConnectTimeout());
-        requestBuilder.setConnectionRequestTimeout(getConnectionRequestTimeout());
-        requestBuilder.setSocketTimeout(getSocketTimeout());
+        final HttpClientBuilder httpClientBuilder = createHttpClientBuilder();
+        final RequestConfig.Builder httpRequestBuilder = createHttpRequestBuilder();
+        return httpClientBuilder.setDefaultRequestConfig(httpRequestBuilder.build()).build();
+    }
+
+    // -----------------------------------------------------
+    //                                           HTTP Client
+    //                                           -----------
+    protected HttpClientBuilder createHttpClientBuilder() {
         final HttpClientBuilder httpClientBuilder = HttpClients.custom();
         if (isSslUntrusted()) {
-            final TrustStrategy trustStrategy = new TrustStrategy() {
-                @Override
-                public boolean isTrusted(X509Certificate[] chain, String authType) throws CertificateException {
-                    return true;
-                }
-            };
-            final SSLContext sslContext;
-            try {
-                sslContext = SSLContexts.custom().loadTrustMaterial(trustStrategy).build();
-            } catch (KeyManagementException | NoSuchAlgorithmException | KeyStoreException e) {
-                throw new IllegalStateException("Failed to build SSL context: trustStrategy=" + trustStrategy, e);
-            }
-            httpClientBuilder.setSSLContext(sslContext).setSSLHostnameVerifier(NoopHostnameVerifier.INSTANCE);
+            customizeToSslUntrusted(httpClientBuilder);
         }
-        return httpClientBuilder.setDefaultRequestConfig(requestBuilder.build()).build();
+        if (httpClientSetupper != null) {
+            httpClientSetupper.accept(httpClientBuilder);
+        }
+        customizeToYourHttpClient(httpClientBuilder);
+        return httpClientBuilder;
+    }
+
+    protected void customizeToSslUntrusted(HttpClientBuilder httpClientBuilder) {
+        final TrustStrategy trustStrategy = new TrustStrategy() {
+            @Override
+            public boolean isTrusted(X509Certificate[] chain, String authType) throws CertificateException {
+                return true;
+            }
+        };
+        final SSLContext sslContext;
+        try {
+            sslContext = SSLContexts.custom().loadTrustMaterial(trustStrategy).build();
+        } catch (KeyManagementException | NoSuchAlgorithmException | KeyStoreException e) {
+            throw new IllegalStateException("Failed to build SSL context: trustStrategy=" + trustStrategy, e);
+        }
+        httpClientBuilder.setSSLContext(sslContext).setSSLHostnameVerifier(NoopHostnameVerifier.INSTANCE);
+    }
+
+    protected void customizeToYourHttpClient(HttpClientBuilder httpClientBuilder) {
+    }
+
+    // -----------------------------------------------------
+    //                                          HTTP Request
+    //                                          ------------
+    protected RequestConfig.Builder createHttpRequestBuilder() {
+        final RequestConfig.Builder httpRequestBuilder = RequestConfig.custom();
+        httpRequestBuilder.setConnectTimeout(getConnectTimeout());
+        httpRequestBuilder.setConnectionRequestTimeout(getConnectionRequestTimeout());
+        httpRequestBuilder.setSocketTimeout(getSocketTimeout());
+        if (httpRequestSetupper != null) {
+            httpRequestSetupper.accept(httpRequestBuilder);
+        }
+        customizeToYourHttpRequest(httpRequestBuilder);
+        return httpRequestBuilder;
+    }
+
+    protected void customizeToYourHttpRequest(RequestConfig.Builder httpRequestBuilder) {
     }
 
     // ===================================================================================
@@ -336,6 +371,19 @@ public class FlutyRemoteApiRule {
 
     protected SendReceiveLogOption newSendReceiveLogOption() {
         return new SendReceiveLogOption();
+    }
+
+    // -----------------------------------------------------
+    //                                       Native Setupper
+    //                                       ---------------
+    public void setupNativeHttpClient(Consumer<HttpClientBuilder> httpClientSetupper) {
+        assertArgumentNotNull("httpClientSetupper", httpClientSetupper);
+        this.httpClientSetupper = httpClientSetupper;
+    }
+
+    public void setupNativeHttpRequest(Consumer<RequestConfig.Builder> httpRequestSetupper) {
+        assertArgumentNotNull("httpRequestSetupper", httpRequestSetupper);
+        this.httpRequestSetupper = httpRequestSetupper;
     }
 
     // ===================================================================================
