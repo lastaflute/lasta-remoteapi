@@ -58,14 +58,14 @@ public class FlQuerySender implements QueryParameterSender {
         return buildQueryString(param, charset, rule);
     }
 
-    protected String buildQueryString(Object form, Charset charset, FlutyRemoteApiRule rule) {
+    protected String buildQueryString(Object param, Charset charset, FlutyRemoteApiRule rule) {
         final StringBuilder sb = new StringBuilder();
         final String charsetName = charset.name();
-        final DfBeanDesc beanDesc = DfBeanDescFactory.getBeanDesc(form.getClass());
+        final DfBeanDesc beanDesc = DfBeanDescFactory.getBeanDesc(param.getClass());
         final MyValueHolder<Integer> paramIndex = new MyValueHolder<>(0);
         for (String propertyName : beanDesc.getProppertyNameList()) {
             final DfPropertyDesc propertyDesc = beanDesc.getPropertyDesc(propertyName);
-            final Object plainValue = propertyDesc.getValue(form);
+            final Object plainValue = propertyDesc.getValue(param);
             if (plainValue != null) {
                 final String parameterName = asSerializedParameterName(propertyDesc);
                 if (Iterable.class.isAssignableFrom(plainValue.getClass())) {
