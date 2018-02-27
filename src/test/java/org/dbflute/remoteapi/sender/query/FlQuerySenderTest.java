@@ -9,7 +9,7 @@
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, 
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
  * either express or implied. See the License for the specific language
  * governing permissions and limitations under the License.
  */
@@ -61,6 +61,35 @@ public class FlQuerySenderTest extends PlainTestCase {
         log(query);
         assertTrue(Srl.count(query, "?") == 1);
         assertTrue(Srl.count(query, "&") == 1);
+    }
+
+    public void test_toQueryString_allNull() {
+        // ## Arrange ##
+        FlQuerySender sender = new FlQuerySender(new LaVacantMappingPolicy());
+        SeaParam param = new SeaParam();
+
+        // ## Act ##
+        String query = sender.toQueryString(param, Charsets.UTF_8, new FlutyRemoteApiRule());
+
+        // ## Assert ##
+        log(query);
+        assertTrue(query.length() == 0);
+    }
+
+    public void test_toQueryString_empty() {
+        // ## Arrange ##
+        FlQuerySender sender = new FlQuerySender(new LaVacantMappingPolicy());
+        SeaParam param = new SeaParam();
+        param.location = "";
+        param.stageList = newArrayList("", "");
+
+        // ## Act ##
+        String query = sender.toQueryString(param, Charsets.UTF_8, new FlutyRemoteApiRule());
+
+        // ## Assert ##
+        log(query);
+        assertTrue(Srl.count(query, "?") == 1);
+        assertTrue(Srl.count(query, "&") == 2);
     }
 
     public static class SeaParam {
