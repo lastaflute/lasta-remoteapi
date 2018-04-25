@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2017 the original author or authors.
+ * Copyright 2015-2018 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -439,11 +439,11 @@ public class FlutyRemoteApi {
     protected String buildRequestPath(Type returnType, String urlBase, String actionPath, Object[] pathVariables,
             OptionalThing<? extends Object> queryParam, FlutyRemoteApiRule rule) {
         final StringBuilder sb = new StringBuilder();
-        final ActionPathNew pathNew = prepareActionPathVariableNew(returnType, urlBase, actionPath, pathVariables, queryParam, rule);
+        final ActionPathNew pathNew = prepareActionPathNew(returnType, urlBase, actionPath, pathVariables, queryParam, rule);
         sb.append(pathNew.getActionPath());
         if (pathNew.hasPathVariables()) {
             sb.append("/");
-            sb.append(buildPathVariablePart(returnType, urlBase, actionPath, pathNew.getPathVariables(), queryParam, rule));
+            sb.append(buildPathVariableRearPart(returnType, urlBase, actionPath, pathNew.getPathVariables(), queryParam, rule));
         }
         return sb.toString();
     }
@@ -464,13 +464,13 @@ public class FlutyRemoteApi {
         return sb.toString();
     }
 
-    protected ActionPathNew prepareActionPathVariableNew(Type returnType, String urlBase, String actionPath, Object[] pathVariables,
+    protected ActionPathNew prepareActionPathNew(Type returnType, String urlBase, String actionPath, Object[] pathVariables,
             OptionalThing<? extends Object> queryParam, FlutyRemoteApiRule rule) {
         final String newActionPath;
         final Object[] newPathVariables;
-        if (Srl.containsAll(actionPath, "{", "}")) { // e.g. /sea/{hangar}/land/{showbase}, {"mystic", "onamna"}
+        if (Srl.containsAll(actionPath, "{", "}")) { // e.g. /sea/{hangar}/land/{showbase}, {"mystic", "onaman"}
             final List<String> pathElementList = Srl.splitList(actionPath, "/");
-            final List<Object> resolvedElementList = new ArrayList<Object>();
+            final List<Object> resolvedElementList = new ArrayList<Object>(); // e.g. [, sea, mystic, land, onaman]
             int pathVariableUsedIndex = 0;
             for (String token : pathElementList) {
                 final Object newToken;
@@ -478,8 +478,16 @@ public class FlutyRemoteApi {
                     if (pathVariables.length <= pathVariableUsedIndex) {
                         throwRemoteApiPathVariableShortElementException(returnType, urlBase, actionPath, pathVariables, queryParam, rule);
                     }
-                    newToken = pathVariables[pathVariableUsedIndex];
-                    if (newToken == null) {
+                    final Object variablePlainValue = pathVariables[pathVariableUsedIndex];
+                    if (variablePlainValue == null) {
+                        throwRemoteApiPathVariableNullElementException(returnType, urlBase, actionPath, pathVariables, queryParam, rule);
+                    }
+                    if (isPathVariableOptionalThingEmpty(variablePlainValue)) {
+                        ++pathVariableUsedIndex;
+                        continue; // skip the variable (for optional parameter)
+                    }
+                    newToken = convertPathVariableToString(variablePlainValue, rule);
+                    if (newToken == null) { // basically no way, just in case (e.g. code() and toString() should not return null)
                         throwRemoteApiPathVariableNullElementException(returnType, urlBase, actionPath, pathVariables, queryParam, rule);
                     }
                     ++pathVariableUsedIndex;
@@ -488,7 +496,9 @@ public class FlutyRemoteApi {
                 }
                 resolvedElementList.add(newToken);
             }
-            newActionPath = resolvedElementList.stream().map(token -> token.toString()).collect(Collectors.joining("/"));
+            newActionPath = resolvedElementList.stream().map(token -> { // /sea/mystic/land/oneman
+                return token.toString(); // already converted here
+            }).collect(Collectors.joining("/"));
             if (pathVariables.length > 0) { // basically here
                 newPathVariables = Arrays.asList(pathVariables).subList(pathVariableUsedIndex, pathVariables.length).toArray();
             } else { // no way, already checked but just in case (or may be broken variable expression...!?)
@@ -524,13 +534,16 @@ public class FlutyRemoteApi {
         }
     }
 
-    protected String buildPathVariablePart(Type returnType, String urlBase, String actionPath, Object[] pathVariables,
+    protected String buildPathVariableRearPart(Type returnType, String urlBase, String actionPath, Object[] pathVariables,
             OptionalThing<? extends Object> queryParam, FlutyRemoteApiRule rule) {
         final String encoding = rule.getPathVariableCharset().name();
-        return Stream.of(pathVariables).map(el -> {
+        return Stream.of(pathVariables).peek(el -> {
             if (el == null) {
                 throwRemoteApiPathVariableNullElementException(returnType, urlBase, actionPath, pathVariables, queryParam, rule);
             }
+        }).filter(el -> {
+            return !isPathVariableOptionalThingEmpty(el); // skip empty optional parameter
+        }).map(el -> {
             try {
                 return URLEncoder.encode(convertPathVariableToString(el, rule), encoding);
             } catch (UnsupportedEncodingException e) { // basically no way
@@ -539,12 +552,24 @@ public class FlutyRemoteApi {
         }).collect(Collectors.joining("/"));
     }
 
+    protected boolean isPathVariableOptionalThingEmpty(Object value) {
+        return value instanceof OptionalThing<?> && !((OptionalThing<?>) value).isPresent();
+    }
+
     protected String convertPathVariableToString(Object el, FlutyRemoteApiRule rule) {
-        // #hope jflute needs PathVariableFilter?
+        // #thinking needs PathVariableFilter? will support on demand by jflute
         if (el instanceof String) {
             return (String) el;
         } else if (el instanceof Classification) {
             return ((Classification) el).code();
+        } else if (el instanceof OptionalThing<?>) {
+            final Object plainValue = ((OptionalThing<?>) el).orElseTranslatingThrow(cause -> {
+                throw new IllegalStateException("Empty optional, should be checked before.", cause);
+            });
+            if (isPathVariableOptionalThingEmpty(plainValue)) { // e.g. OptionalThing<OptionalThing<?>>
+                throw new IllegalStateException("Unsupported optional in optional: " + el);
+            }
+            return convertPathVariableToString(plainValue, rule); // recursive
         } else {
             return el.toString();
         }

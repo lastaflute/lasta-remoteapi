@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2017 the original author or authors.
+ * Copyright 2015-2018 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -30,7 +30,7 @@ public class FlutyRemoteApiTest extends PlainTestCase {
     // ===================================================================================
     //                                                                          buildUrl()
     //                                                                          ==========
-    public void test_buildUrl_actionPathVariables() {
+    public void test_buildUrl_actionPathVariables_basic() {
         assertEquals("8080/sea/land", buildUrl_withPath("/sea/land"));
         assertEquals("8080/sea/land/mystic/2", buildUrl_withPath("/sea/land", "mystic", 2));
         assertEquals("8080/sea/mystic/land/2", buildUrl_withPath("/sea/{hangar}/land", "mystic", 2));
@@ -44,6 +44,19 @@ public class FlutyRemoteApiTest extends PlainTestCase {
                 () -> buildUrl_withPath("/sea/land/{show1}/{show2}", "mystic", null, "oneman"));
         assertException(RemoteApiPathVariableShortElementException.class, () -> buildUrl_withPath("/sea/land/{show1}}"));
         assertException(RemoteApiPathVariableShortElementException.class, () -> buildUrl_withPath("/sea/land/{show1}/{show2}", "mystic"));
+
+        // optional as rear
+        assertEquals("8080/sea/land/mystic/oneman", buildUrl_withPath("/sea/land", "mystic", OptionalThing.of("oneman")));
+        assertEquals("8080/sea/land/mystic", buildUrl_withPath("/sea/land", "mystic", OptionalThing.empty()));
+
+        // optional as variable
+        {
+            String path = "/sea/land/{hangar}/{showbase}";
+            assertEquals("8080/sea/land/mystic/oneman", buildUrl_withPath(path, "mystic", OptionalThing.of("oneman")));
+            assertEquals("8080/sea/land/mystic", buildUrl_withPath(path, OptionalThing.of("mystic"), OptionalThing.empty()));
+            assertEquals("8080/sea/land/oneman", buildUrl_withPath(path, OptionalThing.empty(), OptionalThing.of("oneman")));
+            assertEquals("8080/sea/land", buildUrl_withPath(path, OptionalThing.empty(), OptionalThing.empty()));
+        }
     }
 
     private String buildUrl_withPath(String actionPath, Object... pathVariables) {
@@ -66,7 +79,7 @@ public class FlutyRemoteApiTest extends PlainTestCase {
         FlutyRemoteApiRule rule = new FlutyRemoteApiRule();
 
         // ## Act ##
-        String part = remoteApi.buildPathVariablePart(String.class, "/harbor", "/mypage",
+        String part = remoteApi.buildPathVariableRearPart(String.class, "/harbor", "/mypage",
                 new Object[] { "sea", MockCDef.MemberStatus.Formalized }, OptionalThing.empty(), rule);
 
         // ## Assert ##
@@ -80,7 +93,7 @@ public class FlutyRemoteApiTest extends PlainTestCase {
         FlutyRemoteApiRule rule = new FlutyRemoteApiRule();
 
         // ## Act ##
-        String part = remoteApi.buildPathVariablePart(String.class, "/harbor", "/mypage", new Object[] { "sea", "my/s ti-c" },
+        String part = remoteApi.buildPathVariableRearPart(String.class, "/harbor", "/mypage", new Object[] { "sea", "my/s ti-c" },
                 OptionalThing.empty(), rule);
 
         // ## Assert ##
@@ -96,7 +109,8 @@ public class FlutyRemoteApiTest extends PlainTestCase {
         // ## Act ##
         // ## Assert ##
         assertException(RemoteApiPathVariableNullElementException.class, () -> {
-            remoteApi.buildPathVariablePart(String.class, "/harbor", "/mypage", new Object[] { "sea", null }, OptionalThing.empty(), rule);
+            remoteApi.buildPathVariableRearPart(String.class, "/harbor", "/mypage", new Object[] { "sea", null }, OptionalThing.empty(),
+                    rule);
         });
     }
 }

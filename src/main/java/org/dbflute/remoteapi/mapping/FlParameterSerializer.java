@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2017 the original author or authors.
+ * Copyright 2015-2018 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,6 +17,7 @@ package org.dbflute.remoteapi.mapping;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.Map;
 
 import org.dbflute.helper.beans.DfPropertyDesc;
@@ -43,15 +44,18 @@ public class FlParameterSerializer {
         }
         final String realValue;
         if (value instanceof LocalDate) {
-            realValue = ((LocalDate) value).format(mappingPolicy.getDateFormatter());
+            final DateTimeFormatter formatter = mappingPolicy.getDateFormatter(); // null allowed
+            realValue = ((LocalDate) value).format(formatter != null ? formatter : DateTimeFormatter.ISO_LOCAL_DATE);
         } else if (value instanceof LocalDateTime) {
-            realValue = ((LocalDateTime) value).format(mappingPolicy.getDateTimeFormatter());
+            final DateTimeFormatter formatter = mappingPolicy.getDateTimeFormatter(); // null allowed
+            realValue = ((LocalDateTime) value).format(formatter != null ? formatter : DateTimeFormatter.ISO_LOCAL_DATE_TIME);
         } else if (value instanceof Boolean || boolean.class.equals(value.getClass())) {
             realValue = mappingPolicy.serializeBoolean((boolean) value);
         } else if (value instanceof Classification) {
             final Classification cls = (Classification) value;
             final Map<String, Object> map = cls.subItemMap();
-            final String preferredValue = (String) map.get(mappingPolicy.getClsPreferredItem());
+            final String clsPreferredItem = mappingPolicy.getClsPreferredItem(); // null allowed
+            final String preferredValue = clsPreferredItem != null ? (String) map.get(clsPreferredItem) : null;
             if (preferredValue != null) { // means Flg
                 realValue = preferredValue;
             } else {

@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2017 the original author or authors.
+ * Copyright 2015-2018 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -9,7 +9,7 @@
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, 
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
  * either express or implied. See the License for the specific language
  * governing permissions and limitations under the License.
  */
@@ -58,14 +58,14 @@ public class FlQuerySender implements QueryParameterSender {
         return buildQueryString(param, charset, rule);
     }
 
-    protected String buildQueryString(Object form, Charset charset, FlutyRemoteApiRule rule) {
+    protected String buildQueryString(Object param, Charset charset, FlutyRemoteApiRule rule) {
         final StringBuilder sb = new StringBuilder();
         final String charsetName = charset.name();
-        final DfBeanDesc beanDesc = DfBeanDescFactory.getBeanDesc(form.getClass());
+        final DfBeanDesc beanDesc = DfBeanDescFactory.getBeanDesc(param.getClass());
         final MyValueHolder<Integer> paramIndex = new MyValueHolder<>(0);
         for (String propertyName : beanDesc.getProppertyNameList()) {
             final DfPropertyDesc propertyDesc = beanDesc.getPropertyDesc(propertyName);
-            final Object plainValue = propertyDesc.getValue(form);
+            final Object plainValue = propertyDesc.getValue(param);
             if (plainValue != null) {
                 final String parameterName = asSerializedParameterName(propertyDesc);
                 if (Iterable.class.isAssignableFrom(plainValue.getClass())) {
@@ -87,7 +87,7 @@ public class FlQuerySender implements QueryParameterSender {
 
     protected void buildParameterElement(StringBuilder sb, MyValueHolder<Integer> paramIndex, String parameterName, String parameterValue,
             String charsetName) {
-        sb.append(paramIndex.getValue() == 0 ? "?" : "&");
+        sb.append(sb.length() == 0 ? "?" : "&");
         sb.append(parameterName).append("=");
         sb.append(encode(parameterValue, charsetName));
     }
