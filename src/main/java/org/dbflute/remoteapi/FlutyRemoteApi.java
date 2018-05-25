@@ -113,7 +113,7 @@ public class FlutyRemoteApi {
      * @param <RETURN> The type of response return.
      * @param returnType The class type of bean as return (response body), should have default constructor. (NotNull)
      * @param urlBase The base part of URL to remote API server. e.g. http://localhost:8090/harbor (NotNull)
-     * @param actionPath The path to action without URL parameter, and trailing slash is no difference. e.g. /sea/land (NotNull)
+     * @param actionPath The path to action without path variables, and trailing slash is no difference. e.g. /sea/land (NotNull)
      * @param pathVariables The array of URL path variables, e.g. ["hangar", 3]. (NotNull, EmptyAllowed)
      * @param param The optional parameter object of query (GET parameters). (NotNull, EmptyAllowed)
      * @param ruleLambda The callback for rule of remote API. (NotNull)
@@ -133,7 +133,7 @@ public class FlutyRemoteApi {
      * @param <RETURN> The type of response return.(response).
      * @param returnType The class type of bean as return (response body), should have default constructor. (NotNull)
      * @param urlBase The base part of URL to remote API server. e.g. http://localhost:8090/harbor (NotNull)
-     * @param actionPath The path to action without URL parameter, and trailing slash is no difference. e.g. /sea/land (NotNull)
+     * @param actionPath The path to action without path variables, and trailing slash is no difference. e.g. /sea/land (NotNull)
      * @param pathVariables The array of URL path variables, e.g. ["hangar", 3]. (NotNull, EmptyAllowed)
      * @param param The parameter objet of POST parameters, may be JSON body. (NotNull)
      * @param ruleLambda The callback for rule of remote API. (NotNull)
@@ -153,7 +153,7 @@ public class FlutyRemoteApi {
      * @param <RETURN> The type of response return.
      * @param returnType The class type of bean as return (response body), should have default constructor. (NotNull)
      * @param urlBase The base part of URL to remote API server. e.g. http://localhost:8090/harbor (NotNull)
-     * @param actionPath The path to action without URL parameter, and trailing slash is no difference. e.g. /sea/land (NotNull)
+     * @param actionPath The path to action without path variables, and trailing slash is no difference. e.g. /sea/land (NotNull)
      * @param pathVariables The array of URL path variables, e.g. ["hangar", 3]. (NotNull, EmptyAllowed)
      * @param param The parameter object of PUT parameters, may be JSON body. (NotNull)
      * @param ruleLambda The callback for rule of remote API. (NotNull)
@@ -173,7 +173,7 @@ public class FlutyRemoteApi {
      * @param <RETURN> The type of response return.
      * @param returnType The class type of bean as return (response body), should have default constructor. (NotNull)
      * @param urlBase The base part of URL to remote API server. e.g. http://localhost:8090/harbor (NotNull)
-     * @param actionPath The path to action without URL parameter, and trailing slash is no difference. e.g. /sea/land (NotNull)
+     * @param actionPath The path to action without path variables, and trailing slash is no difference. e.g. /sea/land (NotNull)
      * @param pathVariables The array of URL path variables, e.g. ["hangar", 3]. (NotNull, EmptyAllowed)
      * @param param The optional parameter object of query (GET parameters). (NotNull, EmptyAllowed)
      * @param ruleLambda The callback for rule of remote API. (NotNull)
@@ -193,7 +193,7 @@ public class FlutyRemoteApi {
      * @param <RETURN> The type of response return.
      * @param returnType The class type of bean as return (response body), should have default constructor. (NotNull)
      * @param urlBase The base part of URL to remote API server. e.g. http://localhost:8090/harbor (NotNull)
-     * @param actionPath The path to action without URL parameter, and trailing slash is no difference. e.g. /sea/land (NotNull)
+     * @param actionPath The path to action without path variables, and trailing slash is no difference. e.g. /sea/land (NotNull)
      * @param pathVariables The array of URL path variables, e.g. ["hangar", 3]. (NotNull, EmptyAllowed)
      * @param param The parameter object of PATCH parameters, may be JSON body. (NotNull)
      * @param ruleLambda The callback for rule of remote API. (NotNull)
