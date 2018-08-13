@@ -73,7 +73,8 @@ public class LastaRemoteApi extends FlutyRemoteApi {
     // ===================================================================================
     //                                                                           Attribute
     //                                                                           =========
-    protected RequestManager requestManager; // not null after set, for validation and various purpose
+    /** Only for validation and various functions not related to HTTP request. (basically NotNull: should be set by e.g. behavior) */
+    protected RequestManager requestManager;
 
     // ===================================================================================
     //                                                                         Constructor
