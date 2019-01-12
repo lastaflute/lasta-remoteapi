@@ -22,7 +22,7 @@ import java.util.stream.Collectors;
 
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.dbflute.optional.OptionalThing;
-import org.dbflute.remoteapi.FlutyRemoteApi.EmptyRequestBody;
+import org.dbflute.remoteapi.http.EmptyRequestBody;
 import org.dbflute.remoteapi.mock.MockHttpClient;
 import org.dbflute.util.DfCollectionUtil;
 

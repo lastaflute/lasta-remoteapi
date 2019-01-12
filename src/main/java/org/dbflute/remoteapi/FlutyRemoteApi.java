@@ -66,6 +66,7 @@ import org.dbflute.remoteapi.exception.RemoteApiSenderOfRequestBodyNotFoundExcep
 import org.dbflute.remoteapi.exception.retry.ClientErrorRetryDeterminer;
 import org.dbflute.remoteapi.exception.retry.ClientErrorRetryResource;
 import org.dbflute.remoteapi.exception.translation.ClientErrorTranslatingResource;
+import org.dbflute.remoteapi.http.EmptyRequestBody;
 import org.dbflute.remoteapi.http.HttpDeleteEnclosing;
 import org.dbflute.remoteapi.http.SupportedHttpMethod;
 import org.dbflute.remoteapi.logging.SendReceiveLogOption;
@@ -367,9 +368,6 @@ public class FlutyRemoteApi {
         });
         converter.prepareEnclosingRequest(enclosingRequest, param, rule);
         return enclosingRequest;
-    }
-
-    public static class EmptyRequestBody { // special type to control noRequestBody()
     }
 
     // ===================================================================================
