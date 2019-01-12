@@ -17,7 +17,7 @@ package org.dbflute.remoteapi.http;
 
 /**
  * @author jflute
- * @since 0.3.4 (2017/09/23 Sutarday)
+ * @since 0.3.4 (2017/09/23 Saturday)
  */
 public enum SupportedHttpMethod {
 

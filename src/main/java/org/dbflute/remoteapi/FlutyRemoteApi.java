@@ -66,6 +66,7 @@ import org.dbflute.remoteapi.exception.RemoteApiSenderOfRequestBodyNotFoundExcep
 import org.dbflute.remoteapi.exception.retry.ClientErrorRetryDeterminer;
 import org.dbflute.remoteapi.exception.retry.ClientErrorRetryResource;
 import org.dbflute.remoteapi.exception.translation.ClientErrorTranslatingResource;
+import org.dbflute.remoteapi.http.HttpDeleteEnclosing;
 import org.dbflute.remoteapi.http.SupportedHttpMethod;
 import org.dbflute.remoteapi.logging.SendReceiveLogOption;
 import org.dbflute.remoteapi.logging.SendReceiveLogger;
@@ -110,12 +111,13 @@ public class FlutyRemoteApi {
     //                                                                         Request GET
     //                                                                         ===========
     /**
+     * Request as GET.
      * @param <RETURN> The type of response return.
      * @param returnType The class type of bean as return (response body), should have default constructor. (NotNull)
      * @param urlBase The base part of URL to remote API server. e.g. http://localhost:8090/harbor (NotNull)
      * @param actionPath The path to action without path variables, and trailing slash is no difference. e.g. /sea/land (NotNull)
      * @param pathVariables The array of URL path variables, e.g. ["hangar", 3]. (NotNull, EmptyAllowed)
-     * @param param The optional parameter object of query (GET parameters). (NotNull, EmptyAllowed)
+     * @param param The optional parameter object of query parameters. (NotNull, EmptyAllowed)
      * @param ruleLambda The callback for rule of remote API. (NotNull)
      * @return The analyzed return of response from the request. (NotNull)
      */
@@ -130,12 +132,13 @@ public class FlutyRemoteApi {
     //                                                                        Request POST
     //                                                                        ============
     /**
+     * Request as POST.
      * @param <RETURN> The type of response return.(response).
      * @param returnType The class type of bean as return (response body), should have default constructor. (NotNull)
      * @param urlBase The base part of URL to remote API server. e.g. http://localhost:8090/harbor (NotNull)
      * @param actionPath The path to action without path variables, and trailing slash is no difference. e.g. /sea/land (NotNull)
      * @param pathVariables The array of URL path variables, e.g. ["hangar", 3]. (NotNull, EmptyAllowed)
-     * @param param The parameter objet of POST parameters, may be JSON body. (NotNull)
+     * @param param The parameter objet of on-body parameters, may be JSON body. (NotNull)
      * @param ruleLambda The callback for rule of remote API. (NotNull)
      * @return The analyzed return of response from the request. (NotNull)
      */
@@ -150,12 +153,13 @@ public class FlutyRemoteApi {
     //                                                                         Request PUT
     //                                                                         ===========
     /**
+     * Request as PUT.
      * @param <RETURN> The type of response return.
      * @param returnType The class type of bean as return (response body), should have default constructor. (NotNull)
      * @param urlBase The base part of URL to remote API server. e.g. http://localhost:8090/harbor (NotNull)
      * @param actionPath The path to action without path variables, and trailing slash is no difference. e.g. /sea/land (NotNull)
      * @param pathVariables The array of URL path variables, e.g. ["hangar", 3]. (NotNull, EmptyAllowed)
-     * @param param The parameter object of PUT parameters, may be JSON body. (NotNull)
+     * @param param The parameter object of on-body parameters, may be JSON body. (NotNull)
      * @param ruleLambda The callback for rule of remote API. (NotNull)
      * @return The analyzed return of response from the request. (NotNull)
      */
@@ -170,12 +174,13 @@ public class FlutyRemoteApi {
     //                                                                      Request DELETE
     //                                                                      ==============
     /**
+     * Request as DELETE (with query parameter).
      * @param <RETURN> The type of response return.
      * @param returnType The class type of bean as return (response body), should have default constructor. (NotNull)
      * @param urlBase The base part of URL to remote API server. e.g. http://localhost:8090/harbor (NotNull)
      * @param actionPath The path to action without path variables, and trailing slash is no difference. e.g. /sea/land (NotNull)
      * @param pathVariables The array of URL path variables, e.g. ["hangar", 3]. (NotNull, EmptyAllowed)
-     * @param param The optional parameter object of query (GET parameters). (NotNull, EmptyAllowed)
+     * @param param The optional parameter object of query parameters. (NotNull, EmptyAllowed)
      * @param ruleLambda The callback for rule of remote API. (NotNull)
      * @return The analyzed return of response from the request. (NotNull)
      */
@@ -186,16 +191,35 @@ public class FlutyRemoteApi {
         });
     }
 
-    // ===================================================================================
-    //                                                                       Request PATCH
-    //                                                                       =============
     /**
+     * Request as DELETE with entity-enclosing.
      * @param <RETURN> The type of response return.
      * @param returnType The class type of bean as return (response body), should have default constructor. (NotNull)
      * @param urlBase The base part of URL to remote API server. e.g. http://localhost:8090/harbor (NotNull)
      * @param actionPath The path to action without path variables, and trailing slash is no difference. e.g. /sea/land (NotNull)
      * @param pathVariables The array of URL path variables, e.g. ["hangar", 3]. (NotNull, EmptyAllowed)
-     * @param param The parameter object of PATCH parameters, may be JSON body. (NotNull)
+     * @param param The parameter object of on-body parameters, may be JSON body. (NotNull)
+     * @param ruleLambda The callback for rule of remote API. (NotNull)
+     * @return The analyzed return of response from the request. (NotNull)
+     */
+    public <RETURN> RETURN requestDeleteEnclosing(Type returnType, String urlBase, String actionPath, Object[] pathVariables, Object param,
+            Consumer<FlutyRemoteApiRule> ruleLambda) {
+        return doRequestEnclosing(returnType, urlBase, actionPath, pathVariables, param, ruleLambda, SupportedHttpMethod.DELETE, url -> {
+            return new HttpDeleteEnclosing(url);
+        });
+    }
+
+    // ===================================================================================
+    //                                                                       Request PATCH
+    //                                                                       =============
+    /**
+     * Request as PATCH.
+     * @param <RETURN> The type of response return.
+     * @param returnType The class type of bean as return (response body), should have default constructor. (NotNull)
+     * @param urlBase The base part of URL to remote API server. e.g. http://localhost:8090/harbor (NotNull)
+     * @param actionPath The path to action without path variables, and trailing slash is no difference. e.g. /sea/land (NotNull)
+     * @param pathVariables The array of URL path variables, e.g. ["hangar", 3]. (NotNull, EmptyAllowed)
+     * @param param The parameter object of on-body parameters, may be JSON body. (NotNull)
      * @param ruleLambda The callback for rule of remote API. (NotNull)
      * @return The analyzed return of response from the request. (NotNull)
      */

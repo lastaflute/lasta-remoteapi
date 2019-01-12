@@ -43,7 +43,7 @@ public abstract class FlutyRemoteBehavior {
     // ===================================================================================
     //                                                                           Attribute
     //                                                                           =========
-    protected final FlutyRemoteApi remoteApi;
+    protected final FlutyRemoteApi remoteApi; // not null
 
     // ===================================================================================
     //                                                                         Constructor
@@ -180,7 +180,7 @@ public abstract class FlutyRemoteBehavior {
      * @param returnType The class type of bean as return (response body), should have default constructor. (NotNull)
      * @param actionPath The path to action without path variables. e.g. /sea/land (NotNull)
      * @param pathVariables The array of URL path variables, e.g. ["hangar", 3]. (NotNull, EmptyAllowed)
-     * @param param The optional parameter object of query (GET parameters). (NotNull, EmptyAllowed)
+     * @param param The optional object of query parameter. (NotNull, EmptyAllowed)
      * @param ruleLambda The callback for rule of remote API. (NotNull)
      * @return The analyzed return of response from the request. (NotNull)
      */
@@ -207,7 +207,7 @@ public abstract class FlutyRemoteBehavior {
      * @param returnType The parameterized type of bean as return (response body), should have default constructor. (NotNull)
      * @param actionPath The path to action without path variables. e.g. /sea/land (NotNull)
      * @param pathVariables The array of URL path variables, e.g. ["hangar", 3]. (NotNull, EmptyAllowed)
-     * @param param The optional parameter object of query (GET parameters). (NotNull, EmptyAllowed)
+     * @param param The optional object of query parameter. (NotNull, EmptyAllowed)
      * @param ruleLambda The callback for rule of remote API. (NotNull)
      * @return The analyzed return of response from the request. (NotNull)
      */
@@ -235,7 +235,7 @@ public abstract class FlutyRemoteBehavior {
      * @param returnType The class type of bean as return (response body), should have default constructor. (NotNull)
      * @param actionPath The path to action without path variables. e.g. /sea/land (NotNull)
      * @param pathVariables The array of URL path variables, e.g. ["hangar", 3]. (NotNull, EmptyAllowed)
-     * @param param The parameter object of POST parameters, may be JSON body. (NotNull)
+     * @param param The parameter object of on-body parameters, may be JSON body. (NotNull)
      * @param ruleLambda The callback for rule of remote API. (NotNull)
      * @return The analyzed return of response from the request. (NotNull)
      */
@@ -262,7 +262,7 @@ public abstract class FlutyRemoteBehavior {
      * @param returnType The parameterized type of bean as return (response body), should have default constructor. (NotNull)
      * @param actionPath The path to action without path variables. e.g. /sea/land (NotNull)
      * @param pathVariables The array of URL path variables, e.g. ["hangar", 3]. (NotNull, EmptyAllowed)
-     * @param param The parameter object of POST parameters, may be JSON body. (NotNull)
+     * @param param The parameter object of on-body parameters, may be JSON body. (NotNull)
      * @param ruleLambda The callback for rule of remote API. (NotNull)
      * @return The analyzed return of response from the request. (NotNull)
      */
@@ -290,7 +290,7 @@ public abstract class FlutyRemoteBehavior {
      * @param returnType The class type of bean as return (response body), should have default constructor. (NotNull)
      * @param actionPath The path to action without path variables. e.g. /sea/land (NotNull)
      * @param pathVariables The array of URL path variables, e.g. ["hangar", 3]. (NotNull, EmptyAllowed)
-     * @param param The parameter object of PUT parameters, may be JSON body. (NotNull)
+     * @param param The parameter object of on-body parameters, may be JSON body. (NotNull)
      * @param ruleLambda The callback for rule of remote API. (NotNull)
      * @return The analyzed return of response from the request. (NotNull)
      */
@@ -317,7 +317,7 @@ public abstract class FlutyRemoteBehavior {
      * @param returnType The parameterized type of bean as return (response body), should have default constructor. (NotNull)
      * @param actionPath The path to action without path variables. e.g. /sea/land (NotNull)
      * @param pathVariables The array of URL path variables, e.g. ["hangar", 3]. (NotNull, EmptyAllowed)
-     * @param param The parameter object of PUT parameters, may be JSON body. (NotNull)
+     * @param param The parameter object of on-body parameters, may be JSON body. (NotNull)
      * @param ruleLambda The callback for rule of remote API. (NotNull)
      * @return The analyzed return of response from the request. (NotNull)
      */
@@ -330,13 +330,13 @@ public abstract class FlutyRemoteBehavior {
     //                                                DELETE
     //                                                ------
     /**
-     * Request as DELETE, receiving as simple bean type.
+     * Request as DELETE (with query parameter), receiving as simple bean type.
      * <pre>
      * e.g. if sender, receiver are already set as default: /lido/product/list/7
-     *  return doRequestDelete(RemoteProductListReturn.class, "/lido/product/list", moreUrl(7), rule -&gt; {});
+     *  return doRequestDelete(RemoteProductListReturn.class, "/lido/product/list", moreUrl(7), OptionalThing.of(form), rule -&gt; {});
      *  
      * e.g. if sender, receiver are not set yet, so set them here: /lido/product/list/7
-     *  return doRequestDelete(RemoteProductListReturn.class, "/lido/product/list", moreUrl(7), rule -&gt; {
+     *  return doRequestDelete(RemoteProductListReturn.class, "/lido/product/list", moreUrl(7), OptionalThing.of(form), rule -&gt; {
      *      rule.sendQueryBy(new LaQuerySender(...));
      *      rule.receiveBodyBy(new LaJsonReceiver(...));
      *  });
@@ -345,7 +345,7 @@ public abstract class FlutyRemoteBehavior {
      * @param returnType The class type of bean as return (response body), should have default constructor. (NotNull)
      * @param actionPath The path to action without path variables. e.g. /sea/land (NotNull)
      * @param pathVariables The array of URL path variables, e.g. ["hangar", 3]. (NotNull, EmptyAllowed)
-     * @param param The optional paramter object of query (GET parameters). (NotNull, EmptyAllowed)
+     * @param param The optional parameter object of query parameter. (NotNull, EmptyAllowed)
      * @param ruleLambda The callback for rule of remote API. (NotNull)
      * @return The analyzed return of response from the request. (NotNull)
      */
@@ -355,15 +355,15 @@ public abstract class FlutyRemoteBehavior {
     }
 
     /**
-     * Request as POST, receiving as parameterized type (has nested generics).
+     * Request as DELETE (with query parameter), receiving as parameterized type (has nested generics).
      * <pre>
      * e.g. if sender, receiver are already set as default: /lido/product/list/7
      *  return doRequestDelete(new ParameterizedRef&lt;RemoteSearchPagingReturn&lt;RemoteProductRowReturn&gt;&gt;() {
-     *  }.getType(), "/lido/product/list", moreUrl(7), rule -&gt; {});
+     *  }.getType(), "/lido/product/list", moreUrl(7), OptionalThing.of(form), rule -&gt; {});
      *  
      * e.g. if sender, receiver are not set yet, so set them here: /lido/product/list/7
      *  return doRequestDelete(new ParameterizedRef&lt;RemoteSearchPagingReturn&lt;RemoteProductRowReturn&gt;&gt;() {
-     *  }.getType(), "/lido/product/list", moreUrl(7), rule -&gt; {
+     *  }.getType(), "/lido/product/list", moreUrl(7), OptionalThing.of(form), rule -&gt; {
      *      rule.sendQueryBy(new LaQuerySender(...));
      *      rule.receiveBodyBy(new LaJsonReceiver(...));
      *  });
@@ -372,13 +372,65 @@ public abstract class FlutyRemoteBehavior {
      * @param returnType The parameterized type of bean as return (response body), should have default constructor. (NotNull)
      * @param actionPath The path to action without path variables. e.g. /sea/land (NotNull)
      * @param pathVariables The array of URL path variables, e.g. ["hangar", 3]. (NotNull, EmptyAllowed)
-     * @param param The optional parameter object of query (GET parameters). (NotNull, EmptyAllowed)
+     * @param param The optional parameter object of query parameter. (NotNull, EmptyAllowed)
      * @param ruleLambda The callback for rule of remote API. (NotNull)
      * @return The analyzed return of response from the request. (NotNull)
      */
     protected <RETURN> RETURN doRequestDelete(ParameterizedType returnType //
             , String actionPath, Object[] pathVariables, OptionalThing<? extends Object> param, Consumer<FlutyRemoteApiRule> ruleLambda) {
         return remoteApi.requestDelete(returnType, getUrlBase(), actionPath, pathVariables, param, ruleLambda);
+    }
+
+    /**
+     * Request as DELETE with entity-enclosing, receiving as simple bean type.
+     * <pre>
+     * e.g. if sender, receiver are already set as default: /lido/product/list/7
+     *  return doRequestDeleteEnclosing(RemoteProductListReturn.class, "/lido/product/list", moreUrl(7), body, rule -&gt; {});
+     *  
+     * e.g. if sender, receiver are not set yet, so set them here: /lido/product/list/7
+     *  return doRequestDeleteEnclosing(RemoteProductListReturn.class, "/lido/product/list", moreUrl(7), body, rule -&gt; {
+     *      rule.sendBodyBy(new LaJsonSender(...));
+     *      rule.receiveBodyBy(new LaJsonReceiver(...));
+     *  });
+     * </pre>
+     * @param <RETURN> The type of response return.
+     * @param returnType The class type of bean as return (response body), should have default constructor. (NotNull)
+     * @param actionPath The path to action without path variables. e.g. /sea/land (NotNull)
+     * @param pathVariables The array of URL path variables, e.g. ["hangar", 3]. (NotNull, EmptyAllowed)
+     * @param param The parameter object of on-body parameters, may be JSON body. (NotNull)
+     * @param ruleLambda The callback for rule of remote API. (NotNull)
+     * @return The analyzed return of response from the request. (NotNull)
+     */
+    protected <RETURN> RETURN doRequestDeleteEnclosing(Class<? extends RETURN> returnType //
+            , String actionPath, Object[] pathVariables, Object param, Consumer<FlutyRemoteApiRule> ruleLambda) {
+        return remoteApi.requestDeleteEnclosing(returnType, getUrlBase(), actionPath, pathVariables, param, ruleLambda);
+    }
+
+    /**
+     * Request as DELETE (with entity-enclosing), receiving as parameterized type (has nested generics).
+     * <pre>
+     * e.g. if sender, receiver are already set as default: /lido/product/list/7
+     *  return doRequestDeleteEnclosing(new ParameterizedRef&lt;RemoteSearchPagingReturn&lt;RemoteProductRowReturn&gt;&gt;() {
+     *  }.getType(), "/lido/product/list", moreUrl(7), body, rule -&gt; {});
+     *  
+     * e.g. if sender, receiver are not set yet, so set them here: /lido/product/list/7
+     *  return doRequestDeleteEnclosing(new ParameterizedRef&lt;RemoteSearchPagingReturn&lt;RemoteProductRowReturn&gt;&gt;() {
+     *  }.getType(), "/lido/product/list", moreUrl(7), body, rule -&gt; {
+     *      rule.sendBodyBy(new LaJsonSender(...));
+     *      rule.receiveBodyBy(new LaJsonReceiver(...));
+     *  });
+     * </pre>
+     * @param <RETURN> The type of response return.
+     * @param returnType The parameterized type of bean as return (response body), should have default constructor. (NotNull)
+     * @param actionPath The path to action without path variables. e.g. /sea/land (NotNull)
+     * @param pathVariables The array of URL path variables, e.g. ["hangar", 3]. (NotNull, EmptyAllowed)
+     * @param param The parameter object of on-body parameters, may be JSON body. (NotNull)
+     * @param ruleLambda The callback for rule of remote API. (NotNull)
+     * @return The analyzed return of response from the request. (NotNull)
+     */
+    protected <RETURN> RETURN doRequestDeleteEnclosing(ParameterizedType returnType //
+            , String actionPath, Object[] pathVariables, Object param, Consumer<FlutyRemoteApiRule> ruleLambda) {
+        return remoteApi.requestDeleteEnclosing(returnType, getUrlBase(), actionPath, pathVariables, param, ruleLambda);
     }
 
     // -----------------------------------------------------
@@ -400,7 +452,7 @@ public abstract class FlutyRemoteBehavior {
      * @param returnType The class type of bean as return (response body), should have default constructor. (NotNull)
      * @param actionPath The path to action without path variables. e.g. /sea/land (NotNull)
      * @param pathVariables The array of URL path variables, e.g. ["hangar", 3]. (NotNull, EmptyAllowed)
-     * @param param The parameter object of PATCH parameters, may be JSON body. (NotNull)
+     * @param param The parameter object of on-body parameters, may be JSON body. (NotNull)
      * @param ruleLambda The callback for rule of remote API. (NotNull)
      * @return The analyzed return of response from the request. (NotNull)
      */
@@ -427,7 +479,7 @@ public abstract class FlutyRemoteBehavior {
      * @param returnType The parameterized type of bean as return (response body), should have default constructor. (NotNull)
      * @param actionPath The path to action without path variables. e.g. /sea/land (NotNull)
      * @param pathVariables The array of URL path variables, e.g. ["hangar", 3]. (NotNull, EmptyAllowed)
-     * @param param The parameter object of PATCH parameters, may be JSON body. (NotNull)
+     * @param param The parameter object of on-body parameters, may be JSON body. (NotNull)
      * @param ruleLambda The callback for rule of remote API. (NotNull)
      * @return The analyzed return of response from the request. (NotNull)
      */
