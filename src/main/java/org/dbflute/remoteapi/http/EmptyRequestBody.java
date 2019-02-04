@@ -13,20 +13,11 @@
  * either express or implied. See the License for the specific language
  * governing permissions and limitations under the License.
  */
-package org.dbflute.remoteapi.exception;
+package org.dbflute.remoteapi.http;
 
 /**
  * @author jflute
+ * @since 0.4.2 (2019/01/12 Saturday) // means independence
  */
-public class RemoteApiFailureResponseTypeNotFoundException extends RemoteApiBaseException {
-
-    private static final long serialVersionUID = 1L;
-
-    public RemoteApiFailureResponseTypeNotFoundException(String msg) {
-        super(msg);
-    }
-
-    public RemoteApiFailureResponseTypeNotFoundException(String msg, Throwable cause) {
-        super(msg, cause);
-    }
+public class EmptyRequestBody { // special type to control noRequestBody()
 }

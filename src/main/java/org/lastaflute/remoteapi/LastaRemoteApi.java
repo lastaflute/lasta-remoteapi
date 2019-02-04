@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2018 the original author or authors.
+ * Copyright 2015-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -73,7 +73,8 @@ public class LastaRemoteApi extends FlutyRemoteApi {
     // ===================================================================================
     //                                                                           Attribute
     //                                                                           =========
-    protected RequestManager requestManager; // not null after set, for validation and various purpose
+    /** Only for validation and various functions not related to HTTP request. (basically NotNull: should be set by e.g. behavior) */
+    protected RequestManager requestManager;
 
     // ===================================================================================
     //                                                                         Constructor
