@@ -39,6 +39,7 @@ import org.apache.http.ssl.TrustStrategy;
 import org.dbflute.optional.OptionalThing;
 import org.dbflute.remoteapi.exception.retry.ClientErrorRetryDeterminer;
 import org.dbflute.remoteapi.exception.translation.ClientErrorTranslator;
+import org.dbflute.remoteapi.http.header.ResponseHeaderResource;
 import org.dbflute.remoteapi.logging.SendReceiveLogOption;
 import org.dbflute.remoteapi.receiver.ResponseBodyReceiver;
 import org.dbflute.remoteapi.sender.body.RequestBodySender;
@@ -76,7 +77,8 @@ public class FlutyRemoteApiRule {
     protected Charset queryParameterCharset = StandardCharsets.UTF_8; // not null
     protected Charset requestBodyCharset = StandardCharsets.UTF_8; // not null
     protected Charset responseBodyCharset = StandardCharsets.UTF_8; // not null
-    protected Map<String, List<String>> headers; // null allowed, not required, lazy-loaded
+    protected Map<String, List<String>> requestHeaders; // null allowed, not required, lazy-loaded
+    protected Consumer<ResponseHeaderResource> responseHeaderHandler; // null allowed, not required
     protected Type failureResponseType; // null allowed, not required
     protected ClientErrorTranslator clientErrorTranslator; // null allowed, not required
     protected ClientErrorRetryDeterminer clientErrorRetryDeterminer; // null allowed, not required
@@ -242,7 +244,7 @@ public class FlutyRemoteApiRule {
     //                                           HTTP Header
     //                                           -----------
     /**
-     * Set header value by the name. <br>
+     * Set request header value by the name. <br>
      * It overwrites the same-name header if it already exists.
      * @param name The name of the header. (NotNull)
      * @param value The value of the header. (NotNull)
@@ -250,14 +252,14 @@ public class FlutyRemoteApiRule {
     public void setHeader(String name, String value) {
         assertArgumentNotNull("name", name);
         assertArgumentNotNull("value", value);
-        if (headers == null) {
-            headers = DfCollectionUtil.newLinkedHashMap();
+        if (requestHeaders == null) {
+            requestHeaders = DfCollectionUtil.newLinkedHashMap();
         }
-        headers.put(name, DfCollectionUtil.newArrayList(value));
+        requestHeaders.put(name, DfCollectionUtil.newArrayList(value));
     }
 
     /**
-     * Add header value by the name. <br>
+     * Add request header value by the name. <br>
      * It is added as the second-or-more value if the name already exists.
      * @param name The name of the header. (NotNull)
      * @param value The value of the header, which may be as the second-or-more value. (NotNull)
@@ -265,15 +267,24 @@ public class FlutyRemoteApiRule {
     public void addHeader(String name, String value) {
         assertArgumentNotNull("name", name);
         assertArgumentNotNull("value", value);
-        if (headers == null) {
-            headers = DfCollectionUtil.newLinkedHashMap();
+        if (requestHeaders == null) {
+            requestHeaders = DfCollectionUtil.newLinkedHashMap();
         }
-        List<String> valueList = headers.get(name);
+        List<String> valueList = requestHeaders.get(name);
         if (valueList == null) {
             valueList = DfCollectionUtil.newArrayList();
-            headers.put(name, valueList);
+            requestHeaders.put(name, valueList);
         }
         valueList.add(value);
+    }
+
+    /**
+     * Handle response header for both success case and failure case.
+     * @param resourceLambda The callback for handling header. (NotNull)
+     */
+    public void handleResponseHeader(Consumer<ResponseHeaderResource> resourceLambda) {
+        assertArgumentNotNull("resourceLambda (responseHeaderHandler)", resourceLambda);
+        this.responseHeaderHandler = resourceLambda;
     }
 
     // -----------------------------------------------------
@@ -412,7 +423,7 @@ public class FlutyRemoteApiRule {
         sb.append(", timeout:{connect=").append(connectTimeout);
         sb.append(", connectionRequest=").append(connectionRequestTimeout);
         sb.append(", socket=").append(socketTimeout);
-        sb.append("}, headers=").append(headers);
+        sb.append("}, headers=").append(requestHeaders);
         sb.append(", failureResponse=").append(failureResponseType);
         sb.append(", charset:{query=").append(queryParameterCharset);
         sb.append(", requestBody=").append(requestBodyCharset);
@@ -491,8 +502,14 @@ public class FlutyRemoteApiRule {
     }
 
     public OptionalThing<Map<String, List<String>>> getHeaders() {
-        return OptionalThing.ofNullable(headers, () -> {
+        return OptionalThing.ofNullable(requestHeaders, () -> {
             throw new IllegalStateException("Not found the headers in the option: " + toString());
+        });
+    }
+
+    public OptionalThing<Consumer<ResponseHeaderResource>> getResponseHeaderHandler() {
+        return OptionalThing.ofNullable(responseHeaderHandler, () -> {
+            throw new IllegalStateException("Not found the responseHeaderHandler.");
         });
     }
 

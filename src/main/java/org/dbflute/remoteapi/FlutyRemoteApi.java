@@ -69,6 +69,10 @@ import org.dbflute.remoteapi.exception.translation.ClientErrorTranslatingResourc
 import org.dbflute.remoteapi.http.EmptyRequestBody;
 import org.dbflute.remoteapi.http.HttpDeleteEnclosing;
 import org.dbflute.remoteapi.http.SupportedHttpMethod;
+import org.dbflute.remoteapi.http.header.ResponseHeader;
+import org.dbflute.remoteapi.http.header.ResponseHeaderByNative;
+import org.dbflute.remoteapi.http.header.ResponseHeaderProvider;
+import org.dbflute.remoteapi.http.header.ResponseHeaderResource;
 import org.dbflute.remoteapi.logging.SendReceiveLogOption;
 import org.dbflute.remoteapi.logging.SendReceiveLogger;
 import org.dbflute.remoteapi.receiver.ResponseBodyReceiver;
@@ -613,18 +617,22 @@ public class FlutyRemoteApi {
     //                                                                   =================
     protected <RETURN> RETURN handleResponse(Type returnType, String url, OptionalThing<Object> param, CloseableHttpResponse response,
             FlutyRemoteApiRule rule) throws IOException {
+        final Supplier<Header[]> headerSupplier = () -> response.getAllHeaders();
         final int httpStatus = response.getStatusLine().getStatusCode();
-        keepResponseHeaderIfNeeds(rule, response.getAllHeaders());
+        keepResponseHeaderIfNeeds(rule, headerSupplier);
         keepResponseStatusIfNeeds(rule, httpStatus);
         final OptionalThing<String> body = extractResponseBody(response, rule);
         try {
-            final RETURN ret = parseResponse(returnType, url, param, httpStatus, body, rule);
+            final RETURN ret = parseResponse(returnType, url, param, httpStatus, body, rule); // not null
+            handleSuccessResponseHeaderIfNeeds(headerSupplier, rule, ret);
             validateReturn(returnType, url, param, httpStatus, body, ret, rule);
             return ret;
         } catch (RemoteApiHttpBasisErrorException cause) {
-            cause.getFailureResponse().ifPresent(failureResponse -> { // don't forget it
+            final Object failureResponse = cause.getFailureResponse().orElse(null);
+            handleFailureResponseHeaderIfNeeds(headerSupplier, rule, failureResponse, cause);
+            if (failureResponse != null) {
                 validateReturn(returnType, url, param, httpStatus, body, failureResponse, rule);
-            });
+            }
             if (cause instanceof RemoteApiHttpClientErrorException) {
                 throwTranslatedClientErrorIfNeeds(returnType, url, param, rule, httpStatus, body,
                         (RemoteApiHttpClientErrorException) cause);
@@ -733,6 +741,37 @@ public class FlutyRemoteApi {
         return null; // as default
     }
 
+    // -----------------------------------------------------
+    //                                       Response Header
+    //                                       ---------------
+    protected void handleSuccessResponseHeaderIfNeeds(Supplier<Header[]> headerSupplier, FlutyRemoteApiRule rule, Object ret) {
+        doHandleResponseHeaderIfNeeds(headerSupplier, rule, ret, null);
+    }
+
+    protected void handleFailureResponseHeaderIfNeeds(Supplier<Header[]> headerSupplier, FlutyRemoteApiRule rule, Object failureResponse,
+            RemoteApiHttpBasisErrorException cause) {
+        doHandleResponseHeaderIfNeeds(headerSupplier, rule, failureResponse, cause);
+    }
+
+    protected void doHandleResponseHeaderIfNeeds(Supplier<Header[]> headerSupplier, FlutyRemoteApiRule rule, Object ret,
+            RemoteApiHttpBasisErrorException cause) {
+        rule.getResponseHeaderHandler().ifPresent(headerHandler -> {
+            final List<ResponseHeader> headerList = new ArrayList<>();
+            final Header[] allHeaders = headerSupplier.get(); // lazy get to avoid copy cost
+            if (allHeaders != null) { // just in case
+                for (Header nativeHeader : allHeaders) {
+                    headerList.add(new ResponseHeaderByNative(nativeHeader));
+                }
+            }
+            final ResponseHeaderProvider headerProvider = newResponseHeaderProvider(headerList);
+            headerHandler.accept(new ResponseHeaderResource(headerProvider, ret, cause));
+        });
+    }
+
+    protected ResponseHeaderProvider newResponseHeaderProvider(List<ResponseHeader> headerList) {
+        return new ResponseHeaderProvider(headerList);
+    }
+
     // ===================================================================================
     //                                                                            Memories
     //                                                                            ========
@@ -812,11 +851,14 @@ public class FlutyRemoteApi {
     // -----------------------------------------------------
     //                                              Response
     //                                              --------
-    protected void keepResponseHeaderIfNeeds(FlutyRemoteApiRule rule, Header[] headers) {
+    protected void keepResponseHeaderIfNeeds(FlutyRemoteApiRule rule, Supplier<Header[]> headerSupplier) {
         final SendReceiveLogOption option = rule.getSendReceiveLogOption();
-        if (option.isEnabled() && headers != null) {
-            for (Header header : headers) {
-                option.keeper().keepResponseHeader(header.getName(), header.getValue());
+        if (option.isEnabled()) {
+            final Header[] headers = headerSupplier.get(); // lazy get to avoid copy cost
+            if (headers != null) { // just in case
+                for (Header header : headers) {
+                    option.keeper().keepResponseHeader(header.getName(), header.getValue());
+                }
             }
         }
     }
