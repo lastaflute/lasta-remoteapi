@@ -12,6 +12,23 @@ import org.dbflute.utflute.core.PlainTestCase;
  */
 public class ResponseHeaderProviderTest extends PlainTestCase {
 
+    public void test_findPresentFirstValue_basic() {
+        // ## Arrange ##
+        List<ResponseHeader> headerList = new ArrayList<ResponseHeader>();
+        headerList.add(new MockResponseHeader("sea", "mystic"));
+        headerList.add(new MockResponseHeader("sea", "bbb"));
+        headerList.add(new MockResponseHeader("land", "oneman"));
+        headerList.add(new MockResponseHeader("piari", null));
+        ResponseHeaderProvider provider = new ResponseHeaderProvider(headerList);
+
+        // ## Act ##
+        // ## Assert ##
+        assertEquals("mystic", provider.findPresentFirstValue("sea").get());
+        assertEquals("oneman", provider.findPresentFirstValue("land").get());
+        assertFalse(provider.findPresentFirstValue("piari").isPresent());
+        assertFalse(provider.findPresentFirstValue("miraco").isPresent());
+    }
+
     public void test_findPresentValueList_basic() {
         // ## Arrange ##
         List<ResponseHeader> headerList = new ArrayList<ResponseHeader>();
