@@ -62,7 +62,7 @@ public class FlFormSender implements RequestBodySender {
     //                                                                             =======
     @Override
     public void prepareEnclosingRequest(HttpEntityEnclosingRequest enclosingRequest, Object param, FlutyRemoteApiRule rule) {
-        final List<NameValuePair> parameterList = prepareTextParameterList(enclosingRequest, param, rule);
+        final List<NameValuePair> parameterList = prepareParameterList(enclosingRequest, param, rule);
         enclosingRequest.setEntity(prepareEnclosedHttpEntity(param, parameterList, rule));
         readySendReceiveLogIfNeeds(param, parameterList, rule);
     }
@@ -70,13 +70,12 @@ public class FlFormSender implements RequestBodySender {
     // -----------------------------------------------------
     //                                        Text Parameter
     //                                        --------------
-    protected List<NameValuePair> prepareTextParameterList(HttpEntityEnclosingRequest enclosingRequest, Object param,
-            FlutyRemoteApiRule rule) {
+    protected List<NameValuePair> prepareParameterList(HttpEntityEnclosingRequest enclosingRequest, Object param, FlutyRemoteApiRule rule) {
         final DfBeanDesc beanDesc = DfBeanDescFactory.getBeanDesc(param.getClass());
         final List<NameValuePair> parameters = new ArrayList<>();
         beanDesc.getProppertyNameList().stream().forEach(proppertyName -> {
             final DfPropertyDesc propertyDesc = beanDesc.getPropertyDesc(proppertyName);
-            if (isExceptTextParameter(param, propertyDesc, rule)) { // e.g. multi-part
+            if (isExceptParameter(param, propertyDesc, rule)) { // e.g. multi-part
                 return;
             }
             final String serializedParameterName = asSerializedParameterName(propertyDesc);
@@ -93,7 +92,7 @@ public class FlFormSender implements RequestBodySender {
         return parameters;
     }
 
-    protected boolean isExceptTextParameter(Object param, DfPropertyDesc propertyDesc, FlutyRemoteApiRule rule) {
+    protected boolean isExceptParameter(Object param, DfPropertyDesc propertyDesc, FlutyRemoteApiRule rule) {
         return false; // you can override for e.g. multi-part
     }
 
@@ -115,16 +114,16 @@ public class FlFormSender implements RequestBodySender {
     // -----------------------------------------------------
     //                                  Send/Receive Logging
     //                                  --------------------
-    protected void readySendReceiveLogIfNeeds(Object param, List<NameValuePair> textParameterList, FlutyRemoteApiRule rule) {
+    protected void readySendReceiveLogIfNeeds(Object param, List<NameValuePair> parameterList, FlutyRemoteApiRule rule) {
         final SendReceiveLogOption option = rule.getSendReceiveLogOption();
         if (option.isEnabled()) {
-            final Map<String, String> keptMap = prepareLoggingParameterMap(param, textParameterList);
+            final Map<String, String> keptMap = prepareLoggingParameterMap(param, parameterList);
             option.keeper().keepFormParameter(keptMap);
         }
     }
 
-    protected Map<String, String> prepareLoggingParameterMap(Object param, List<NameValuePair> textParameterList) {
-        return textParameterList.stream().collect(Collectors.toMap(bean -> bean.getName(), bean -> bean.getValue()));
+    protected Map<String, String> prepareLoggingParameterMap(Object param, List<NameValuePair> parameterList) {
+        return parameterList.stream().collect(Collectors.toMap(bean -> bean.getName(), bean -> bean.getValue()));
     }
 
     // ===================================================================================
