@@ -20,6 +20,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+import org.apache.http.HttpEntity;
 import org.apache.http.HttpEntityEnclosingRequest;
 import org.apache.http.NameValuePair;
 import org.apache.http.client.entity.UrlEncodedFormEntity;
@@ -61,10 +62,22 @@ public class FlFormSender implements RequestBodySender {
     //                                                                             =======
     @Override
     public void prepareEnclosingRequest(HttpEntityEnclosingRequest enclosingRequest, Object param, FlutyRemoteApiRule rule) {
+        final List<NameValuePair> parameterList = prepareParameterList(enclosingRequest, param, rule);
+        enclosingRequest.setEntity(prepareEnclosedHttpEntity(param, parameterList, rule));
+        readySendReceiveLogIfNeeds(param, parameterList, rule);
+    }
+
+    // -----------------------------------------------------
+    //                                        Text Parameter
+    //                                        --------------
+    protected List<NameValuePair> prepareParameterList(HttpEntityEnclosingRequest enclosingRequest, Object param, FlutyRemoteApiRule rule) {
         final DfBeanDesc beanDesc = DfBeanDescFactory.getBeanDesc(param.getClass());
         final List<NameValuePair> parameters = new ArrayList<>();
         beanDesc.getProppertyNameList().stream().forEach(proppertyName -> {
             final DfPropertyDesc propertyDesc = beanDesc.getPropertyDesc(proppertyName);
+            if (isExceptParameter(param, propertyDesc, rule)) { // e.g. multi-part
+                return;
+            }
             final String serializedParameterName = asSerializedParameterName(propertyDesc);
             final Object plainValue = beanDesc.getPropertyDesc(proppertyName).getValue(param);
             if (plainValue != null && Iterable.class.isAssignableFrom(plainValue.getClass())) {
@@ -76,28 +89,41 @@ public class FlFormSender implements RequestBodySender {
                 parameters.add(createBasicNameValuePair(serializedParameterName, asSerializedParameterValue(plainValue)));
             }
         });
-        enclosingRequest.setEntity(createUrlEncodedFormEntity(parameters, rule));
-        readySendReceiveLogIfNeeds(rule, param, parameters);
+        return parameters;
+    }
+
+    protected boolean isExceptParameter(Object param, DfPropertyDesc propertyDesc, FlutyRemoteApiRule rule) {
+        return false; // you can override for e.g. multi-part
     }
 
     protected BasicNameValuePair createBasicNameValuePair(String name, String value) {
         return new BasicNameValuePair(name, value);
     }
 
-    protected UrlEncodedFormEntity createUrlEncodedFormEntity(List<NameValuePair> parameters, FlutyRemoteApiRule rule) {
-        return new UrlEncodedFormEntity(parameters, rule.getRequestBodyCharset());
+    // -----------------------------------------------------
+    //                                           HTTP Entity
+    //                                           -----------
+    protected HttpEntity prepareEnclosedHttpEntity(Object param, List<NameValuePair> parameterList, FlutyRemoteApiRule rule) {
+        return createUrlEncodedFormEntity(parameterList, rule); // as default, may be overridden for e.g. multi-part
+    }
+
+    protected UrlEncodedFormEntity createUrlEncodedFormEntity(List<NameValuePair> parameterList, FlutyRemoteApiRule rule) {
+        return new UrlEncodedFormEntity(parameterList, rule.getRequestBodyCharset());
     }
 
     // -----------------------------------------------------
     //                                  Send/Receive Logging
     //                                  --------------------
-    protected void readySendReceiveLogIfNeeds(FlutyRemoteApiRule rule, Object param, List<NameValuePair> parameters) {
+    protected void readySendReceiveLogIfNeeds(Object param, List<NameValuePair> parameterList, FlutyRemoteApiRule rule) {
         final SendReceiveLogOption option = rule.getSendReceiveLogOption();
         if (option.isEnabled()) {
-            final Map<String, String> keptMap =
-                    parameters.stream().collect(Collectors.toMap(bean -> bean.getName(), bean -> bean.getValue()));
+            final Map<String, String> keptMap = prepareLoggingParameterMap(param, parameterList);
             option.keeper().keepFormParameter(keptMap);
         }
+    }
+
+    protected Map<String, String> prepareLoggingParameterMap(Object param, List<NameValuePair> parameterList) {
+        return parameterList.stream().collect(Collectors.toMap(bean -> bean.getName(), bean -> bean.getValue()));
     }
 
     // ===================================================================================
