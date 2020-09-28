@@ -15,8 +15,8 @@
  */
 package org.lastaflute.remoteapi.sender.body;
 
-import org.dbflute.optional.OptionalThing;
 import org.dbflute.remoteapi.sender.body.FlJsonSender;
+import org.lastaflute.core.json.JsonEngineResource;
 import org.lastaflute.core.json.JsonManager;
 import org.lastaflute.core.json.JsonMappingOption;
 import org.lastaflute.core.json.engine.RealJsonEngine;
@@ -35,9 +35,13 @@ public class LaJsonSender extends FlJsonSender {
     }
 
     protected RealJsonEngine createJsonEngine(JsonManager jsonManager, JsonMappingOption mappingOption) {
-        return jsonManager.newAnotherEngine(OptionalThing.ofNullable(mappingOption, () -> {
-            throw new IllegalStateException("Not found the json mapping option: " + mappingOption);
-        }));
+        return jsonManager.newRuledEngine(prepareJsonEngineResource(mappingOption));
+    }
+
+    protected JsonEngineResource prepareJsonEngineResource(JsonMappingOption mappingOption) {
+        final JsonEngineResource resource = new JsonEngineResource();
+        resource.acceptMappingOption(mappingOption);
+        return resource;
     }
 
     @Override
