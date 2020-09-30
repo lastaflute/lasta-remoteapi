@@ -3,7 +3,7 @@
 	<modelVersion>4.0.0</modelVersion>
 	<groupId>org.lastaflute.remoteapi</groupId>
 	<artifactId>lasta-remoteapi</artifactId>
-	<version>0.4.4</version>
+	<version>0.4.5</version>
 	<packaging>jar</packaging>
 
 	<name>Lasta RemoteApi</name>
@@ -12,10 +12,10 @@
 	<inceptionYear>2015</inceptionYear>
 
 	<properties>
-		<lastaflute.version>1.0.8</lastaflute.version> <!-- about one year old (from now) -->
-		<httpclient.version>4.5.3</httpclient.version>
+		<lastaflute.version>1.1.4</lastaflute.version> <!-- about one year old (from now) -->
+		<httpclient.version>4.5.12</httpclient.version>
 		<slf4j.version>1.7.12</slf4j.version>
-		<utflute.version>0.8.9</utflute.version>
+		<utflute.version>0.9.1</utflute.version>
 		<junit.version>4.8.2</junit.version> <!-- latest version without hamcrest -->
 	</properties>
 

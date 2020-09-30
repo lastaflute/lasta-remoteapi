@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2019 the original author or authors.
+ * Copyright 2015-2020 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -44,26 +44,47 @@ public class FlParameterSerializer {
         }
         final String realValue;
         if (value instanceof LocalDate) {
-            final DateTimeFormatter formatter = mappingPolicy.getDateFormatter(); // null allowed
-            realValue = ((LocalDate) value).format(formatter != null ? formatter : DateTimeFormatter.ISO_LOCAL_DATE);
+            realValue = handleSerializedLocalDateParameter((LocalDate) value, mappingPolicy);
         } else if (value instanceof LocalDateTime) {
-            final DateTimeFormatter formatter = mappingPolicy.getDateTimeFormatter(); // null allowed
-            realValue = ((LocalDateTime) value).format(formatter != null ? formatter : DateTimeFormatter.ISO_LOCAL_DATE_TIME);
+            realValue = handleSerializedLocalDateTimeParameter((LocalDateTime) value, mappingPolicy);
         } else if (value instanceof Boolean || boolean.class.equals(value.getClass())) {
-            realValue = mappingPolicy.serializeBoolean((boolean) value);
+            realValue = handleSerializedBooleanParameter((boolean) value, mappingPolicy);
         } else if (value instanceof Classification) {
-            final Classification cls = (Classification) value;
-            final Map<String, Object> map = cls.subItemMap();
-            final String clsPreferredItem = mappingPolicy.getClsPreferredItem(); // null allowed
-            final String preferredValue = clsPreferredItem != null ? (String) map.get(clsPreferredItem) : null;
-            if (preferredValue != null) { // means Flg
-                realValue = preferredValue;
-            } else {
-                realValue = cls.code();
-            }
-        } else {
-            realValue = value.toString();
+            realValue = handleSerializedClassificationParameter((Classification) value, mappingPolicy);
+        } else { // e.g. String, Integer, Bean
+            realValue = handleSerializedStringParameter(value, mappingPolicy);
         }
         return realValue;
+    }
+
+    protected String handleSerializedLocalDateParameter(LocalDate date, FlRemoteMappingPolicy mappingPolicy) {
+        final DateTimeFormatter formatter = mappingPolicy.getDateFormatter(); // null allowed
+        return date.format(formatter != null ? formatter : DateTimeFormatter.ISO_LOCAL_DATE);
+    }
+
+    protected String handleSerializedLocalDateTimeParameter(LocalDateTime dateTime, FlRemoteMappingPolicy mappingPolicy) {
+        final DateTimeFormatter formatter = mappingPolicy.getDateTimeFormatter(); // null allowed
+        return dateTime.format(formatter != null ? formatter : DateTimeFormatter.ISO_LOCAL_DATE_TIME);
+    }
+
+    protected String handleSerializedBooleanParameter(boolean boo, FlRemoteMappingPolicy mappingPolicy) {
+        return mappingPolicy.serializeBoolean(boo);
+    }
+
+    protected String handleSerializedClassificationParameter(Classification cls, FlRemoteMappingPolicy mappingPolicy) {
+        final String realValue;
+        final Map<String, Object> map = cls.subItemMap();
+        final String clsPreferredItem = mappingPolicy.getClsPreferredItem(); // null allowed
+        final String preferredValue = clsPreferredItem != null ? (String) map.get(clsPreferredItem) : null;
+        if (preferredValue != null) { // means Flg
+            realValue = preferredValue;
+        } else {
+            realValue = cls.code();
+        }
+        return realValue;
+    }
+
+    protected String handleSerializedStringParameter(Object value, FlRemoteMappingPolicy mappingPolicy) {
+        return value.toString();
     }
 }
