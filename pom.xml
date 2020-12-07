@@ -183,6 +183,19 @@
                 <groupId>org.owasp</groupId>
                 <artifactId>dependency-check-maven</artifactId>
                 <version>6.0.3</version>
+				<configuration>
+					<failBuildOnCVSS>4</failBuildOnCVSS>
+                    <skipProvidedScope>true</skipProvidedScope>
+                    <skipRuntimeScope>true</skipRuntimeScope>
+                    <format>ALL</format>
+                </configuration>
+				<executions>
+					<execution>
+						<goals>
+							<goal>check</goal>
+						</goals>
+					</execution>
+				</executions>
             </plugin>
 		</plugins>
 	</build>
