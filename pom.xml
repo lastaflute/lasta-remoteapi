@@ -13,7 +13,7 @@
 
 	<properties>
 		<lastaflute.version>1.1.4</lastaflute.version> <!-- about one year old (from now) -->
-		<httpclient.version>4.5.12</httpclient.version>
+		<httpclient.version>4.5.13</httpclient.version>
 		<slf4j.version>1.7.12</slf4j.version>
 		<utflute.version>0.9.1</utflute.version>
 		<junit.version>4.8.2</junit.version> <!-- latest version without hamcrest -->
@@ -106,18 +106,18 @@
 								<pluginExecution>
 									<pluginExecutionFilter>
 										<groupId>org.apache.maven.plugins</groupId>
-                        				<artifactId>maven-enforcer-plugin</artifactId>
-                        				<versionRange>[1.0.0,)</versionRange>
-                        				<goals>
-                           					<goal>enforce</goal>
-                        				</goals>
-                    				</pluginExecutionFilter>
-                    				<action><ignore /></action>
-                				</pluginExecution>
-                			</pluginExecutions>
-                		</lifecycleMappingMetadata>
-                	</configuration>
-                </plugin>
+										<artifactId>maven-enforcer-plugin</artifactId>
+										<versionRange>[1.0.0,)</versionRange>
+										<goals>
+						   					<goal>enforce</goal>
+										</goals>
+									</pluginExecutionFilter>
+									<action><ignore /></action>
+								</pluginExecution>
+							</pluginExecutions>
+						</lifecycleMappingMetadata>
+					</configuration>
+				</plugin>
 			</plugins>
 		</pluginManagement>
 		<plugins>
@@ -165,20 +165,38 @@
 			 'xxx.jar.asc' file can be created by this plug-in
 			 you can deploy by 'mvn -e clean deploy -Dgpg.keyname=xxx -Dgpg.passphrase="xxx"'
 			 -->
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-gpg-plugin</artifactId>
-                <version>1.5</version>
-                <executions>
-                    <execution>
-                        <id>sign-artifacts</id>
-                        <phase>verify</phase>
-                        <goals>
-                            <goal>sign</goal>
-                        </goals>
-                    </execution>
-                </executions>
-            </plugin>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-gpg-plugin</artifactId>
+				<version>1.5</version>
+				<executions>
+					<execution>
+						<id>sign-artifacts</id>
+						<phase>verify</phase>
+						<goals>
+							<goal>sign</goal>
+						</goals>
+					</execution>
+				</executions>
+			</plugin>
+			<plugin>
+				<groupId>org.owasp</groupId>
+				<artifactId>dependency-check-maven</artifactId>
+				<version>6.0.3</version>
+				<configuration>
+					<failBuildOnCVSS>4</failBuildOnCVSS>
+					<skipProvidedScope>true</skipProvidedScope>
+					<skipRuntimeScope>true</skipRuntimeScope>
+					<format>ALL</format>
+				</configuration>
+				<executions>
+					<execution>
+						<goals>
+							<goal>check</goal>
+						</goals>
+					</execution>
+				</executions>
+			</plugin>
 		</plugins>
 	</build>
 
