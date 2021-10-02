@@ -155,7 +155,7 @@ public class LastaRemoteApi extends FlutyRemoteApi {
             sb.append(Stream.of(pathVariables).map(el -> el.toString()).collect(Collectors.joining("/"))); // simple for debug message
         }
         final String url = sb.toString();
-        setupRequestInfo(br, returnType, url, OptionalThing.of(param));
+        setupRequestInfo(br, returnType, url, OptionalThing.of(param), rule);
         setupYourRule(br, rule);
         final String msg = br.buildExceptionMessage();
         if (rule.getValidatorOption().isHandleAsWarnParam()) {
@@ -169,7 +169,7 @@ public class LastaRemoteApi extends FlutyRemoteApi {
             OptionalThing<String> body, Object ret, FlutyRemoteApiRule rule, RuntimeException e) {
         final ExceptionMessageBuilder br = new ExceptionMessageBuilder();
         br.addNotice("Validation Error as Return object for the remote API.");
-        setupRequestInfo(br, returnType, url, param);
+        setupRequestInfo(br, returnType, url, param, rule);
         setupResponseInfo(br, httpStatus, body);
         setupReturnInfo(br, ret);
         setupYourRule(br, rule);

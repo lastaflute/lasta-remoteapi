@@ -18,6 +18,7 @@ package org.dbflute.remoteapi.exception;
 import java.util.function.Supplier;
 
 import org.dbflute.optional.OptionalThing;
+import org.dbflute.remoteapi.http.SupportedHttpMethod;
 
 /**
  * @author jflute
@@ -31,6 +32,7 @@ public class RemoteApiHttpBasisErrorException extends RemoteApiBaseException {
     // ===================================================================================
     //                                                                           Attribute
     //                                                                           =========
+    protected final SupportedHttpMethod httpMethod; // not null
     protected final int httpStatus;
     protected final RemoteApiFailureResponseHolder failureResponseHolder; // not null
 
@@ -56,14 +58,20 @@ public class RemoteApiHttpBasisErrorException extends RemoteApiBaseException {
     // ===================================================================================
     //                                                                         Constructor
     //                                                                         ===========
-    public RemoteApiHttpBasisErrorException(String msg, int httpStatus, RemoteApiFailureResponseHolder failureResponseHolder) {
+    public RemoteApiHttpBasisErrorException(String msg, SupportedHttpMethod httpMethod, int httpStatus,
+            RemoteApiFailureResponseHolder failureResponseHolder) {
         super(msg);
         this.httpStatus = httpStatus;
+        this.httpMethod = httpMethod;
         if (failureResponseHolder != null) {
             this.failureResponseHolder = failureResponseHolder;
         } else { // for outer framework
-            this.failureResponseHolder = new RemoteApiFailureResponseHolder(null, null);
+            this.failureResponseHolder = createNullFailureResponseHolder();
         }
+    }
+
+    protected RemoteApiFailureResponseHolder createNullFailureResponseHolder() {
+        return new RemoteApiFailureResponseHolder(null, null);
     }
 
     // botsu: to keep simple by jflute (2017/09/13)
@@ -105,7 +113,15 @@ public class RemoteApiHttpBasisErrorException extends RemoteApiBaseException {
     //                                                                            Accessor
     //                                                                            ========
     /**
-     * Get the HTTP status of remote API response.
+     * Get the HTTP Method of the remote API request.
+     * @return The enum type of HTTP Method as supported by RemoteApi. (NotNull)
+     */
+    public SupportedHttpMethod getHttpMethod() {
+        return httpMethod;
+    }
+
+    /**
+     * Get the HTTP Status of the remote API response.
      * @return The status code as integer.
      */
     public int getHttpStatus() {
