@@ -39,6 +39,7 @@ import org.apache.http.ssl.TrustStrategy;
 import org.dbflute.optional.OptionalThing;
 import org.dbflute.remoteapi.exception.retry.ClientErrorRetryDeterminer;
 import org.dbflute.remoteapi.exception.translation.ClientErrorTranslator;
+import org.dbflute.remoteapi.http.SupportedHttpMethod;
 import org.dbflute.remoteapi.http.header.ResponseHeaderResource;
 import org.dbflute.remoteapi.logging.SendReceiveLogOption;
 import org.dbflute.remoteapi.receiver.ResponseBodyReceiver;
@@ -90,6 +91,12 @@ public class FlutyRemoteApiRule {
     // #hope jflute can accept response header, interface? mapping? (2017/09/13)
     // #hope jflute request trace ID option, but thinking...header? (2017/09/13)
     // #hope jflute improve tracebility like DBFlute (2017/09/13)
+
+    // -----------------------------------------------------
+    //                                         Optional Rule
+    //                                         -------------
+    // used framework-internally so don't use in your application
+    protected SupportedHttpMethod frameworkInternallyRequestedHttpMethod; // null allowed until requested
 
     // ===================================================================================
     //                                                                         Http Client
@@ -395,6 +402,33 @@ public class FlutyRemoteApiRule {
     public void setupNativeHttpRequest(Consumer<RequestConfig.Builder> httpRequestSetupper) {
         assertArgumentNotNull("httpRequestSetupper", httpRequestSetupper);
         this.httpRequestSetupper = httpRequestSetupper;
+    }
+
+    // ===================================================================================
+    //                                                               Requested HTTP Method
+    //                                                               =====================
+    /**
+     * Used framework-internally so don't use in your application!
+     * @return The optional HTTP Method of the request. (NotNull, basically Present)
+     */
+    @Deprecated // framework only
+    public OptionalThing<SupportedHttpMethod> xgetFrameworkInternallyRequestedHttpMethod() {
+        return OptionalThing.ofNullable(frameworkInternallyRequestedHttpMethod, () -> {
+            // basically no way, but use optional just in case
+            throw new IllegalStateException("Not found the requested HTTP Method.");
+        });
+    }
+
+    @Deprecated // framework only
+    public void xacceptFrameworkInternallyRequestedHttpMethod(SupportedHttpMethod httpMethod) {
+        if (httpMethod == null) {
+            throw new IllegalArgumentException("The argument 'httpMethod' should not be null.");
+        }
+        if (frameworkInternallyRequestedHttpMethod != null) { // block application set
+            String msg = "Already set in the rule: existing=" + frameworkInternallyRequestedHttpMethod;
+            throw new IllegalStateException(msg);
+        }
+        frameworkInternallyRequestedHttpMethod = httpMethod;
     }
 
     // ===================================================================================

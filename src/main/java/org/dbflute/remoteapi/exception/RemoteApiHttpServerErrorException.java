@@ -15,6 +15,8 @@
  */
 package org.dbflute.remoteapi.exception;
 
+import org.dbflute.remoteapi.http.SupportedHttpMethod;
+
 /**
  * @author jflute
  */
@@ -22,7 +24,8 @@ public class RemoteApiHttpServerErrorException extends RemoteApiHttpBasisErrorEx
 
     private static final long serialVersionUID = 1L;
 
-    public RemoteApiHttpServerErrorException(String msg, int httpStatus, RemoteApiFailureResponseHolder failureResponseHolder) {
-        super(msg, httpStatus, failureResponseHolder);
+    public RemoteApiHttpServerErrorException(String msg, SupportedHttpMethod httpMethod, int httpStatus,
+            RemoteApiFailureResponseHolder failureResponseHolder) {
+        super(msg, httpMethod, httpStatus, failureResponseHolder);
     }
 }

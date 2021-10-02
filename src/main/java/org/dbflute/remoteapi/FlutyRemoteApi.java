@@ -249,7 +249,7 @@ public class FlutyRemoteApi {
         assertArgumentNotNull("ruleLambda", ruleLambda);
         assertArgumentNotNull("httpMethod", httpMethod);
         assertArgumentNotNull("emptyBodyFactory", emptyBodyFactory);
-        final FlutyRemoteApiRule rule = createRemoteApiRule(ruleLambda);
+        final FlutyRemoteApiRule rule = createRemoteApiRule(ruleLambda, httpMethod);
         keepBeginDateTimeIfNeeds(rule);
         keepFacadeExpIfNeeds(rule);
         return retryableRequest(returnType, urlBase, actionPath, pathVariables, optParam, rule, () -> {
@@ -287,7 +287,7 @@ public class FlutyRemoteApi {
                 return handleResponse(returnType, url, /*param*/OptionalThing.empty(), response, rule);
             }
         } catch (IOException e) {
-            handleRemoteApiIOException(returnType, url, /*param*/OptionalThing.empty(), e);
+            handleRemoteApiIOException(returnType, url, /*param*/OptionalThing.empty(), rule, e);
             return null; // unreachable
         }
     }
@@ -313,7 +313,7 @@ public class FlutyRemoteApi {
         assertArgumentNotNull("ruleLambda", ruleLambda);
         assertArgumentNotNull("httpMethod", httpMethod);
         assertArgumentNotNull("enclosingFactory", enclosingFactory);
-        final FlutyRemoteApiRule rule = createRemoteApiRule(ruleLambda);
+        final FlutyRemoteApiRule rule = createRemoteApiRule(ruleLambda, httpMethod);
         keepBeginDateTimeIfNeeds(rule);
         keepFacadeExpIfNeeds(rule);
         return retryableRequest(returnType, urlBase, actionPath, pathVariables, param, rule, () -> {
@@ -355,7 +355,7 @@ public class FlutyRemoteApi {
                 return handleResponse(returnType, url, OptionalThing.of(param), response, rule);
             }
         } catch (IOException e) {
-            handleRemoteApiIOException(returnType, url, OptionalThing.of(param), e);
+            handleRemoteApiIOException(returnType, url, OptionalThing.of(param), rule, e);
         }
         return null;
     }
@@ -441,8 +441,9 @@ public class FlutyRemoteApi {
     // ===================================================================================
     //                                                                      RemoteApi Rule
     //                                                                      ==============
-    protected FlutyRemoteApiRule createRemoteApiRule(Consumer<FlutyRemoteApiRule> ruleLambda) {
+    protected FlutyRemoteApiRule createRemoteApiRule(Consumer<FlutyRemoteApiRule> ruleLambda, SupportedHttpMethod httpMethod) {
         final FlutyRemoteApiRule rule = newRemoteApiRule();
+        acceptFrameworkInternallyRequestedHttpMethod(rule, httpMethod);
         defaultRuleLambda.accept(rule);
         ruleLambda.accept(rule);
         return rule;
@@ -450,6 +451,14 @@ public class FlutyRemoteApi {
 
     protected FlutyRemoteApiRule newRemoteApiRule() {
         return new FlutyRemoteApiRule();
+    }
+
+    @SuppressWarnings("deprecation") // for framework internally
+    protected void acceptFrameworkInternallyRequestedHttpMethod(FlutyRemoteApiRule rule, SupportedHttpMethod httpMethod) {
+        // #for_now jflute it uses the rule object as container framework internally (2021/10/02)
+        // because arguments of parseResponse() cannot be changed because of user implementation
+        // and not use rule's constructor to keep simple object (used by e.g. test code)
+        rule.xacceptFrameworkInternallyRequestedHttpMethod(httpMethod); // read the comment in the rule
     }
 
     // ===================================================================================
@@ -644,6 +653,7 @@ public class FlutyRemoteApi {
     // -----------------------------------------------------
     //                                        Parse Response
     //                                        --------------
+    // #thinking jflute user framework overrides this so cannot change arguments (2021/10/02)
     protected <RETURN> RETURN parseResponse(Type returnType, String url, OptionalThing<Object> form, int httpStatus,
             OptionalThing<String> body, FlutyRemoteApiRule rule) {
         logger.debug("#flow #remote ...Receiving response as {} from Remote API:\n{}\n as {}\n{}", httpStatus, url, returnType,
@@ -653,10 +663,10 @@ public class FlutyRemoteApi {
             return ret;
         } else if (httpStatus >= 400 && httpStatus < 500) { // e.g. not found, bad request
             final RemoteApiFailureResponseHolder failureResponseHolder = holdFailureResponse(returnType, url, form, httpStatus, body, rule);
-            throwRemoteApiHttpClientErrorException(returnType, url, form, httpStatus, body, failureResponseHolder);
+            throwRemoteApiHttpClientErrorException(returnType, url, form, httpStatus, body, failureResponseHolder, rule);
         } else { // e.g. 500, unknown error
             final RemoteApiFailureResponseHolder failureResponseHolder = holdFailureResponse(returnType, url, form, httpStatus, body, rule);
-            throwRemoteApiHttpServerErrorException(returnType, url, form, httpStatus, body, failureResponseHolder);
+            throwRemoteApiHttpServerErrorException(returnType, url, form, httpStatus, body, failureResponseHolder, rule);
         }
         return null; // unreachable
     }
@@ -703,7 +713,7 @@ public class FlutyRemoteApi {
         try {
             return receiver.toResponseReturn(body, returnType, rule);
         } catch (RuntimeException e) {
-            throwRemoteApiResponseParseFailureException(returnType, url, form, httpStatus, body, receiver, e);
+            throwRemoteApiResponseParseFailureException(returnType, url, form, httpStatus, body, receiver, rule, e);
             return null; // unreachable
         }
     }
@@ -931,7 +941,7 @@ public class FlutyRemoteApi {
         br.addElement("    \"/sea/{hangar}/land/{showbase}\", moreUrl(\"mystic\", \"oneman\")");
         br.addItem("Path Variables");
         br.addElement(Arrays.asList(pathVariables));
-        setupRequestInfo(br, returnType, urlBase + actionPath, queryParam);
+        setupRequestInfo(br, returnType, urlBase + actionPath, queryParam, rule);
         setupYourRule(br, rule);
         setupFacadeExpression(br);
         final String msg = br.buildExceptionMessage();
@@ -950,7 +960,7 @@ public class FlutyRemoteApi {
         br.addElement("    moreUrl(1, 2, 3)");
         br.addItem("Path Variables");
         br.addElement(Arrays.asList(pathVariables));
-        setupRequestInfo(br, returnType, urlBase + actionPath, queryParam);
+        setupRequestInfo(br, returnType, urlBase + actionPath, queryParam, rule);
         setupYourRule(br, rule);
         setupFacadeExpression(br);
         final String msg = br.buildExceptionMessage();
@@ -965,7 +975,7 @@ public class FlutyRemoteApi {
         br.addNotice("Failed to ready the retry of request for client error.");
         br.addItem("Advice");
         br.addElement("Confirm your rule.retryIfClientError() callback.");
-        // clientError has rich message of requset and response information
+        // clientError has rich message of request and response information
         //setupRequestInfo(br, returnType, url, optOrParam);
         br.addItem("Client Error");
         br.addElement(clientError.getMessage());
@@ -981,34 +991,44 @@ public class FlutyRemoteApi {
     //                                           HTTP Status
     //                                           -----------
     protected void throwRemoteApiHttpClientErrorException(Type returnType, String url, OptionalThing<Object> form, int httpStatus,
-            OptionalThing<String> body, RemoteApiFailureResponseHolder failureResponseHolder) {
+            OptionalThing<String> body, RemoteApiFailureResponseHolder failureResponseHolder, FlutyRemoteApiRule rule) {
         final ExceptionMessageBuilder br = new ExceptionMessageBuilder();
-        br.addNotice("Client Error as HTTP status from the remote API.");
-        setupRequestInfo(br, returnType, url, form);
+        br.addNotice("Client Error as HTTP Status from the remote API.");
+        setupRequestInfo(br, returnType, url, form, rule);
         setupResponseInfo(br, httpStatus, body);
         setupFacadeExpression(br);
         final String msg = br.buildExceptionMessage();
-        throw new RemoteApiHttpClientErrorException(msg, httpStatus, failureResponseHolder);
+        final SupportedHttpMethod httpMethod = extractResponseErrorRequestedHttpMethod(rule);
+        throw new RemoteApiHttpClientErrorException(msg, httpMethod, httpStatus, failureResponseHolder);
     }
 
     protected void throwRemoteApiHttpServerErrorException(Type returnType, String url, OptionalThing<Object> form, int httpStatus,
-            OptionalThing<String> body, RemoteApiFailureResponseHolder failureResponseHolder) {
+            OptionalThing<String> body, RemoteApiFailureResponseHolder failureResponseHolder, FlutyRemoteApiRule rule) {
         final ExceptionMessageBuilder br = new ExceptionMessageBuilder();
-        br.addNotice("Server Error as HTTP status from the remote API.");
-        setupRequestInfo(br, returnType, url, form);
+        br.addNotice("Server Error as HTTP Status from the remote API.");
+        setupRequestInfo(br, returnType, url, form, rule);
         setupResponseInfo(br, httpStatus, body);
         setupFacadeExpression(br);
         final String msg = br.buildExceptionMessage();
-        throw new RemoteApiHttpServerErrorException(msg, httpStatus, failureResponseHolder);
+        final SupportedHttpMethod httpMethod = extractResponseErrorRequestedHttpMethod(rule);
+        throw new RemoteApiHttpServerErrorException(msg, httpMethod, httpStatus, failureResponseHolder);
+    }
+
+    protected SupportedHttpMethod extractResponseErrorRequestedHttpMethod(FlutyRemoteApiRule rule) {
+        // HTTP Method in the rule always exists in this timing so no check here 
+        @SuppressWarnings("deprecation")
+        final SupportedHttpMethod httpMethod = rule.xgetFrameworkInternallyRequestedHttpMethod().get();
+        return httpMethod;
     }
 
     // -----------------------------------------------------
     //                                          IO Exception
     //                                          ------------
-    protected void handleRemoteApiIOException(Type returnType, String url, OptionalThing<Object> form, IOException cause) {
+    protected void handleRemoteApiIOException(Type returnType, String url, OptionalThing<Object> form, FlutyRemoteApiRule rule,
+            IOException cause) {
         final ExceptionMessageBuilder br = new ExceptionMessageBuilder();
         br.addNotice("IO Error to the remote API.");
-        setupRequestInfo(br, returnType, url, form);
+        setupRequestInfo(br, returnType, url, form, rule);
         setupFacadeExpression(br);
         final String msg = br.buildExceptionMessage();
         throw new RemoteApiIOException(msg, cause);
@@ -1018,10 +1038,10 @@ public class FlutyRemoteApi {
     //                                          Cannot Parse
     //                                          ------------
     protected void throwRemoteApiResponseParseFailureException(Type type, String url, OptionalThing<Object> form, int httpStatus,
-            OptionalThing<String> body, ResponseBodyReceiver receiver, RuntimeException e) {
+            OptionalThing<String> body, ResponseBodyReceiver receiver, FlutyRemoteApiRule rule, RuntimeException e) {
         final ExceptionMessageBuilder br = new ExceptionMessageBuilder();
         br.addNotice("Failed to parse the response body from remote API.");
-        setupRequestInfo(br, type, url, form);
+        setupRequestInfo(br, type, url, form, rule);
         setupResponseInfo(br, httpStatus, body);
         br.addItem("Receiver");
         br.addElement(receiver);
@@ -1040,7 +1060,7 @@ public class FlutyRemoteApi {
         br.addNotice("Failed to translate client error.");
         br.addItem("Advice");
         br.addElement("Confirm your logic of rule.translateClientError().");
-        setupRequestInfo(br, returnType, url, param);
+        setupRequestInfo(br, returnType, url, param, rule);
         setupResponseInfo(br, httpStatus, body);
         setupYourRule(br, rule);
         setupFacadeExpression(br);
@@ -1069,7 +1089,7 @@ public class FlutyRemoteApi {
         br.addElement("    }");
         br.addElement("  (o):");
         br.addElement("    doRequestGet(..., rule -> rule.sendQueryBy(new LaQuerySender()));");
-        setupRequestInfo(br, returnType, url, form);
+        setupRequestInfo(br, returnType, url, form, rule);
         setupYourRule(br, rule);
         setupFacadeExpression(br);
         final String msg = br.buildExceptionMessage();
@@ -1090,7 +1110,7 @@ public class FlutyRemoteApi {
         br.addElement("    }");
         br.addElement("  (o):");
         br.addElement("    doRequest" + camelMethod + "(..., rule -> rule.sendBodyBy(new LaJsonSender());");
-        setupRequestInfo(br, returnType, url, param);
+        setupRequestInfo(br, returnType, url, param, rule);
         setupYourRule(br, rule);
         br.addItem("HTTP Method");
         br.addElement(httpMethod);
@@ -1112,7 +1132,7 @@ public class FlutyRemoteApi {
         br.addElement("    }");
         br.addElement("  (o):");
         br.addElement("    doRequestGet(..., rule -> rule.receiveBodyBy(new LaJsonReceiver()));");
-        setupRequestInfo(br, returnType, url, form);
+        setupRequestInfo(br, returnType, url, form, rule);
         setupResponseInfo(br, httpStatus, body);
         setupYourRule(br, rule);
         setupFacadeExpression(br);
@@ -1132,7 +1152,7 @@ public class FlutyRemoteApi {
         br.addElement("    protected void yourDefaultRule(FlutyRemoteApiRule rule) {");
         br.addElement("        rule.handleFailureResponseAs(FaicliUnifiedFailureResult.class);");
         br.addElement("    }");
-        setupRequestInfo(br, returnType, url, form);
+        setupRequestInfo(br, returnType, url, form, rule);
         setupResponseInfo(br, httpStatus, body);
         setupYourRule(br, rule);
         final String msg = br.buildExceptionMessage();
@@ -1142,8 +1162,8 @@ public class FlutyRemoteApi {
     // ===================================================================================
     //                                                                      Message Helper
     //                                                                      ==============
-    protected void setupRequestInfo(ExceptionMessageBuilder br, Type returnType, String url, Object optOrParam) {
-        setupReturnTypeAndRemoteApi(br, returnType, url);
+    protected void setupRequestInfo(ExceptionMessageBuilder br, Type returnType, String url, Object optOrParam, FlutyRemoteApiRule rule) {
+        setupReturnTypeAndRemoteApi(br, returnType, url, rule);
         if (optOrParam instanceof OptionalThing<?>) {
             ((OptionalThing<?>) optOrParam).ifPresent(param -> {
                 br.addItem("Request Parameter");
@@ -1155,9 +1175,16 @@ public class FlutyRemoteApi {
         }
     }
 
-    protected void setupReturnTypeAndRemoteApi(ExceptionMessageBuilder br, Type returnType, String url) {
+    protected void setupReturnTypeAndRemoteApi(ExceptionMessageBuilder br, Type returnType, String url, FlutyRemoteApiRule rule) {
         br.addItem("Return Type");
         br.addElement(returnType);
+
+        // this setup method is for various exception so use orElse() here 
+        @SuppressWarnings("deprecation")
+        final SupportedHttpMethod httpMethod = rule.xgetFrameworkInternallyRequestedHttpMethod().orElse(null);
+        br.addItem("HTTP Method");
+        br.addElement(httpMethod);
+
         br.addItem("Remote API");
         br.addElement(url);
     }
