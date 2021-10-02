@@ -653,6 +653,7 @@ public class FlutyRemoteApi {
     // -----------------------------------------------------
     //                                        Parse Response
     //                                        --------------
+    // #thinking jflute user framework overrides this so cannot change arguments (2021/10/02)
     protected <RETURN> RETURN parseResponse(Type returnType, String url, OptionalThing<Object> form, int httpStatus,
             OptionalThing<String> body, FlutyRemoteApiRule rule) {
         logger.debug("#flow #remote ...Receiving response as {} from Remote API:\n{}\n as {}\n{}", httpStatus, url, returnType,
