@@ -36,15 +36,14 @@ public class MockHttpClientTest extends PlainTestCase {
         // ## Arrange ##
         String responseJson = "{productName=\"sea\", regularPrice=100}";
         MockHttpClient client = MockHttpClient.create(resopnse -> {
-            resopnse.asJsonDirectly(responseJson, request -> request.getUrl().contains("/sea"));
             resopnse.asJsonDirectly(responseJson, request -> {
-                String requestForm = "land=oneman&sea=mystic"; // fixed ordered?
+                String requestForm = "land=one%26man&sea=mys%2Ftic"; // fixed ordered?
                 return request.getBody().get().contains(requestForm);
             });
         });
         HttpPost post = new HttpPost("http://docksidestage.org/sea");
         FlFormSender sender = new FlFormSender(new FlVacantMappingPolicy());
-        sender.prepareEnclosingRequest(post, new MockForm("mystic", "oneman"), new FlutyRemoteApiRule());
+        sender.prepareEnclosingRequest(post, new MockForm("mys/tic", "one&man"), new FlutyRemoteApiRule());
 
         // ## Act ##
         CloseableHttpResponse response = client.execute(post);
