@@ -57,10 +57,24 @@ public class MockSupposedRequest {
     // ===================================================================================
     //                                                                            Accessor
     //                                                                            ========
+    /**
+     * Get the mock request URL, including query string. <br>
+     * e.g. http://localhost:8090/harbor/lido/product/list/1
+     * @return The string of full URL. (NotNull)
+     */
     public String getUrl() {
         return url;
     }
 
+    /**
+     * Get the request body, both form parameters and JSON body.
+     * <pre>
+     * e.g.
+     *  form parameters: "sea=mystic&land=oneman" 
+     *  JSON body: "{sea:mystic,land:oneman}" 
+     * </pre>
+     * @return The optional URL-encoded expression for body. (NotNull, EmptyAllowed: e.g. if GET)
+     */
     public OptionalThing<String> getBody() {
         return OptionalThing.ofNullable(body, () -> {
             throw new IllegalStateException("Not found the request body: url=" + url);
