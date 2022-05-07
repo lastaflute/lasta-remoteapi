@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2020 the original author or authors.
+ * Copyright 2015-2022 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -47,6 +47,15 @@ import org.dbflute.remoteapi.mock.supporter.MockSupposedRequest;
 import org.dbflute.util.DfResourceUtil;
 
 /**
+ * The HTTP client as mock. <br>
+ * You can test remote call from application without actual execution.
+ * <pre>
+ * MockHttpClient client = MockHttpClient.create(response -&gt; {
+ *     String json = "{...}"; // for mock JSON response
+ *     response.asJson(json, request -&gt; request...); // choose request for the json
+ *     response.peekRequest(request -&gt; {}); // you can assert request here
+ * });
+ * </pre>
  * @author awane
  * @author jflute
  */
@@ -64,11 +73,32 @@ public class MockHttpClient extends CloseableHttpClient {
         this.freedomResponse = freedomResponse;
     }
 
-    // e.g.
-    //  MockHttpClient.create(response -> {
-    //      response.asJson(path, request -> request...);
-    //      response.peekRequest(request -> {});
-    //  });
+    /**
+     * Create the HTTP client as mock for the response definition.
+     * <pre>
+     * // basic use
+     * MockHttpClient client = MockHttpClient.create(response -&gt; {
+     *     String json = "{...}"; // for mock JSON response
+     *     response.asJson(json, request -&gt; request...); // choose request for the json
+     *     response.peekRequest(request -&gt; {}); // you can assert request here
+     * });
+     * 
+     * // if you use UTFlute, you can enable the mock like this:
+     * registerMock(client);
+     * 
+     * // RemoteApi call in this action is mock,
+     * // if the request matches with mock determination
+     * ... = action.index(...);
+     * </pre>
+     * 
+     * request determination example:
+     * <pre>
+     * response.asJson(json, request -&gt; request.getUrl().contains("/harbor/")); // /harbor/ only
+     * response.asJson(json, request -&gt; true); // all RemoteApi calls are target
+     * </pre>
+     * @param responseLambda The callback of setting up response as mock. (NotNull)
+     * @return The new-created HTTP client as mock. (NotNull)
+     */
     public static MockHttpClient create(MockFreedomResponseSetupper responseLambda) {
         MockFreedomResponse response = new MockFreedomResponse();
         responseLambda.setup(response);
