@@ -70,7 +70,7 @@ public class MockSupposedRequest {
      * Get the request body, both form parameters and JSON body.
      * <pre>
      * e.g.
-     *  form parameters: "sea=mystic&land=oneman" 
+     *  form parameters: "sea=mystic&amp;land=oneman" 
      *  JSON body: "{sea:mystic,land:oneman}" 
      * </pre>
      * @return The optional URL-encoded expression for body. (NotNull, EmptyAllowed: e.g. if GET)
