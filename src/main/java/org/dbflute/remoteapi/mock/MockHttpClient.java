@@ -52,8 +52,8 @@ import org.dbflute.util.DfResourceUtil;
  * <pre>
  * MockHttpClient client = MockHttpClient.create(response -&gt; {
  *     String json = "{...}"; // for mock JSON response
- *     response.asJson(json, request -&gt request...); // choose request for the json
- *     response.peekRequest(request -&gt {}); // you can assert request here
+ *     response.asJson(json, request -&gt; request...); // choose request for the json
+ *     response.peekRequest(request -&gt; {}); // you can assert request here
  * });
  * </pre>
  * @author awane
@@ -79,8 +79,8 @@ public class MockHttpClient extends CloseableHttpClient {
      * // basic use
      * MockHttpClient client = MockHttpClient.create(response -&gt; {
      *     String json = "{...}"; // for mock JSON response
-     *     response.asJson(json, request -&gt request...); // choose request for the json
-     *     response.peekRequest(request -&gt {}); // you can assert request here
+     *     response.asJson(json, request -&gt; request...); // choose request for the json
+     *     response.peekRequest(request -&gt; {}); // you can assert request here
      * });
      * 
      * // if you use UTFlute, you can enable the mock like this:
@@ -94,7 +94,7 @@ public class MockHttpClient extends CloseableHttpClient {
      * request determination example:
      * <pre>
      * response.asJson(json, request -&gt; request.getUrl().contains("/harbor/")); // /harbor/ only
-     * response.asJson(json, request -&gt true); // all RemoteApi calls are target
+     * response.asJson(json, request -&gt; true); // all RemoteApi calls are target
      * </pre>
      * @param responseLambda The callback of setting up response as mock. (NotNull)
      * @return The new-created HTTP client as mock. (NotNull)
