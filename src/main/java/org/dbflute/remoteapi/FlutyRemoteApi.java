@@ -990,18 +990,55 @@ public class FlutyRemoteApi {
     // -----------------------------------------------------
     //                                           HTTP Status
     //                                           -----------
+    /**
+     * @param returnType The type of response return. (NotNull)
+     * @param url The string of requested URL to remote API. (NotNull)
+     * @param form The optional object as request form or body. (NotNull, EmptyAllowed)
+     * @param httpStatus The HTTP status of response from remote API.
+     * @param body The optional string of response body from remote API. (NotNull, EmptyAllowed)
+     * @param failureResponseHolder The holder having e.g. failure response and cause (NotNull)
+     * @param rule The rule object of currently-requested remote API. (NotNull)
+     */
     protected void throwRemoteApiHttpClientErrorException(Type returnType, String url, OptionalThing<Object> form, int httpStatus,
             OptionalThing<String> body, RemoteApiFailureResponseHolder failureResponseHolder, FlutyRemoteApiRule rule) {
+        // _/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/
+        // argument 'rule' may be null for compatible so pay attention to the use of it
+        // _/_/_/_/_/_/_/_/_/_/
         final ExceptionMessageBuilder br = new ExceptionMessageBuilder();
         br.addNotice("Client Error as HTTP Status from the remote API.");
         setupRequestInfo(br, returnType, url, form, rule);
         setupResponseInfo(br, httpStatus, body);
         setupFacadeExpression(br);
         final String msg = br.buildExceptionMessage();
-        final SupportedHttpMethod httpMethod = extractResponseErrorRequestedHttpMethod(rule);
+        final SupportedHttpMethod httpMethod = extractResponseErrorRequestedHttpMethod(rule); // null allowed
         throw new RemoteApiHttpClientErrorException(msg, httpMethod, httpStatus, failureResponseHolder);
     }
 
+    // #hope jflute for compatible to application framework, will be removed (2024/03/19)
+    /**
+     * Without HTTP method information in the exception message. (old method)
+     * @param returnType The type of response return. (NotNull)
+     * @param url The string of requested URL to remote API. (NotNull)
+     * @param form The optional object as request form or body. (NotNull, EmptyAllowed)
+     * @param httpStatus The HTTP status of response from remote API.
+     * @param body The optional string of response body from remote API. (NotNull, EmptyAllowed)
+     * @param failureResponseHolder The holder having e.g. failure response and cause (NotNull)
+     * @deprecated use the another overload method with rule object.
+     */
+    protected void throwRemoteApiHttpClientErrorException(Type returnType, String url, OptionalThing<Object> form, int httpStatus,
+            OptionalThing<String> body, RemoteApiFailureResponseHolder failureResponseHolder) {
+        throwRemoteApiHttpClientErrorException(returnType, url, form, httpStatus, body, failureResponseHolder, /*rule*/null);
+    }
+
+    /**
+     * @param returnType The type of response return. (NotNull)
+     * @param url The string of requested URL to remote API. (NotNull)
+     * @param form The optional object as request form or body. (NotNull, EmptyAllowed)
+     * @param httpStatus The HTTP status of response from remote API.
+     * @param body The optional string of response body from remote API. (NotNull, EmptyAllowed)
+     * @param failureResponseHolder The holder having e.g. failure response and cause (NotNull)
+     * @param rule The rule object of currently-requested remote API. (NotNull)
+     */
     protected void throwRemoteApiHttpServerErrorException(Type returnType, String url, OptionalThing<Object> form, int httpStatus,
             OptionalThing<String> body, RemoteApiFailureResponseHolder failureResponseHolder, FlutyRemoteApiRule rule) {
         final ExceptionMessageBuilder br = new ExceptionMessageBuilder();
@@ -1010,14 +1047,33 @@ public class FlutyRemoteApi {
         setupResponseInfo(br, httpStatus, body);
         setupFacadeExpression(br);
         final String msg = br.buildExceptionMessage();
-        final SupportedHttpMethod httpMethod = extractResponseErrorRequestedHttpMethod(rule);
+        final SupportedHttpMethod httpMethod = extractResponseErrorRequestedHttpMethod(rule); // null allowed
         throw new RemoteApiHttpServerErrorException(msg, httpMethod, httpStatus, failureResponseHolder);
     }
 
+    // #hope jflute for compatible to application framework, will be removed (2024/03/19)
+    /**
+     * Without HTTP method information in the exception message. (old method)
+     * @param returnType The type of response return. (NotNull)
+     * @param url The string of requested URL to remote API. (NotNull)
+     * @param form The optional object as request form or body. (NotNull, EmptyAllowed)
+     * @param httpStatus The HTTP status of response from remote API.
+     * @param body The optional string of response body from remote API. (NotNull, EmptyAllowed)
+     * @param failureResponseHolder The holder having e.g. failure response and cause (NotNull)
+     * @deprecated use the another overload method with rule object.
+     */
+    protected void throwRemoteApiHttpServerErrorException(Type returnType, String url, OptionalThing<Object> form, int httpStatus,
+            OptionalThing<String> body, RemoteApiFailureResponseHolder failureResponseHolder) {
+        throwRemoteApiHttpServerErrorException(returnType, url, form, httpStatus, body, failureResponseHolder, /*rule*/null);
+    }
+
     protected SupportedHttpMethod extractResponseErrorRequestedHttpMethod(FlutyRemoteApiRule rule) {
-        // HTTP Method in the rule always exists in this timing so no check here 
+        if (rule == null) { // for compatible to application framework
+            return null;
+        }
+        // HTTP Method in the rule always exists in this timing so basically present (but use orElse() just in case) 
         @SuppressWarnings("deprecation")
-        final SupportedHttpMethod httpMethod = rule.xgetFrameworkInternallyRequestedHttpMethod().get();
+        final SupportedHttpMethod httpMethod = rule.xgetFrameworkInternallyRequestedHttpMethod().orElse(null);
         return httpMethod;
     }
 
@@ -1163,7 +1219,7 @@ public class FlutyRemoteApi {
     //                                                                      Message Helper
     //                                                                      ==============
     protected void setupRequestInfo(ExceptionMessageBuilder br, Type returnType, String url, Object optOrParam, FlutyRemoteApiRule rule) {
-        setupReturnTypeAndRemoteApi(br, returnType, url, rule);
+        setupReturnTypeAndRemoteApi(br, returnType, url, rule); // rule may be null for compatible
         if (optOrParam instanceof OptionalThing<?>) {
             ((OptionalThing<?>) optOrParam).ifPresent(param -> {
                 br.addItem("Request Parameter");
@@ -1180,10 +1236,12 @@ public class FlutyRemoteApi {
         br.addElement(returnType);
 
         // this setup method is for various exception so use orElse() here 
-        @SuppressWarnings("deprecation")
-        final SupportedHttpMethod httpMethod = rule.xgetFrameworkInternallyRequestedHttpMethod().orElse(null);
-        br.addItem("HTTP Method");
-        br.addElement(httpMethod);
+        if (rule != null) { // null allowed since 0.4.9 because for compatible to application framework
+            @SuppressWarnings("deprecation")
+            final SupportedHttpMethod httpMethod = rule.xgetFrameworkInternallyRequestedHttpMethod().orElse(null);
+            br.addItem("HTTP Method");
+            br.addElement(httpMethod);
+        }
 
         br.addItem("Remote API");
         br.addElement(url);

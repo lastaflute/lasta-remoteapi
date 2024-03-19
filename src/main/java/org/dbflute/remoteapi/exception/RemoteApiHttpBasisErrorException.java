@@ -17,6 +17,7 @@ package org.dbflute.remoteapi.exception;
 
 import java.util.function.Supplier;
 
+import org.dbflute.helper.message.ExceptionMessageBuilder;
 import org.dbflute.optional.OptionalThing;
 import org.dbflute.remoteapi.http.SupportedHttpMethod;
 
@@ -32,7 +33,7 @@ public class RemoteApiHttpBasisErrorException extends RemoteApiBaseException {
     // ===================================================================================
     //                                                                           Attribute
     //                                                                           =========
-    protected final SupportedHttpMethod httpMethod; // not null
+    protected final SupportedHttpMethod httpMethod; // null allowed for compatible
     protected final int httpStatus;
     protected final RemoteApiFailureResponseHolder failureResponseHolder; // not null
 
@@ -61,8 +62,8 @@ public class RemoteApiHttpBasisErrorException extends RemoteApiBaseException {
     public RemoteApiHttpBasisErrorException(String msg, SupportedHttpMethod httpMethod, int httpStatus,
             RemoteApiFailureResponseHolder failureResponseHolder) {
         super(msg);
+        this.httpMethod = httpMethod; // null allowed for compatible
         this.httpStatus = httpStatus;
-        this.httpMethod = httpMethod;
         if (failureResponseHolder != null) {
             this.failureResponseHolder = failureResponseHolder;
         } else { // for outer framework
@@ -117,6 +118,25 @@ public class RemoteApiHttpBasisErrorException extends RemoteApiBaseException {
      * @return The enum type of HTTP Method as supported by RemoteApi. (NotNull)
      */
     public SupportedHttpMethod getHttpMethod() {
+        if (httpMethod == null) {
+            ExceptionMessageBuilder br = new ExceptionMessageBuilder();
+            br.addNotice("Not found the HTTP method information in the cause.");
+            br.addItem("Advice");
+            br.addElement("Because you use old method of Lasta RemoteApi.");
+            br.addElement(" o FlutyRemoteApi@throwRemoteApiHttpClientErrorException(with rule)");
+            br.addElement(" x FlutyRemoteApi@throwRemoteApiHttpClientErrorException(without rule)");
+            br.addElement("Use with-rule method in your application or application framework.");
+            br.addElement("(without-rule method is deprecated)");
+            br.addItem("HTTP Status");
+            br.addElement(httpStatus);
+            br.addItem("Failure Response");
+            br.addElement(failureResponseHolder.getFailureResponse());
+            br.addItem("Original Exception");
+            br.addElement(getClass());
+            br.addElement(getMessage());
+            String msg = br.buildExceptionMessage();
+            throw new IllegalStateException(msg);
+        }
         return httpMethod;
     }
 
