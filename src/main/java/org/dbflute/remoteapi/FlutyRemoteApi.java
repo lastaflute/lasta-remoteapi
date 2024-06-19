@@ -1231,6 +1231,12 @@ public class FlutyRemoteApi {
         }
     }
 
+    // #hope jflute for compatible to application framework, will be removed (2024/06/19)
+    @Deprecated // call the another method with rule argument, delete this future (2024/06/19)
+    protected void setupRequestInfo(ExceptionMessageBuilder br, Type returnType, String url, Object optOrParam) {
+        setupRequestInfo(br, returnType, url, optOrParam, /*rule*/null);
+    }
+
     protected void setupReturnTypeAndRemoteApi(ExceptionMessageBuilder br, Type returnType, String url, FlutyRemoteApiRule rule) {
         br.addItem("Return Type");
         br.addElement(returnType);
