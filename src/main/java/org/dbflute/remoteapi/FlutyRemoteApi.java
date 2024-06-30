@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2022 the original author or authors.
+ * Copyright 2015-2024 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -1229,6 +1229,12 @@ public class FlutyRemoteApi {
             br.addItem("Request Parameter");
             br.addElement(convertBeanToDebugString(optOrParam));
         }
+    }
+
+    // #hope jflute for compatible to application framework, will be removed (2024/06/19)
+    @Deprecated // call the another method with rule argument, delete this future (2024/06/19)
+    protected void setupRequestInfo(ExceptionMessageBuilder br, Type returnType, String url, Object optOrParam) {
+        setupRequestInfo(br, returnType, url, optOrParam, /*rule*/null);
     }
 
     protected void setupReturnTypeAndRemoteApi(ExceptionMessageBuilder br, Type returnType, String url, FlutyRemoteApiRule rule) {
