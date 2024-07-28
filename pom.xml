@@ -3,7 +3,7 @@
 	<modelVersion>4.0.0</modelVersion>
 	<groupId>org.lastaflute.remoteapi</groupId>
 	<artifactId>lasta-remoteapi</artifactId>
-	<version>0.5.1</version>
+	<version>2.0.0-A-SNAPSHOT</version>
 	<packaging>jar</packaging>
 
 	<name>Lasta RemoteApi</name>
@@ -12,10 +12,10 @@
 	<inceptionYear>2015</inceptionYear>
 
 	<properties>
-		<lastaflute.version>1.2.7</lastaflute.version> <!-- about one year old (from now) -->
+		<lastaflute.version>2.0.0-B-SNAPSHOT</lastaflute.version> <!-- about one year old (from now) -->
 		<httpclient.version>4.5.14</httpclient.version>
 		<slf4j.version>1.7.12</slf4j.version>
-		<utflute.version>0.9.6</utflute.version>
+		<utflute.version>2.0.0-A-SNAPSHOT</utflute.version>
 		<junit.version>4.8.2</junit.version> <!-- latest version without hamcrest -->
 	</properties>
 
@@ -74,8 +74,8 @@
 				<plugin>
 					<artifactId>maven-compiler-plugin</artifactId>
 					<configuration>
-						<source>1.8</source>
-						<target>1.8</target>
+						<source>21</source>
+						<target>21</target>
 						<encoding>UTF-8</encoding>
 						<showDeprecation>true</showDeprecation>
 						<showWarnings>true</showWarnings>
@@ -220,11 +220,29 @@
 			<version>${lastaflute.version}</version>
 		</dependency>
 
+		<!-- annotation -->
+		<dependency>
+			<groupId>jakarta.annotation</groupId>
+			<artifactId>jakarta.annotation-api</artifactId>
+			<version>2.1.1</version>
+			<scope>provided</scope>
+		</dependency>
+
 		<!-- http client -->
 		<dependency>
 			<groupId>org.apache.httpcomponents</groupId>
 			<artifactId>httpclient</artifactId>
 			<version>${httpclient.version}</version>
+		</dependency>
+
+		<!-- = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = -->
+		<!--                                                               Partner Library -->
+		<!--                                                               = = = = = = = = -->
+		<dependency> <!-- #jakarta -->
+			<groupId>javax.xml.bind</groupId>
+			<artifactId>jaxb-api</artifactId>
+			<version>2.3.0</version>
+			<optional>true</optional> <!-- only for XML handling -->
 		</dependency>
 
 		<!-- = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = -->

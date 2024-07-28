@@ -24,8 +24,6 @@ import java.util.function.Consumer;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import javax.validation.groups.Default;
-
 import org.dbflute.helper.function.IndependentProcessor;
 import org.dbflute.helper.message.ExceptionMessageBuilder;
 import org.dbflute.optional.OptionalThing;
@@ -57,6 +55,8 @@ import org.lastaflute.web.validation.exception.ValidationErrorException;
 import org.lastaflute.web.validation.exception.ValidationStoppedException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import jakarta.validation.groups.Default;
 
 /**
  * @author jflute
