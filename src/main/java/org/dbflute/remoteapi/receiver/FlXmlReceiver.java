@@ -18,10 +18,10 @@ package org.dbflute.remoteapi.receiver;
 import java.io.StringReader;
 import java.lang.reflect.Type;
 
-import javax.xml.bind.JAXB;
-
 import org.dbflute.optional.OptionalThing;
 import org.dbflute.remoteapi.FlutyRemoteApiRule;
+
+import jakarta.xml.bind.JAXB;
 
 /**
  * @author inoue
