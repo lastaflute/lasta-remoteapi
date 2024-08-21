@@ -18,6 +18,8 @@ package org.lastaflute.remoteapi;
 import java.util.Arrays;
 import java.util.function.Consumer;
 
+import javax.annotation.Resource;
+
 import org.dbflute.remoteapi.FlutyRemoteApi;
 import org.dbflute.remoteapi.FlutyRemoteApiRule;
 import org.dbflute.remoteapi.FlutyRemoteBehavior;
@@ -25,8 +27,6 @@ import org.dbflute.util.DfStringUtil;
 import org.lastaflute.core.direction.AccessibleConfig;
 import org.lastaflute.di.naming.NamingConvention;
 import org.lastaflute.web.servlet.request.RequestManager;
-
-import jakarta.annotation.Resource;
 
 /**
  * The base class of behavior for remote API. <br>
