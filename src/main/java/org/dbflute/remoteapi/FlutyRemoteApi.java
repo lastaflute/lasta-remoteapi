@@ -1222,15 +1222,16 @@ public class FlutyRemoteApi {
     //                                          Request Info
     //                                          ------------
     protected void setupRequestInfo(ExceptionMessageBuilder br, Type returnType, String url, Object optOrParam, FlutyRemoteApiRule rule) {
-        doSetupReturnTypeInfo(br, returnType);
-        doSetupHttpMethodInfo(br, rule); // rule may be null for compatible
-        doSetupRemoteApiInfo(br, url);
+        // rule may be null for compatible (of application)
+        doSetupReturnTypeInfo(br, returnType, rule);
+        doSetupHttpMethodInfo(br, rule);
+        doSetupRemoteApiInfo(br, url, rule);
         if (optOrParam instanceof OptionalThing<?>) {
             ((OptionalThing<?>) optOrParam).ifPresent(param -> {
-                doSetupRequestParameterInfo(br, param);
+                doSetupRequestParameterInfo(br, param, rule);
             });
         } else {
-            doSetupRequestParameterInfo(br, optOrParam);
+            doSetupRequestParameterInfo(br, optOrParam, rule);
         }
     }
 
@@ -1240,7 +1241,7 @@ public class FlutyRemoteApi {
         setupRequestInfo(br, returnType, url, optOrParam, /*rule*/null);
     }
 
-    protected void doSetupReturnTypeInfo(ExceptionMessageBuilder br, Type returnType) {
+    protected void doSetupReturnTypeInfo(ExceptionMessageBuilder br, Type returnType, FlutyRemoteApiRule rule) {
         br.addItem("Return Type");
         br.addElement(returnType);
     }
@@ -1255,12 +1256,12 @@ public class FlutyRemoteApi {
         }
     }
 
-    protected void doSetupRemoteApiInfo(ExceptionMessageBuilder br, String url) {
+    protected void doSetupRemoteApiInfo(ExceptionMessageBuilder br, String url, FlutyRemoteApiRule rule) {
         br.addItem("Remote API");
         br.addElement(url);
     }
 
-    protected void doSetupRequestParameterInfo(ExceptionMessageBuilder br, Object param) {
+    protected void doSetupRequestParameterInfo(ExceptionMessageBuilder br, Object param, FlutyRemoteApiRule rule) {
         br.addItem("Request Parameter");
         br.addElement(convertBeanToDebugString(param));
     }
