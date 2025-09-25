@@ -1218,16 +1218,19 @@ public class FlutyRemoteApi {
     // ===================================================================================
     //                                                                      Message Helper
     //                                                                      ==============
+    // -----------------------------------------------------
+    //                                          Request Info
+    //                                          ------------
     protected void setupRequestInfo(ExceptionMessageBuilder br, Type returnType, String url, Object optOrParam, FlutyRemoteApiRule rule) {
-        setupReturnTypeAndRemoteApi(br, returnType, url, rule); // rule may be null for compatible
+        doSetupReturnTypeInfo(br, returnType);
+        doSetupHttpMethodInfo(br, rule); // rule may be null for compatible
+        doSetupRemoteApiInfo(br, url);
         if (optOrParam instanceof OptionalThing<?>) {
             ((OptionalThing<?>) optOrParam).ifPresent(param -> {
-                br.addItem("Request Parameter");
-                br.addElement(convertBeanToDebugString(param));
+                doSetupRequestParameterInfo(br, param);
             });
         } else {
-            br.addItem("Request Parameter");
-            br.addElement(convertBeanToDebugString(optOrParam));
+            doSetupRequestParameterInfo(br, optOrParam);
         }
     }
 
@@ -1237,10 +1240,12 @@ public class FlutyRemoteApi {
         setupRequestInfo(br, returnType, url, optOrParam, /*rule*/null);
     }
 
-    protected void setupReturnTypeAndRemoteApi(ExceptionMessageBuilder br, Type returnType, String url, FlutyRemoteApiRule rule) {
+    protected void doSetupReturnTypeInfo(ExceptionMessageBuilder br, Type returnType) {
         br.addItem("Return Type");
         br.addElement(returnType);
+    }
 
+    protected void doSetupHttpMethodInfo(ExceptionMessageBuilder br, FlutyRemoteApiRule rule) {
         // this setup method is for various exception so use orElse() here 
         if (rule != null) { // null allowed since 0.4.9 because for compatible to application framework
             @SuppressWarnings("deprecation")
@@ -1248,15 +1253,25 @@ public class FlutyRemoteApi {
             br.addItem("HTTP Method");
             br.addElement(httpMethod);
         }
+    }
 
+    protected void doSetupRemoteApiInfo(ExceptionMessageBuilder br, String url) {
         br.addItem("Remote API");
         br.addElement(url);
+    }
+
+    protected void doSetupRequestParameterInfo(ExceptionMessageBuilder br, Object param) {
+        br.addItem("Request Parameter");
+        br.addElement(convertBeanToDebugString(param));
     }
 
     protected String convertBeanToDebugString(Object param) {
         return param.toString(); // as default
     }
 
+    // -----------------------------------------------------
+    //                                         Response Info
+    //                                         -------------
     protected void setupResponseInfo(ExceptionMessageBuilder br, int httpStatus, OptionalThing<String> body) {
         br.addItem("Response HTTP Status");
         br.addElement(httpStatus);
@@ -1264,16 +1279,25 @@ public class FlutyRemoteApi {
         br.addElement(body.orElse("(no body)"));
     }
 
+    // -----------------------------------------------------
+    //                                           Return Info
+    //                                           -----------
     protected <RET> void setupReturnInfo(ExceptionMessageBuilder br, RET ret) {
         br.addItem("Return Object");
         br.addElement(ret);
     }
 
+    // -----------------------------------------------------
+    //                                             Rule Info
+    //                                             ---------
     protected void setupYourRule(ExceptionMessageBuilder br, FlutyRemoteApiRule rule) {
         br.addItem("Your Rule");
         br.addElement(rule);
     }
 
+    // -----------------------------------------------------
+    //                                           Facade Info
+    //                                           -----------
     protected void setupFacadeExpression(ExceptionMessageBuilder br) {
         br.addItem("Facade Expression");
         br.addElement(facadeExp);
