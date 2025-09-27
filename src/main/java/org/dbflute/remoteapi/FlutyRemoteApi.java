@@ -63,6 +63,7 @@ import org.dbflute.remoteapi.exception.RemoteApiResponseParseFailureException;
 import org.dbflute.remoteapi.exception.RemoteApiRetryReadyFailureException;
 import org.dbflute.remoteapi.exception.RemoteApiSenderOfQueryParameterNotFoundException;
 import org.dbflute.remoteapi.exception.RemoteApiSenderOfRequestBodyNotFoundException;
+import org.dbflute.remoteapi.exception.control.RemoteApiExceptionOption;
 import org.dbflute.remoteapi.exception.retry.ClientErrorRetryDeterminer;
 import org.dbflute.remoteapi.exception.retry.ClientErrorRetryResource;
 import org.dbflute.remoteapi.exception.translation.ClientErrorTranslatingResource;
@@ -341,7 +342,7 @@ public class FlutyRemoteApi {
         if (!logger.isDebugEnabled()) {
             return;
         }
-        final String paramDisp = param.getClass().getSimpleName() + ":" + convertBeanToDebugString(param); // because toString() might not be overridden
+        final String paramDisp = param.getClass().getSimpleName() + ":" + convertParamObjToDebugString(param); // because toString() might not be overridden
         final Map<String, List<String>> headerMap = rule.getHeaders().orElseGet(() -> Collections.emptyMap());
         logger.debug("#flow #remote ...Sending request as {} to Remote API:\n{}\n with param: {}\n with headers: {}", httpMethod, url,
                 paramDisp, headerMap);
@@ -1122,7 +1123,7 @@ public class FlutyRemoteApi {
         setupFacadeExpression(br);
         clientError.getFailureResponse().ifPresent(failureResponse -> {
             br.addItem("Failure Response");
-            br.addElement(convertBeanToDebugString(failureResponse));
+            br.addElement(convertParamObjToDebugString(failureResponse));
         }); // client error's data are already set up
         final String msg = br.buildExceptionMessage();
         throw new RemoteApiErrorTranslationFailureException(msg, translationEx);
@@ -1216,8 +1217,8 @@ public class FlutyRemoteApi {
     }
 
     // ===================================================================================
-    //                                                                      Message Helper
-    //                                                                      ==============
+    //                                                                       Message Setup
+    //                                                                       =============
     // -----------------------------------------------------
     //                                          Request Info
     //                                          ------------
@@ -1258,16 +1259,41 @@ public class FlutyRemoteApi {
 
     protected void doSetupRemoteApiInfo(ExceptionMessageBuilder br, String url, FlutyRemoteApiRule rule) {
         br.addItem("Remote API");
-        br.addElement(url);
+        br.addElement(filterMessageRemoteApiUrl(url, rule));
+    }
+
+    protected String filterMessageRemoteApiUrl(String url, FlutyRemoteApiRule rule) {
+        if (rule != null) { // basically here
+            final RemoteApiExceptionOption option = rule.getRemoteApiExceptionOption(); // not null
+            return option.getMessageRemoteApiUrlFilter().map(filter -> {
+                return filter.apply(url); // null allowed (then default)
+            }).orElse(url); // use plain URL if no filter or null returned
+        } else { // for compatible to application framework
+            return url;
+        }
     }
 
     protected void doSetupRequestParameterInfo(ExceptionMessageBuilder br, Object param, FlutyRemoteApiRule rule) {
         br.addItem("Request Parameter");
-        br.addElement(convertBeanToDebugString(param));
+        final String filtered = filterMessageRequestParameter(param, () -> {
+            return convertParamObjToDebugString(param);
+        }, rule);
+        br.addElement(filtered);
     }
 
-    protected String convertBeanToDebugString(Object param) {
+    protected String convertParamObjToDebugString(Object param) {
         return param.toString(); // as default
+    }
+
+    protected String filterMessageRequestParameter(Object param, Supplier<String> defaultExpSupplier, FlutyRemoteApiRule rule) {
+        if (rule != null) { // basically here
+            final RemoteApiExceptionOption option = rule.getRemoteApiExceptionOption(); // not null
+            return option.getMessageRequestParameterFilter().map(filter -> {
+                return filter.apply(param); // null allowed (then default)
+            }).orElse(defaultExpSupplier.get()); // use default expression if no filter or null returned
+        } else { // for compatible to application framework
+            return defaultExpSupplier.get();
+        }
     }
 
     // -----------------------------------------------------

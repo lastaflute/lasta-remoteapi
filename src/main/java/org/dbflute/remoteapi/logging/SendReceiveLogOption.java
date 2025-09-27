@@ -133,12 +133,22 @@ public class SendReceiveLogOption {
     }
 
     // ===================================================================================
-    //                                                                            Accessor
-    //                                                                            ========
-    public boolean isEnabled() {
-        return enabled;
+    //                                                                      Basic Override
+    //                                                                      ==============
+    @Override
+    public String toString() {
+        final StringBuilder sb = new StringBuilder();
+        sb.append("sendReceiveLog:{");
+        sb.append(categoryName);
+        sb.append(", suppressResponseBody=").append(suppressResponseBody);
+        sb.append(", enabled=").append(enabled);
+        sb.append("}");
+        return sb.toString();
     }
 
+    // ===================================================================================
+    //                                                                            Accessor
+    //                                                                            ========
     public OptionalThing<String> getCategoryName() {
         return OptionalThing.ofNullable(categoryName, () -> {
             throw new IllegalStateException("Not found the categoryName.");
@@ -169,5 +179,9 @@ public class SendReceiveLogOption {
         return OptionalThing.ofNullable(responseBodyFilter, () -> {
             throw new IllegalStateException("Not found the responseBodyFilter.");
         });
+    }
+
+    public boolean isEnabled() {
+        return enabled;
     }
 }
