@@ -13,42 +13,37 @@
  * either express or implied. See the License for the specific language
  * governing permissions and limitations under the License.
  */
-package org.dbflute.remoteapi.validation;
+package org.dbflute.remoteapi.exception.control;
+
+import java.util.function.Function;
+
+import org.dbflute.optional.OptionalThing;
+import org.dbflute.util.DfAssertUtil;
 
 /**
  * @author jflute
- * @since 0.3.6 (2017/09/28 Thursday)
+ * @since 0.5.2 (2025/09/26 Friday at ichihara)
  */
-public class SendReceiveValidatorOption {
+public class RemoteApiExceptionOption {
 
     // ===================================================================================
     //                                                                           Attribute
     //                                                                           =========
-    protected boolean handleAsWarnParam;
-    protected boolean handleAsWarnReturn;
-    protected boolean suppressParam;
-    protected boolean suppressReturn;
+    protected Function<String, String> messageRemoteApiUrlFilter; // null allowed, not required
+    protected Function<Object, String> messageRequestParameterFilter; // null allowed, not required
 
     // ===================================================================================
     //                                                                              Option
     //                                                                              ======
-    public SendReceiveValidatorOption handleAsWarnParam() {
-        handleAsWarnParam = true;
+    public RemoteApiExceptionOption filterMessageRemoteApiUrl(Function<String, String> oneArgLambda) {
+        DfAssertUtil.assertObjectNotNull("oneArgLambda (messageRemoteApiUrlFilter)", oneArgLambda);
+        messageRemoteApiUrlFilter = oneArgLambda;
         return this;
     }
 
-    public SendReceiveValidatorOption handleAsWarnReturn() {
-        handleAsWarnReturn = true;
-        return this;
-    }
-
-    public SendReceiveValidatorOption suppressParam() {
-        suppressParam = true;
-        return this;
-    }
-
-    public SendReceiveValidatorOption suppressReturn() {
-        suppressReturn = true;
+    public RemoteApiExceptionOption filterMessageRequestParameter(Function<Object, String> oneArgLambda) {
+        DfAssertUtil.assertObjectNotNull("oneArgLambda (messageRequestParameterFilter)", oneArgLambda);
+        messageRequestParameterFilter = oneArgLambda;
         return this;
     }
 
@@ -58,31 +53,25 @@ public class SendReceiveValidatorOption {
     @Override
     public String toString() {
         final StringBuilder sb = new StringBuilder();
-        sb.append("validator:{");
-        sb.append("warn:{").append(handleAsWarnParam);
-        sb.append(", ").append(handleAsWarnReturn);
-        sb.append("}, suppress:{").append(suppressParam);
-        sb.append(", ").append(suppressReturn);
-        sb.append("}}");
+        sb.append("exception:{");
+        sb.append(messageRemoteApiUrlFilter);
+        sb.append(", ").append(messageRequestParameterFilter);
+        sb.append("}");
         return sb.toString();
     }
 
     // ===================================================================================
     //                                                                            Accessor
     //                                                                            ========
-    public boolean isHandleAsWarnParam() {
-        return handleAsWarnParam;
+    public OptionalThing<Function<String, String>> getMessageRemoteApiUrlFilter() {
+        return OptionalThing.ofNullable(messageRemoteApiUrlFilter, () -> {
+            throw new IllegalStateException("Not found the messageRemoteApiUrlFilter.");
+        });
     }
 
-    public boolean isHandleAsWarnReturn() {
-        return handleAsWarnReturn;
-    }
-
-    public boolean isSuppressParam() {
-        return suppressParam;
-    }
-
-    public boolean isSuppressReturn() {
-        return suppressReturn;
+    public OptionalThing<Function<Object, String>> getMessageRequestParameterFilter() {
+        return OptionalThing.ofNullable(messageRequestParameterFilter, () -> {
+            throw new IllegalStateException("Not found the messageRequestParameterFilter.");
+        });
     }
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2024 the original author or authors.
+ * Copyright 2015-2025 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -37,6 +37,7 @@ import org.apache.http.impl.client.HttpClients;
 import org.apache.http.ssl.SSLContexts;
 import org.apache.http.ssl.TrustStrategy;
 import org.dbflute.optional.OptionalThing;
+import org.dbflute.remoteapi.exception.control.RemoteApiExceptionOption;
 import org.dbflute.remoteapi.exception.retry.ClientErrorRetryDeterminer;
 import org.dbflute.remoteapi.exception.translation.ClientErrorTranslator;
 import org.dbflute.remoteapi.http.SupportedHttpMethod;
@@ -60,43 +61,117 @@ public class FlutyRemoteApiRule {
     //                                                                           Attribute
     //                                                                           =========
     // -----------------------------------------------------
-    //                                         Required Rule
-    //                                         -------------
+    //                                       Sender/Receiver
+    //                                       ---------------
     protected QueryParameterSender queryParameterSender; // null allowed, but required
     protected RequestBodySender requestBodySender; // null allowed, but required
     protected ResponseBodyReceiver responseBodyReceiver; // null allowed, but required
 
     // -----------------------------------------------------
-    //                                         Optional Rule
-    //                                         -------------
+    //                                       HTTP Connection
+    //                                       ---------------
     // default values are defined here
     protected boolean sslUntrusted;
     protected int connectTimeout = 3000;
     protected int connectionRequestTimeout = 3000;
     protected int socketTimeout = 3000;
+
+    // -----------------------------------------------------
+    //                                           HTTP Client
+    //                                           -----------
+    protected Consumer<HttpClientBuilder> httpClientSetupper; // null allowed, not required
+    protected Consumer<RequestConfig.Builder> httpRequestSetupper; // null allowed, not required
+
+    // -----------------------------------------------------
+    //                                              Encoding
+    //                                              --------
     protected Charset pathVariableCharset = StandardCharsets.UTF_8; // not null
     protected Charset queryParameterCharset = StandardCharsets.UTF_8; // not null
     protected Charset requestBodyCharset = StandardCharsets.UTF_8; // not null
     protected Charset responseBodyCharset = StandardCharsets.UTF_8; // not null
+
+    // -----------------------------------------------------
+    //                                           HTTP Header
+    //                                           -----------
     protected Map<String, List<String>> requestHeaders; // null allowed, not required, lazy-loaded
     protected Consumer<ResponseHeaderResource> responseHeaderHandler; // null allowed, not required
+
+    // -----------------------------------------------------
+    //                                        Error Handling
+    //                                        --------------
     protected Type failureResponseType; // null allowed, not required
     protected ClientErrorTranslator clientErrorTranslator; // null allowed, not required
     protected ClientErrorRetryDeterminer clientErrorRetryDeterminer; // null allowed, not required
+    protected RemoteApiExceptionOption remoteApiExceptionOption = newRemoteApiExceptionOption(); // not null, as default, light instance
+
+    // -----------------------------------------------------
+    //                                             Validator
+    //                                             ---------
     protected SendReceiveValidatorOption validatorOption = newValidatorOption(); // not null, as default, light instance
+
+    // -----------------------------------------------------
+    //                                               Logging
+    //                                               -------
     protected SendReceiveLogOption sendReceiveLogOption = newSendReceiveLogOption(); // not null, as default, light instance
-    protected Consumer<HttpClientBuilder> httpClientSetupper; // null allowed, not required
-    protected Consumer<RequestConfig.Builder> httpRequestSetupper; // null allowed, not required
 
     // #hope jflute can accept response header, interface? mapping? (2017/09/13)
     // #hope jflute request trace ID option, but thinking...header? (2017/09/13)
     // #hope jflute improve tracebility like DBFlute (2017/09/13)
 
     // -----------------------------------------------------
-    //                                         Optional Rule
-    //                                         -------------
+    //                                        Super Internal
+    //                                        --------------
     // used framework-internally so don't use in your application
     protected SupportedHttpMethod frameworkInternallyRequestedHttpMethod; // null allowed until requested
+
+    // ===================================================================================
+    //                                                                     Sender/Receiver
+    //                                                                     ===============
+    // -----------------------------------------------------
+    //                                       Sender/Receiver
+    //                                       ---------------
+    /**
+     * @param queryParameterSender The sender of (request) query parameter. (NotNull)
+     */
+    public void sendQueryBy(QueryParameterSender queryParameterSender) {
+        assertArgumentNotNull("queryParameterSender", queryParameterSender);
+        this.queryParameterSender = queryParameterSender;
+    }
+
+    /**
+     * @param requestBodySender The sender of request body. (NotNull)
+     */
+    public void sendBodyBy(RequestBodySender requestBodySender) {
+        assertArgumentNotNull("requestBodySender", requestBodySender);
+        this.requestBodySender = requestBodySender;
+    }
+
+    /**
+     * @param responseBodyReceiver The receiver of response body. (NotNull)
+     */
+    public void receiveBodyBy(ResponseBodyReceiver responseBodyReceiver) {
+        assertArgumentNotNull("responseBodyReceiver", responseBodyReceiver);
+        this.responseBodyReceiver = responseBodyReceiver;
+    }
+
+    // ===================================================================================
+    //                                                                     HTTP Connection
+    //                                                                     ===============
+    public void setSslUntrusted(boolean sslUntrusted) {
+        this.sslUntrusted = sslUntrusted;
+    }
+
+    public void setConnectTimeout(int connectTimeout) {
+        this.connectTimeout = connectTimeout;
+    }
+
+    public void setConnectionRequestTimeout(int connectionRequestTimeout) {
+        this.connectionRequestTimeout = connectionRequestTimeout;
+    }
+
+    public void setSocketTimeout(int socketTimeout) {
+        this.socketTimeout = socketTimeout;
+    }
 
     // ===================================================================================
     //                                                                         Http Client
@@ -112,8 +187,8 @@ public class FlutyRemoteApiRule {
     }
 
     // -----------------------------------------------------
-    //                                           HTTP Client
-    //                                           -----------
+    //                                         Apache Object
+    //                                         -------------
     protected HttpClientBuilder createHttpClientBuilder() {
         final HttpClientBuilder httpClientBuilder = HttpClients.custom();
         if (isSslUntrusted()) {
@@ -163,58 +238,22 @@ public class FlutyRemoteApiRule {
     protected void customizeToYourHttpRequest(RequestConfig.Builder httpRequestBuilder) {
     }
 
-    // ===================================================================================
-    //                                                                      Setting Facade
-    //                                                                      ==============
     // -----------------------------------------------------
-    //                                       Sender/Receiver
+    //                                       Native Setupper
     //                                       ---------------
-    /**
-     * @param queryParameterSender The sender of (request) query parameter. (NotNull)
-     */
-    public void sendQueryBy(QueryParameterSender queryParameterSender) {
-        assertArgumentNotNull("queryParameterSender", queryParameterSender);
-        this.queryParameterSender = queryParameterSender;
+    public void setupNativeHttpClient(Consumer<HttpClientBuilder> httpClientSetupper) {
+        assertArgumentNotNull("httpClientSetupper", httpClientSetupper);
+        this.httpClientSetupper = httpClientSetupper;
     }
 
-    /**
-     * @param requestBodySender The sender of request body. (NotNull)
-     */
-    public void sendBodyBy(RequestBodySender requestBodySender) {
-        assertArgumentNotNull("requestBodySender", requestBodySender);
-        this.requestBodySender = requestBodySender;
+    public void setupNativeHttpRequest(Consumer<RequestConfig.Builder> httpRequestSetupper) {
+        assertArgumentNotNull("httpRequestSetupper", httpRequestSetupper);
+        this.httpRequestSetupper = httpRequestSetupper;
     }
 
-    /**
-     * @param responseBodyReceiver The receiver of response body. (NotNull)
-     */
-    public void receiveBodyBy(ResponseBodyReceiver responseBodyReceiver) {
-        assertArgumentNotNull("responseBodyReceiver", responseBodyReceiver);
-        this.responseBodyReceiver = responseBodyReceiver;
-    }
-
-    // -----------------------------------------------------
-    //                                            Connection
-    //                                            ----------
-    public void setSslUntrusted(boolean sslUntrusted) {
-        this.sslUntrusted = sslUntrusted;
-    }
-
-    public void setConnectTimeout(int connectTimeout) {
-        this.connectTimeout = connectTimeout;
-    }
-
-    public void setConnectionRequestTimeout(int connectionRequestTimeout) {
-        this.connectionRequestTimeout = connectionRequestTimeout;
-    }
-
-    public void setSocketTimeout(int socketTimeout) {
-        this.socketTimeout = socketTimeout;
-    }
-
-    // -----------------------------------------------------
-    //                                              Encoding
-    //                                              --------
+    // ===================================================================================
+    //                                                                            Encoding
+    //                                                                            ========
     /**
      * @param pathVariableCharset The charset of request path variable. (NotNull)
      */
@@ -247,9 +286,9 @@ public class FlutyRemoteApiRule {
         this.responseBodyCharset = responseBodyCharset;
     }
 
-    // -----------------------------------------------------
-    //                                           HTTP Header
-    //                                           -----------
+    // ===================================================================================
+    //                                                                         HTTP Header
+    //                                                                         ===========
     /**
      * Set request header value by the name. <br>
      * It overwrites the same-name header if it already exists.
@@ -294,9 +333,12 @@ public class FlutyRemoteApiRule {
         this.responseHeaderHandler = resourceLambda;
     }
 
+    // ===================================================================================
+    //                                                                      Error Handling
+    //                                                                      ==============
     // -----------------------------------------------------
-    //                                        Error Handling
-    //                                        --------------
+    //                                      Failure Response
+    //                                      ----------------
     /**
      * Handle failure response as specified type. <br>
      * You can get the failure response from exception.
@@ -315,6 +357,9 @@ public class FlutyRemoteApiRule {
         this.failureResponseType = failureResponseType;
     }
 
+    // -----------------------------------------------------
+    //                                          Client Error
+    //                                          ------------
     /**
      * Translate client error exception.
      * <pre>
@@ -344,8 +389,32 @@ public class FlutyRemoteApiRule {
     }
 
     // -----------------------------------------------------
-    //                                            Validation
-    //                                            ----------
+    //                                      Adjust Exception 
+    //                                      ----------------
+    /**
+     * Adjust the exception handling of remoteApi. <br>
+     * e.g. filtering URL on exception message.
+     * @param opLambda The callback for setting of remoteApi exception option. (NotNull)
+     */
+    public void adjustRemoteApiException(Consumer<RemoteApiExceptionOption> opLambda) {
+        assertArgumentNotNull("opLambda", opLambda);
+        final RemoteApiExceptionOption option = createRemoteApiExceptionOption(opLambda);
+        this.remoteApiExceptionOption = option;
+    }
+
+    protected RemoteApiExceptionOption createRemoteApiExceptionOption(Consumer<RemoteApiExceptionOption> opLambda) {
+        final RemoteApiExceptionOption option = newRemoteApiExceptionOption();
+        opLambda.accept(option);
+        return option;
+    }
+
+    protected RemoteApiExceptionOption newRemoteApiExceptionOption() {
+        return new RemoteApiExceptionOption();
+    }
+
+    // ===================================================================================
+    //                                                                           Validator
+    //                                                                           =========
     /**
      * Validate param and return object as your option.
      * @param opLambda The callback for setting of validator option. (NotNull)
@@ -366,9 +435,12 @@ public class FlutyRemoteApiRule {
         return new SendReceiveValidatorOption();
     }
 
+    // ===================================================================================
+    //                                                                             Logging
+    //                                                                             =======
     // -----------------------------------------------------
-    //                                   SendReceive Logging
-    //                                   -------------------
+    //                                      Send/Receive Log
+    //                                      ----------------
     /**
      * Show send-receive log as your option. (INFO logging) <br>
      * The logging is enabled if you call this method. 
@@ -389,19 +461,6 @@ public class FlutyRemoteApiRule {
 
     protected SendReceiveLogOption newSendReceiveLogOption() {
         return new SendReceiveLogOption();
-    }
-
-    // -----------------------------------------------------
-    //                                       Native Setupper
-    //                                       ---------------
-    public void setupNativeHttpClient(Consumer<HttpClientBuilder> httpClientSetupper) {
-        assertArgumentNotNull("httpClientSetupper", httpClientSetupper);
-        this.httpClientSetupper = httpClientSetupper;
-    }
-
-    public void setupNativeHttpRequest(Consumer<RequestConfig.Builder> httpRequestSetupper) {
-        assertArgumentNotNull("httpRequestSetupper", httpRequestSetupper);
-        this.httpRequestSetupper = httpRequestSetupper;
     }
 
     // ===================================================================================
@@ -464,6 +523,7 @@ public class FlutyRemoteApiRule {
         sb.append(", responseBody=").append(responseBodyCharset);
         sb.append(", various:{").append(clientErrorTranslator);
         sb.append(", ").append(clientErrorRetryDeterminer);
+        sb.append(", ").append(remoteApiExceptionOption);
         sb.append(", ").append(validatorOption);
         sb.append(", ").append(sendReceiveLogOption);
         sb.append("}}");
@@ -473,6 +533,9 @@ public class FlutyRemoteApiRule {
     // ===================================================================================
     //                                                                            Accessor
     //                                                                            ========
+    // -----------------------------------------------------
+    //                                       Sender/Receiver
+    //                                       ---------------
     public OptionalThing<QueryParameterSender> getQueryParameterSender() {
         return OptionalThing.ofNullable(queryParameterSender, () -> {
             throw new IllegalStateException("Not found the queryParameterSender in the option: " + toString());
@@ -491,6 +554,9 @@ public class FlutyRemoteApiRule {
         });
     }
 
+    // -----------------------------------------------------
+    //                                           HTTP Client
+    //                                           -----------
     public boolean isSslUntrusted() {
         return sslUntrusted;
     }
@@ -507,6 +573,9 @@ public class FlutyRemoteApiRule {
         return socketTimeout;
     }
 
+    // -----------------------------------------------------
+    //                                              Encoding
+    //                                              --------
     /**
      * @return The charset of request path variable. (NotNull)
      */
@@ -535,6 +604,9 @@ public class FlutyRemoteApiRule {
         return responseBodyCharset;
     }
 
+    // -----------------------------------------------------
+    //                                           HTTP Header
+    //                                           -----------
     public OptionalThing<Map<String, List<String>>> getHeaders() {
         return OptionalThing.ofNullable(requestHeaders, () -> {
             throw new IllegalStateException("Not found the headers in the option: " + toString());
@@ -547,6 +619,9 @@ public class FlutyRemoteApiRule {
         });
     }
 
+    // -----------------------------------------------------
+    //                                        Error Handling
+    //                                        --------------
     public OptionalThing<Type> getFailureResponseType() {
         return OptionalThing.ofNullable(failureResponseType, () -> {
             throw new IllegalStateException("Not found the failureResponseType in the option: " + toString());
@@ -566,12 +641,25 @@ public class FlutyRemoteApiRule {
     }
 
     /**
+     * @return The option of remoteApi exception. (NotNull)
+     */
+    public RemoteApiExceptionOption getRemoteApiExceptionOption() {
+        return remoteApiExceptionOption;
+    }
+
+    // -----------------------------------------------------
+    //                                             Validator
+    //                                             ---------
+    /**
      * @return The option of validator. (NotNull)
      */
     public SendReceiveValidatorOption getValidatorOption() {
         return validatorOption;
     }
 
+    // -----------------------------------------------------
+    //                                               Logging
+    //                                               -------
     /**
      * @return The option of send-receive logging. (NotNull)
      */

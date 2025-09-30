@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2024 the original author or authors.
+ * Copyright 2015-2025 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,11 +15,14 @@
  */
 package org.dbflute.remoteapi;
 
+import org.dbflute.helper.message.ExceptionMessageBuilder;
 import org.dbflute.optional.OptionalThing;
 import org.dbflute.remoteapi.exception.RemoteApiPathVariableNullElementException;
 import org.dbflute.remoteapi.exception.RemoteApiPathVariableShortElementException;
 import org.dbflute.remoteapi.mock.MockCDef;
 import org.dbflute.utflute.core.PlainTestCase;
+import org.dbflute.util.DfCollectionUtil;
+import org.dbflute.util.Srl;
 
 /**
  * @author jflute
@@ -112,5 +115,137 @@ public class FlutyRemoteApiTest extends PlainTestCase {
             remoteApi.buildPathVariableRearPart(String.class, "/harbor", "/mypage", new Object[] { "sea", null }, OptionalThing.empty(),
                     rule);
         });
+    }
+
+    // ===================================================================================
+    //                                                                       Message Setup
+    //                                                                       =============
+    // -----------------------------------------------------
+    //                                            Core Logic
+    //                                            ----------
+    public void test_setupRequestInfo_basic() {
+        // ## Arrange ##
+        FlutyRemoteApi remoteApi = new FlutyRemoteApi(rule -> {}, this);
+        FlutyRemoteApiRule rule = new FlutyRemoteApiRule();
+        ExceptionMessageBuilder br = new ExceptionMessageBuilder();
+        Object optOrParam = DfCollectionUtil.newArrayList("sea", "land", "piari");
+        String url = "url:{mystic, oneman}";
+
+        // ## Act ##
+        remoteApi.setupRequestInfo(br, Integer.class, url, optOrParam, rule);
+
+        // ## Assert ##
+        String msg = br.buildExceptionMessage();
+        log(ln() + msg);
+        assertContains(msg, url);
+        assertContains(msg, "[sea, land, piari]");
+    }
+
+    @SuppressWarnings("deprecation")
+    public void test_setupRequestInfo_compatible() {
+        // ## Arrange ##
+        FlutyRemoteApi remoteApi = new FlutyRemoteApi(rule -> {}, this);
+        ExceptionMessageBuilder br = new ExceptionMessageBuilder();
+        Object optOrParam = DfCollectionUtil.newArrayList("sea", "land", "piari");
+        String url = "url:{mystic, oneman}";
+
+        // ## Act ##
+        remoteApi.setupRequestInfo(br, Integer.class, url, optOrParam);
+
+        // ## Assert ##
+        String msg = br.buildExceptionMessage();
+        log(ln() + msg);
+        assertContains(msg, url);
+        assertContains(msg, "[sea, land, piari]");
+    }
+
+    // -----------------------------------------------------
+    //                           filterMessageRemoteApiUrl()
+    //                           ---------------------------
+    public void test_setupRequestInfo_adjustRemoteApiException_filterMessageRemoteApiUrl_basic() {
+        // ## Arrange ##
+        FlutyRemoteApi remoteApi = new FlutyRemoteApi(rule -> {}, this);
+        FlutyRemoteApiRule rule = new FlutyRemoteApiRule();
+        rule.adjustRemoteApiException(op -> op.filterMessageRemoteApiUrl(url -> {
+            return Srl.replace(url, "mystic", "showbase");
+        }));
+        ExceptionMessageBuilder br = new ExceptionMessageBuilder();
+        Object optOrParam = DfCollectionUtil.newArrayList("sea", "land", "piari");
+        String url = "url:{mystic, oneman}";
+
+        // ## Act ##
+        remoteApi.setupRequestInfo(br, Integer.class, url, optOrParam, rule);
+
+        // ## Assert ##
+        String msg = br.buildExceptionMessage();
+        log(ln() + msg);
+        assertContains(msg, "url:{showbase, oneman}");
+        assertContains(msg, "[sea, land, piari]");
+    }
+
+    public void test_setupRequestInfo_adjustRemoteApiException_filterMessageRemoteApiUrl_null() {
+        // ## Arrange ##
+        FlutyRemoteApi remoteApi = new FlutyRemoteApi(rule -> {}, this);
+        FlutyRemoteApiRule rule = new FlutyRemoteApiRule();
+        rule.adjustRemoteApiException(op -> op.filterMessageRemoteApiUrl(url -> {
+            return null;
+        }));
+        ExceptionMessageBuilder br = new ExceptionMessageBuilder();
+        Object optOrParam = DfCollectionUtil.newArrayList("sea", "land", "piari");
+        String url = "url:{mystic, oneman}";
+
+        // ## Act ##
+        remoteApi.setupRequestInfo(br, Integer.class, url, optOrParam, rule);
+
+        // ## Assert ##
+        String msg = br.buildExceptionMessage();
+        log(ln() + msg);
+        assertContains(msg, url);
+        assertContains(msg, "[sea, land, piari]");
+    }
+
+    // -----------------------------------------------------
+    //                       filterMessageRequestParameter()
+    //                       -------------------------------
+    public void test_setupRequestInfo_adjustRemoteApiException_filterMessageRequestParameter_basic() {
+        // ## Arrange ##
+        FlutyRemoteApi remoteApi = new FlutyRemoteApi(rule -> {}, this);
+        FlutyRemoteApiRule rule = new FlutyRemoteApiRule();
+        rule.adjustRemoteApiException(op -> op.filterMessageRequestParameter(param -> {
+            return Srl.replace(param.toString(), "land", "showbase");
+        }));
+        ExceptionMessageBuilder br = new ExceptionMessageBuilder();
+        Object optOrParam = DfCollectionUtil.newArrayList("sea", "land", "piari");
+        String url = "url:{mystic, oneman}";
+
+        // ## Act ##
+        remoteApi.setupRequestInfo(br, Integer.class, url, optOrParam, rule);
+
+        // ## Assert ##
+        String msg = br.buildExceptionMessage();
+        log(ln() + msg);
+        assertContains(msg, url);
+        assertContains(msg, "[sea, showbase, piari]");
+    }
+
+    public void test_setupRequestInfo_adjustRemoteApiException_filterMessageRequestParameter_null() {
+        // ## Arrange ##
+        FlutyRemoteApi remoteApi = new FlutyRemoteApi(rule -> {}, this);
+        FlutyRemoteApiRule rule = new FlutyRemoteApiRule();
+        rule.adjustRemoteApiException(op -> op.filterMessageRequestParameter(param -> {
+            return null;
+        }));
+        ExceptionMessageBuilder br = new ExceptionMessageBuilder();
+        Object optOrParam = DfCollectionUtil.newArrayList("sea", "land", "piari");
+        String url = "url:{mystic, oneman}";
+
+        // ## Act ##
+        remoteApi.setupRequestInfo(br, Integer.class, url, optOrParam, rule);
+
+        // ## Assert ##
+        String msg = br.buildExceptionMessage();
+        log(ln() + msg);
+        assertContains(msg, url);
+        assertContains(msg, "[sea, land, piari]");
     }
 }
